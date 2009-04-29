@@ -67,21 +67,36 @@
                                                   :mask '(heuristic t)))) )))
          (directory-files-and-attributes garak-icon-directory)) ))
 
-(defvar garak-icon-tags '((":available"     . "[!]")
-                          (":away"          . "[_]")
-                          (":busy"          . "(/)")
-                          (":chat"          . "ii ")
-                          (":connecting"    . " * ")
-                          (":extended-away" . " - ")
-                          (":garak"         . " G ")
-                          (":group"         . "iii")
-                          (":invisible"     . "   ")
-                          (":log-in"        . "l/i")
-                          (":log-out"       . "l/o")
-                          (":off"           . "[X]")
-                          (":on"            . "[O]")
-                          (":person"        . " i ")
-                          (":unavailable"   . "(/)")))
+(defvar garak-icon-tags '((":available"      . "[i]")
+                          (":away"           . "[_]")
+                          (":busy"           . "(/)")
+                          (":chat"           . "ii ")
+                          (":connecting"     . " * ")
+                          (":extended-away"  . " - ")
+                          (":garak"          . "Gª ")
+                          (":group"          . "iii")
+                          (":invisible"      . "   ")
+                          (":log-in"         . "l/i")
+                          (":log-out"        . "l/o")
+                          (":offline"        . " x ")
+                          (":off"            . "[X]")
+                          (":on"             . "[O]")
+                          (":person"         . " i ")
+                          (":unavailable"    . "(/)")
+                          (":prpl-aim"       . "AIM ")
+                          (":prpl-bonjour"   . "Bon ")
+                          (":prpl-gg"        . "GG  ")
+                          (":prpl-icq"       . "ICQ ")
+                          (":prpl-irc"       . "IRC ")
+                          (":prpl-jabber"    . "XMPP")
+                          (":prpl-meanwhile" . "Mnw ")
+                          (":prpl-msn"       . "MSN ")
+                          (":prpl-novell"    . "Novl")
+                          (":prpl-qq"        . " QQ ")
+                          (":prpl-silc"      . "SILC")
+                          (":prpl-simple"    . "Smpl")
+                          (":prpl-yahoo"     . " Y! ")
+                          (":prpl-zephyr"    . "Zeph")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
@@ -439,16 +454,25 @@
     bnode))
 
 (defun garak-account-list-node-widget (process account)
-  (let (adata uid)
-    (setq uid (car account) adata (cdr account))
+  (let (adata uid proto iname icon label aname)
+    (setq uid   (car account)
+          adata (cdr account)
+          aname (elim-avalue :name  adata)
+          proto (elim-avalue :proto adata)
+          iname (format ":%s" proto)
+          alt   (format "[%s]" (or (elim-avalue iname garak-icon-tags) "---"))
+          icon  (tree-widget-find-image iname))
     (message "garak-account-list-node-widget: %S" account)
+    (setq label (if icon
+                    (concat (propertize alt 'display icon) aname)
+                  (concat alt aname)))
     (widget-convert 'menu-choice
                     :format      "%[%t%]\n"
                     :garak-type  :account
-                    :tag         (elim-avalue :name  adata)
-                    :im-protocol (elim-avalue :proto adata)
+                    :tag          label
+                    :im-protocol  proto
                     :value       '(noop)
-                    :account     (car account)
+                    :account      uid
                     :value-get   'widget-value-value-get
                     :inline       t
                     :notify      'ignore
@@ -557,7 +581,7 @@
 
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
-  (let (buid buddy where-widget point widget icon-name icon buffer dummy other)
+  (let (buid buddy where-widget point widget icon-name icon buffer tag other)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
@@ -588,11 +612,23 @@
                   end       (next-single-char-property-change point 'display)
                   widget    (cdr where-widget)
                   icon-name (garak-buddy-list-choose-icon widget buddy)
+                  tag       (elim-avalue icon-name garak-icon-tags)
                   icon      (tree-widget-find-image icon-name))
-            (when icon 
-              (let ((inhibit-read-only t))
-                ;;(message "adjust display prop %d -> %d : %S" point end icon)
-                (put-text-property point end 'display icon) )) )) )) ))
+            (let ((inhibit-read-only t) (old))
+              (setq widget (widget-at point)
+                    old    (widget-get widget :tag))
+              (widget-put widget :tag tag)
+              (if (and icon (tree-widget-use-image-p))
+                  (put-text-property point end 'display icon)
+                (when tag
+                  (setq end (+ point (length old)))
+                  ;;(message "REPLACE %S with %S in %S - %S" 
+                  ;;         old tag point end)
+                  (save-excursion
+                    (goto-char point)
+                    (setq old (make-string (length old) ?.))
+                    (when (search-forward-regexp old end t)
+                      (replace-match tag nil t)) )) )) )) )) ))
 
 (defun garak-account-update (proc name id status args)
   (let (buffer auid where-widget point end icon-name icon conn status kids node)
@@ -647,7 +683,7 @@
             (setq puid   (garak-buddy-find-parent proc puid)
                   parent (elim-buddy-data proc puid)))
           ;; ok: by now we should have a live ancestor: find its node:
-          (when (setq where-widget (garak-ui-find-node puid :bnode))
+          (when (setq where-widget (garak-ui-find-node puid :buddy))
             (setq point  (car where-widget)
                   widget (widget-at  point))
             (when (and (memq (elim-avalue "bnode-type" parent)
@@ -711,10 +747,10 @@
           ((eq gtype :accounts) (setq icon ":garak")))
     ;; set the icon, if we have an image in our set:
     (when (and icon (assoc icon garak-icons))
-      (if tree-widget-image-enable
-          (widget-put wicon :glyph-name icon)
-        (when (setq tag (elim-avalue icon garak-icon-tags))
-          (widget-put wicon :tag tag)) )) ))
+      (when tree-widget-image-enable
+          (widget-put wicon :glyph-name icon))
+      (when (setq tag (elim-avalue icon garak-icon-tags))
+        (widget-put wicon :tag tag)) ) ))
 
 (defun garak-create-ui-widget-buffer (proc) 
   (let ((blist   (elim-buddy-list proc))
@@ -972,7 +1008,6 @@
     (disconnect  . garak-comp-account    )
     (register    . garak-comp-account    )
     (remove-acct . garak-comp-account    )
-    ()
     (unregister  . garak-comp-account    )
     (help        . garak-comp-help       )
     (join        . garak-comp-join       )))
