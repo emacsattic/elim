@@ -31,6 +31,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 // don't change this to -2147483648: that triggers a warning. don't ask.
 #define INT_32BIT_MIN  (-2147483647 - 1)
 
+char    * xnode_unescape_html     ( const char *html );
 xmlnode * xnode_alist_item_string ( const char *name, const char *value );
 xmlnode * xnode_alist_item_integer( const char *name, int         value );
 xmlnode * xnode_alist_item_boolean( const char *name, gboolean    value );

@@ -103,6 +103,16 @@ if we do not intend to wait for the response (this is the usual case).")
       (setq rval (or (car (rassq value enum-vals)) value)))
     rval))
 
+(defun elim-pack-enum (etype value)
+  (let ((enum-vals (cdr (assq etype elim-enum-alist))) (rval 0))
+    (if (memq etype elim-enum-flag-types)
+        (mapc
+         (lambda (v)
+           (setq rval (logior rval (cdr (assq v enum-vals))))) 
+         (if (listp value) value (list value)))
+      (setq rval (or (cdr (assq value enum-vals)) value)))
+    rval))
+
 (defun elim-string-to-number (attr thing)
   (let (etype)
     (if (setq etype (intern-soft (cdr (assq 'type attr)))) 
@@ -119,34 +129,32 @@ a straightforward elisp s-expression."
          (value (cddr arg)) )
     (when attr (setq name (cdr (assq 'name attr))))
     (setq parsed
-          (cond ((eq type 'string) (elim-html-to-text          (car value)))
+          (cond ((eq type 'string) (identity                   (car value)))
                 ((eq type 'int   ) (elim-string-to-number attr (car value)))
                 ((eq type 'float ) (string-to-number           (car value)))
                 ((eq type 'bool  ) (/= 0 (string-to-number    (car value))))
                 ((eq type 'data  ) (base64-decode-string       (car value)))
                 ((eq type 'list  ) (mapcar  'elim-parse-proto-args   value))
                 ((eq type 'alist ) (mapcar  'elim-parse-proto-args   value))
-                ;; this type was an old form of the protocol, no longer used:
-                ((eq type 'item  ) (cons 
-                                    (cdr (assq 'name attr)) 
-                                    (elim-parse-proto-args (car value))))
-                (t                 (error "Bad elim arg type : %S" type)) )) 
+                (t                 (error  "Bad elim arg type : %S"   type)))) 
     (if name (cons name parsed) parsed)))
-  
+
 (defun elim-entity-to-string (match)
   (format "%c" (string-to-int (match-string 1 match))))
 
 ;; this is just a temporary hack, replace it with something better
-(defun elim-html-to-text (string)
-  "Return a copy of STRING with the major named entities and numeric (byte)
-entities converted into characters."
-  (if string
-      (replace-regexp-in-string "&#\\([0-9]+\\);" 'elim-entity-to-string
-       (replace-regexp-in-string "&apos;" "'"
-        (replace-regexp-in-string "&quot;" "\""
-         (replace-regexp-in-string "&amp;" "&"
-          (replace-regexp-in-string "&lt;" "<"
-           (replace-regexp-in-string "&gt;" ">" string)) )) )) ""))
+;; we now unescape the pseudo-html from libpurple within elim-client,
+;; using code from libpurple.
+;; (defun elim-html-to-text (string)
+;;   "Return a copy of STRING with the major named entities and numeric (byte)
+;; entities converted into characters."
+;;   (if string
+;;       (replace-regexp-in-string "&#\\([0-9]+\\);" 'elim-entity-to-string
+;;        (replace-regexp-in-string "&apos;" "'"
+;;         (replace-regexp-in-string "&quot;" "\""
+;;          (replace-regexp-in-string "&amp;" "&"
+;;           (replace-regexp-in-string "&lt;" "<"
+;;            (replace-regexp-in-string "&gt;" ">" string)) )) )) ""))
 
 (defun elim-number-to-proto (number &optional attr)
   "Take a NUMBER and return an elim protocol sexp representing it"
@@ -318,14 +326,18 @@ and return an s-expression suitable for making a call to an elim daemon."
       (mapc 
        (lambda (E) 
          (setq key   (intern (car E))
-               entry (mapcar 
-                      (lambda (F)
-                        (cons (intern (concat ":" (downcase (car F)))) 
+               entry 
+               (mapcar 
+                (lambda (F)
+                  (cons (intern 
+                         (concat 
+                          ":" (replace-regexp-in-string 
+                               "_" "-" (downcase (car F))) ))
                               (cdr F))) (cdr E)))
          (setcdr (or (assq key elim-enum-alist)
                      (car (setq elim-enum-alist 
                                 (cons (cons key nil) elim-enum-alist)))) entry))
-       enum-alist)) 
+       enum-alist))
     (mapc (lambda (E) 
             (when (string-match "-flags$" (symbol-name (car E))) 
               (add-to-list 'elim-enum-flag-types (car E)))) elim-enum-alist)))
@@ -446,16 +458,12 @@ be initialised to the value of `elim-directory' if you do not supply it."
          (elim                    nil) )
     (setq elim (start-process-shell-command 
                 (buffer-name buf) buf (elim-command)))
-    ;;(message "STARTED ELIM")
     (elim-store-process-data elim 'protocol-buffer proto-buf)
     (set-process-filter elim 'elim-input-filter) 
-    ;;(message "SET FILTER")
     (elim-init elim ui-string user-dir)
-    ;;(message "CALLED INIT")
     (elim-update-protocol-list elim)
     (elim-update-account-list  elim)
     (elim-load-enum-values     elim)
-    ;;(message "CALLED PROTO UPDATE")
     (sit-for 1)
     elim))
 

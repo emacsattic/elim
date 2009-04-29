@@ -85,7 +85,7 @@ xnode_markup_unescape_entity( const char *text, int *length )
     return pln;
 }
 
-static char *
+char *
 xnode_unescape_html( const char *html ) 
 {
     if( html )

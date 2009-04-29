@@ -315,7 +315,6 @@ char * sexp_escape_symbol( const char *symbol, int len )
     return rval;
 }
 
-char * sexp_escape_string( const char *symbol, int len, gboolean significant );
 char * sexp_escape_string( const char *symbol, int len, gboolean significant )
 {
     int l            = ( len >= 0 ) ? len : strlen( symbol );
@@ -416,11 +415,16 @@ _xnode_to_sexp( xmlnode *node, int *len, int depth )
             }
             else if( c->type == XMLNODE_TYPE_DATA && c->data_sz > 0 ) 
             {
-                if( (esc = sexp_escape_string( c->data, c->data_sz, TRUE )) )
+                char *data  = g_new0( char, c->data_sz + 1 );
+                memcpy( data, c->data, c->data_sz );
+                char *unesc = xnode_unescape_html( data );
+                if( (esc = sexp_escape_string( unesc, -1, TRUE )) )
                 {
                     g_string_append_printf( text, " \"%s\"", esc );
                     g_free( esc );
                 }
+                g_free( unesc );
+                g_free( data  );
             }
         }
 
