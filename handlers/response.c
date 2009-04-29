@@ -31,7 +31,8 @@ xmlnode * _h_elim_response ( const char *name ,
     // this action frees the key in the hash, but not the value:
     // the callback handler function we extract here is in charge of freeing
     // the data pointer if this is required;
-    // we are in charge of freeing the callback data pointer cbh:
+    // we are NOT in charge of freeing the callback data pointer cbh:
+    // that is done by the close_request callback in request_ui_ops.c
     // the callback handler is also in charge of freeing the SEXP args:
     CB_HANDLER *cbh = fetch_cb_data( id );
     if( cbh )
@@ -39,11 +40,15 @@ xmlnode * _h_elim_response ( const char *name ,
         CB_FUNC  func   = cbh->func;
         gpointer handle = cbh->data;
         xmlnode *rval   = NULL;
-        if( func )
-            rval = func( handle, args );
-        g_free( cbh );
+        if( func ) rval = func( handle, args );
+        else       sexp_val_free( args );
+
+        // BAD: do not do this here!
+        // g_free( cbh );
+
         return rval;
     }
+    else { sexp_val_free( args ); }
 
     return NULL;
 }

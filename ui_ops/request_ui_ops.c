@@ -157,7 +157,7 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.input.nok( data, "" ); }
     }
     
-    if( handle ) g_free( handle );
+  //if( handle ) g_free( handle );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -200,9 +200,9 @@ static void *_elim_request_input ( const char         *title         ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
@@ -231,6 +231,7 @@ static void *_elim_request_input ( const char         *title         ,
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-input", ID, alist );
     add_outbound_sexp( mcall );
+    fprintf(stderr, "(_elim_request_input HANDLE: %p . %p)", cbh, resp );
     return cbh;
 }
 
@@ -258,7 +259,7 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.choice.nok( data, 0 ); }
     }
     
-    if( handle ) g_free( handle );
+  //if( handle ) g_free( handle );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -330,6 +331,7 @@ static void *_elim_request_choice( const char         *title         ,
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-choice", ID, alist );
     add_outbound_sexp( mcall );
+    fprintf(stderr, "(_elim_request_choice HANDLE: %p . %p)", cbh, resp );
     return cbh;
 }
 
@@ -351,18 +353,27 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
                 int x = 0;
                 gpointer     f = (gpointer)ALIST_VAL_INT( args, "value" );
                 action_func *F = handle->req.action.func;
+                fprintf( stderr, "( chosen action    : %p\n", f );
                 for( x = 0; x < max; x++ )
-                    if( f == *(F++) ) { (*F)( data ); break; }
+                    if( f == *(F + x) ) 
+                    {
+                        fprintf( stderr, "     matched action: %p\n", *(F +x) );
+                        (*(F + x))( data ); break; 
+                    }
+                    else
+                    {
+                        fprintf( stderr, "   unmatched action: %p\n", *(F +x) );
+                    }
             }
             else { (handle->req.input.nok)( data, "" ); }
         }
     }
 
-    if( handle->type == PURPLE_REQUEST_ACTION )
-        g_free( handle->req.action.func );
+    //if( handle->type == PURPLE_REQUEST_ACTION )
+    //    g_free( handle->req.action.func );
+    //if( handle ) g_free       ( handle );
 
-    if( handle ) g_free       ( handle );
-    if( args   ) sexp_val_free( args   );
+    if( args ) sexp_val_free( args );
 
     return NULL;
 }
@@ -392,7 +403,8 @@ static void *_elim_request_action( const char          *title        ,
     {
         int offs = 0;
         const char *label = NULL;
-        while( (label = va_arg( actions, const char *)) )
+        while( ( offs  < action_count ) &&
+               ( label = va_arg( actions, const char *) ) )   
         {
             action_func func = va_arg( actions, action_func );
             AL_PTR( acts, label, func );
@@ -412,9 +424,9 @@ static void *_elim_request_action( const char          *title        ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
@@ -436,9 +448,12 @@ static void *_elim_request_action( const char          *title        ,
     resp->id   = ID;
     cbh ->func = _elim_request_action_cb;
     cbh ->data = resp;
+
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-action", ID, alist );
     add_outbound_sexp( mcall );
+
+    fprintf(stderr, "(_elim_request_action HANDLE: %p . %p)", cbh, resp );
     return cbh;
 }
 
@@ -516,7 +531,7 @@ static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.fields.nok( data, F ); }
     }
 
-    if( handle ) g_free( handle );
+  //if( handle ) g_free( handle );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -682,6 +697,7 @@ static void *_elim_request_fields( const char          *title        ,
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-fields", ID, alist );
     add_outbound_sexp( mcall );
+    fprintf(stderr, "(_elim_request_fields HANDLE: %p . %p)", cbh, resp );
     return cbh;
 }
 
@@ -709,8 +725,9 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.path.nok( data, "" ); }
     }
     
-    if( handle ) g_free( handle );
-    if( args   ) sexp_val_free( args );
+    //if( handle ) g_free( handle );
+
+    if( args ) sexp_val_free( args );
 
     return NULL;
 }
@@ -772,19 +789,27 @@ static void *_elim_request_file  ( const char            *title      ,
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-file", ID, alist );
     add_outbound_sexp( mcall );
+
+    fprintf(stderr, "(_elim_request_file HANDLE: %p . %p)", cbh, resp );
     return cbh;    
 }
 
 static void _elim_close_request  ( PurpleRequestType type, void *ui_handle )
 {
-    fprintf( stderr, "(_elim_close_request)\n" );
+    fprintf( stderr, "(_elim_close_request HANDLE %p)\n", ui_handle );
 
     CB_HANDLER *cbh  = ui_handle;
-    REQ_RESP   *resp = cbh->data;
+    REQ_RESP   *resp = cbh ? cbh->data : NULL;
 
-    if( resp->type == PURPLE_REQUEST_ACTION )
+    if( resp && (resp->type == PURPLE_REQUEST_ACTION) ) 
+    {
+        fprintf( stderr, "about to free action list: %p\n", 
+                 resp->req.action.func );
         g_free( resp->req.action.func );
+    }
+    fprintf( stderr, "about to free REQ_RESP : %p\n", resp );
     g_free( resp );
+    fprintf( stderr, "about to free CB_HANDLE: %p\n", cbh  );
     g_free( cbh  );
 }
 
@@ -842,5 +867,6 @@ static void *_elim_request_folder( const char            *title      ,
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-directory", ID, alist );
     add_outbound_sexp( mcall );
+    fprintf(stderr, "(_elim_request_folder HANDLE: %p . %p)", cbh, resp );
     return cbh;    
 }

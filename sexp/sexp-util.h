@@ -91,7 +91,7 @@ struct _SEXP_VALUE
     {
         GString    *string ;
         GString    *data   ;
-        int         integer;
+        long        integer; // got to be big enough to hold a pointer
         double      number ;
         gboolean    bool   ;
         GHashTable *hash   ;

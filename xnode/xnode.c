@@ -943,7 +943,7 @@ xmlnode * xnode_alist_item_string( const char *name, const char *value )
     return item;
 }
 
-xmlnode * xnode_alist_item_integer( const char *name, int value )
+xmlnode * xnode_alist_item_integer( const char *name, long value )
 {
     xmlnode *item;
     GString *i = g_string_new( "" );
@@ -951,7 +951,7 @@ xmlnode * xnode_alist_item_integer( const char *name, int value )
 
     _ALIST_ITEM( item, "int", name ); 
 
-    g_string_printf  ( i, "%d", value );
+    g_string_printf  ( i, "%ld", value );
     xnode_insert_data( item, i->str, i->len );
     g_string_free    ( i, TRUE );
 

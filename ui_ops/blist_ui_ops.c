@@ -114,11 +114,11 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
 
     xmlnode *alist = xnode_new( "alist" );
 
-    AL_INT ( alist, "bnode-uid" , (int)b );
+    AL_PTR ( alist, "bnode-uid" , b );
     AL_ENUM( alist, "bnode-type", type, ":blist-node-type"   );
 
     if( bname   ) AL_STR ( alist, "bnode-name"   , bname     );
-    if( acct    ) AL_INT ( alist, "account-uid"  , (int)acct );
+    if( acct    ) AL_PTR ( alist, "account-uid"  , acct      );
     if( aname   ) AL_STR ( alist, "account-name" , aname     );
     if( proto   ) AL_STR ( alist, "im-protocol"  , proto     );
     if( alias   ) AL_STR ( alist, "bnode-alias"  , alias     );

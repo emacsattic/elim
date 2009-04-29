@@ -20,16 +20,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "default.h"
+#ifndef _EMACSIM_HANDLER_REGISTER_H_
+#define _EMACSIM_HANDLER_REGISTER_H_
 
-xmlnode * _h_elim_default( const char *name , 
-                           const char *id   , 
-                           SEXP_VALUE *args , 
-                           gpointer data    )
-{
-    char *out = sexp_to_str( args );
-    fprintf( stderr, ";; unknown function %s:\n%s\n;; ++ --\n", name, out );
-    g_free ( out );
-    sexp_val_free( args );
-    return response_error( EINVAL, id, name, "unknown function" );
-}
+#include "../elim-rpc.h"
+
+xmlnode * _h_elim_register ( const char *name , 
+                             const char *id   ,
+                             SEXP_VALUE *args , 
+                             gpointer    data );
+
+#endif

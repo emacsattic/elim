@@ -45,10 +45,10 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
      xnode_insert_child( (a), xnode_alist_item_string ( (n), (v) ) )
 
 #define AL_PTR(a,n,v)    \
-     xnode_insert_child( (a), xnode_alist_item_integer( (n), (int)(v) ) )
+     xnode_insert_child( (a), xnode_alist_item_integer( (n), (long)(v) ) )
 
 #define AL_INT(a,n,v)    \
-     xnode_insert_child( (a), xnode_alist_item_integer( (n), (v) ) )
+     xnode_insert_child( (a), xnode_alist_item_integer( (n), (long)(v) ) )
 
 #define AL_BOOL(a,n,v)   \
      xnode_insert_child( (a), xnode_alist_item_boolean( (n), (v) ) )

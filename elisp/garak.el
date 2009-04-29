@@ -408,6 +408,13 @@
       (elim-connect garak-elim-process args)
       (format "/connect %s" (cdr (assq :name (cdr account-data)))) )))
 
+(defun garak-cmd-register (args)
+  (let ((account-data (elim-account-data garak-elim-process args)))
+    (if (not account-data)
+        (format "/register %s: no account found" args)
+      (elim-register garak-elim-process args)
+      (format "/register %s" (cdr (assq :name (cdr account-data)))) )))
+
 (defun garak-cmd-disconnect (args)
   (let (account-data)
     (setq account-data 
@@ -425,6 +432,7 @@
   '((add-account . garak-cmd-add-account)
     (add-buddy   . garak-cmd-add-buddy  )
     (connect     . garak-cmd-connect    )
+    (register    . garak-cmd-register   )
     (config-acct . garak-cmd-configure-account)
     (disconnect  . garak-cmd-disconnect )
     (msg         . garak-cmd-msg        )
@@ -438,6 +446,7 @@
    ((string-match "\\(?:^\\|/\\)add.account\\>"         cmd) 'add-account)
    ((string-match "\\(?:^\\|/\\)add.buddy\\>"           cmd) 'add-buddy  )
    ((string-match "\\(?:^\\|/\\)configure.account\\>"   cmd) 'config-acct)
+   ((string-match "\\(?:^\\|/\\)configure\\>"           cmd) 'config-acct)
    ((string-match "\\(?:^\\|/\\)connect\\>"             cmd) 'connect    )
    ((string-match "\\(?:^\\|/\\)login\\>"               cmd) 'connect    )
    ((string-match "\\(?:^\\|/\\)disconnect\\>"          cmd) 'disconnect )
@@ -448,6 +457,7 @@
    ((string-match "\\(?:^\\|/\\)part\\>"                cmd) 'leave      )
    ((string-match "\\(?:^\\|/\\)leave\\>"               cmd) 'leave      )
    ((string-match "\\(?:^\\|/\\)\\(?:priv\\)?msg\\>"    cmd) 'msg        )
+   ((string-match "\\(?:^\\|/\\)register\\>"            cmd) 'register   )
    ((string-match "\\(?:^\\|/\\)quit\\>"                cmd) 'quit       )))
 
 (defun garak-command-handler (cmd args &optional raw)
@@ -477,14 +487,16 @@
 (defvar garak-commands 
   '("/add-account" "/add-buddy" "/connect" "/login" "/msg" "/privmsg"
     "/disconnect"  "/logout"    "/logoff"  "/quit"  "/remove-buddy"
-    "/configure-account"))
+    "/configure-account" "/register"))
 
 (defvar garak-command-completers 
   '((add-account . garak-comp-add-account)
     (add-buddy   . garak-comp-add-buddy  )
     (msg         . garak-comp-msg        )
-    (connect     . garak-comp-connect    )
-    (disconnect  . garak-comp-disconnect )
+    (connect     . garak-comp-account    )
+    (config-acct . garak-comp-account    )
+    (disconnect  . garak-comp-account    )
+    (register    . garak-comp-account    )
     (help        . garak-comp-help       )
     (join        . garak-comp-join       )))
 
@@ -506,10 +518,7 @@
     (when (and (= (length args) 2) (not (member acct available)))
       (all-completions acct available)) ))
 
-(defun garak-comp-connect     (prefix &optional protocol)
-  (garak-comp-add-buddy prefix))
-
-(defun garak-comp-disconnect  (prefix &optional protocol)
+(defun garak-comp-account (prefix &optional protocol)
   (garak-comp-add-buddy prefix))
 
 (defun garak-comp-msg         (prefix &optional protocol) 

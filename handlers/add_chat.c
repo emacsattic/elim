@@ -40,7 +40,7 @@ static void __ghash_copy_sexp_str( gpointer key, gpointer value, gpointer data )
       case SEXP_INT:
       {
           buf = g_string_new( "    " );
-          g_string_printf( buf, "%d", val->x.integer );
+          g_string_printf( buf, "%ld", val->x.integer );
           v   = buf->str;
           g_string_free( buf, FALSE );
       }

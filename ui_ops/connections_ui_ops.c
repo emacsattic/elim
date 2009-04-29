@@ -64,10 +64,10 @@ static void _elim_notice ( PurpleConnection *conn, const char *msg )
         int         state = purple_connection_get_state   ( conn );
         g_free( ID );
 
-        AL_INT ( alist, "account-uid" , (int)acct );
-        AL_STR ( alist, "account-name", aname     );
-        AL_STR ( alist, "im-protocol" , proto     );
-        AL_STR ( alist, "message"     , msg       );
+        AL_PTR ( alist, "account-uid" , acct  );
+        AL_STR ( alist, "account-name", aname );
+        AL_STR ( alist, "im-protocol" , proto );
+        AL_STR ( alist, "message"     , msg   );
         AL_ENUM( alist, "state"       , state , ":connection-state" );
 
         add_outbound_sexp( mcall );
@@ -92,7 +92,7 @@ static void _elim_connect_progress        ( PurpleConnection *gc ,
         int         state = purple_connection_get_state   ( gc   );
         g_free( ID );
 
-        AL_INT ( alist, "account-uid" , (int)acct  );
+        AL_PTR ( alist, "account-uid" , acct       );
         AL_STR ( alist, "account-name", aname      );
         AL_STR ( alist, "im-protocol" , proto      );
         AL_INT ( alist, "step"        , step       );
@@ -147,12 +147,12 @@ static void _elim_report_disconnect_reason( PurpleConnection     *conn   ,
         int         state = purple_connection_get_state   ( conn );
         g_free( ID );
 
-        AL_INT ( alist, "account-uid" , (int)acct );
-        AL_STR ( alist, "account-name", aname     );
-        AL_STR ( alist, "im-protocol" , proto     );
-        AL_STR ( alist, "message"     , text      );
-        AL_ENUM( alist, "reason-code" , reason    , ":connection-error" );
-        AL_ENUM( alist, "state"       , state     , ":connection-state" );
+        AL_PTR ( alist, "account-uid" , acct  );
+        AL_STR ( alist, "account-name", aname );
+        AL_STR ( alist, "im-protocol" , proto );
+        AL_STR ( alist, "message"     , text  );
+        AL_ENUM( alist, "reason-code" , reason, ":connection-error" );
+        AL_ENUM( alist, "state"       , state , ":connection-state" );
 
         add_outbound_sexp( mcall );
     }

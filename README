@@ -49,6 +49,10 @@ To configue extra account details:
 This will trigger an emacs widget based (defcustom style) UI being set up
 for you to fill out the details in.
 
+If the account is a new one, you can then register it:
+
+  /register ACCOUNT
+
 To login:
 
   /connect USERNAME

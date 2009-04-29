@@ -80,7 +80,7 @@ static void _elim_notify_added ( PurpleAccount *account    ,
     AL_STR( alist, "user"         , remote_user  );
     AL_STR( alist, "alias"        , alias        );
     AL_STR( alist, "message"      , message      );
-    AL_INT( alist, "account-uid"  , (int)account );
+    AL_PTR( alist, "account-uid"  , account      );
     AL_STR( alist, "account-name" , purple_account_get_username   ( account ) );
     AL_STR( alist, "im-protocol"  , purple_account_get_protocol_id( account ) );
     xmlnode *mcall = func_call( "elim-account-notify-added", ID, alist );
@@ -98,7 +98,7 @@ static void _elim_status_changed ( PurpleAccount *account ,
     PurpleStatusType     *type  = purple_status_get_type( status );
     PurpleStatusPrimitive statp = purple_status_type_get_primitive( type ); 
 
-    AL_INT ( alist, "account-uid" , (int)account );
+    AL_PTR ( alist, "account-uid" , account );
     AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
     AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
     AL_STR ( alist, "status-name" , purple_status_get_name        ( status  ) );
@@ -124,7 +124,7 @@ static void _elim_request_add ( PurpleAccount *account ,
     AL_STR ( alist, "user"        , remote_user  );
     AL_STR ( alist, "alias"       , alias        );
     AL_STR ( alist, "message"     , message      );
-    AL_INT ( alist, "account-uid" , (int)account );
+    AL_PTR ( alist, "account-uid" , account      );
     AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
     AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
     xmlnode *mcall = func_call( "elim-account-request-add", ID, alist );
@@ -182,7 +182,7 @@ static void *_elim_request_authorise ( PurpleAccount *account      ,
     AL_STR ( alist, "alias"       , alias        );
     AL_BOOL( alist, "on-list"     , on_list      );
     AL_STR ( alist, "message"     , message      );
-    AL_INT ( alist, "account-uid" , (int)account );
+    AL_PTR ( alist, "account-uid" , account      );
     AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
     AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
     resp->ok   = authorize_cb;

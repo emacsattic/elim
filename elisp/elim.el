@@ -67,6 +67,7 @@ flags rather than simple enumerations.")
     (elim-request-input         . elim-request-item)
     (elim-request-file          . elim-request-item)
     (elim-request-directory     . elim-request-item)
+    (elim-request-action        )
     ;; conversation
     (elim-conv-create           )
     (elim-conv-destroy          )
@@ -512,13 +513,12 @@ and return an s-expression suitable for making a call to an elim daemon."
             id   (cadr (memq :call-id elim-form-ui-args)))
       (cond
        ((eq 'elim-request-fields name)
-        (setq value    (elim-form-proto-values elim-form-ui-args)
+        (setq value    (elim-form-proto-values elim-form-ui-data)
               response (elim-daemon-response name id 0 
                                              (nconc (list 'alist nil) value))))
        (t
-        (setq value (elim-atom-to-item "value"
-                                       (widget-value (car elim-form-ui-data)))
-              response (elim-daemon-response name id 0 ))))
+        (setq value    (car (elim-form-proto-values elim-form-ui-data))
+              response (elim-daemon-response name id 0 value))))
       (elim-process-send proc response))
     (kill-buffer nil) ))
 
@@ -664,15 +664,13 @@ and return an s-expression suitable for making a call to an elim daemon."
                                      "Information Required:"         ) " *")
           field-buf (generate-new-buffer buf-name))
     (with-current-buffer field-buf 
-      (kill-all-local-variables)
-      (make-local-variable 'elim-form-ui-data)
-      (make-local-variable 'elim-form-ui-args)
+      (elim-init-ui-buffer)
       (setq elim-form-ui-args (list :process proc 
                                     :name    name 
                                     :call-id id  ))
       (widget-insert (concat (or (elim-avalue "primary" args)
-                                 (elim-avalue "title"   args)) "\n"
-                             (elim-avalue "secondary" args)))
+                                 (elim-avalue "title"   args)) 
+                             "\n" (elim-avalue "secondary" args)))
       ;; actually create the widget:
       (mapc 'elim-request-field-group fields)
       (setq ok-label  (elim-avalue "ok-label"  args)
@@ -691,6 +689,45 @@ and return an s-expression suitable for making a call to an elim daemon."
       (beginning-of-buffer)
       (widget-forward 1))
     (display-buffer field-buf)))
+
+(defun elim-request-action (proc name id status args)
+  (let (action-buf buf-name actions default)
+    (setq actions    (elim-avalue "actions" args)
+          buf-name   (concat "* " (or (elim-avalue "title"   args)
+                                      (elim-avalue "primary" args)
+                                      (elim-avalue "who"     args)
+                                      "Choose an Action"         ) " *")
+          action-buf (generate-new-buffer buf-name)
+          default    (cdr (nth (or (elim-avalue "default" args) 0) actions)))
+    (with-current-buffer action-buf
+      (elim-init-ui-buffer)
+      (setq elim-form-ui-args (list :process proc 
+                                    :name    name 
+                                    :call-id id  ))
+      (widget-insert (concat (or (elim-avalue "primary" args)
+                                 (elim-avalue "title"   args)) 
+                             "\n" (elim-avalue "secondary" args) "\n"))
+      (apply 'elim-form-widget-create 
+             'choice
+             "value"
+             :notify 'elim-form-ui-handle-event
+             :tag    "Action:"
+             :value  default
+             (mapcar (lambda (A) (list 'const :tag (car A) (cdr A))) actions))
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Cancel")
+                               :notify 'elim-form-ui-nok-cb)
+      (widget-insert " ")
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Ok")
+                               :notify 'elim-form-ui-ok-cb)
+      (use-local-map widget-keymap)
+      (widget-setup)
+      (beginning-of-buffer)
+      (widget-forward 1))
+    (display-buffer action-buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon calls not intended for direct client use:
@@ -903,7 +940,7 @@ add that user to your buddy list"
       (elim-process-send process 
                          (elim-daemon-call 'end-conversation nil arglist)) )))
 
-(defun elim-co-disco (process account operation)
+(defun elim-account-op (process account operation)
   (let ((arglist (elim-account-proto-items process account)))
     (when arglist
       (setq arglist (nconc (list 'alist nil) arglist))
@@ -911,11 +948,15 @@ add that user to your buddy list"
 
 (defun elim-disconnect (process account)
   "Disconnect from ACCOUNT (a uid (number) or string (account name))."
-  (elim-co-disco process account 'disconnect))
+  (elim-account-op process account 'disconnect))
 
 (defun elim-connect (process account)
   "Connect to ACCOUNT (a uid (number) or string (account name))."
-  (elim-co-disco process account 'connect))
+  (elim-account-op process account 'connect))
+
+(defun elim-register (process account)
+  "Register a new ACCOUNT (a uid (number) or string (account name))."
+  (elim-account-op process account 'register))
 
 (defun elim-do-cmd  (process account conversation cmd)
   "Execute a CONVERSATION (name or uid) command CMD (a string, excluding the 

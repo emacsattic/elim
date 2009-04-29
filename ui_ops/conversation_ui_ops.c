@@ -117,11 +117,11 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
 
     fprintf( stderr, "(_elim_conv_args)\n" );
     
-    AL_STR ( alist, "account-name" , aname     );
-    AL_STR ( alist, "im-protocol"  , proto     );
-    AL_INT ( alist, "account-uid"  , (int)acct );
-    AL_INT ( alist, "conv-uid"     , (int)conv );
-    AL_STR ( alist, "conv-name"    , cname     );
+    AL_STR ( alist, "account-name" , aname );
+    AL_STR ( alist, "im-protocol"  , proto );
+    AL_PTR ( alist, "account-uid"  , acct  );
+    AL_PTR ( alist, "conv-uid"     , conv  );
+    AL_STR ( alist, "conv-name"    , cname );
     AL_STR ( alist, "conv-title"   , title ? title : cname );
     AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
     AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );    

@@ -157,7 +157,7 @@ static char * _sexp_to_str( SEXP_VALUE *sexp, int depth, const char *name )
     switch( sexp->type )
     {
       case SEXP_INT    :
-        g_string_append_printf( str,"(int    %s \"%d\")" , k, sexp->x.integer );
+        g_string_append_printf( str,"(int    %s \"%ld\")", k, sexp->x.integer );
         break;
       case SEXP_FLOAT  :
         g_string_append_printf( str,"(float  %s \"%f\")" , k, sexp->x.number  );
