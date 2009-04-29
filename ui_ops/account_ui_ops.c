@@ -75,12 +75,12 @@ static void _elim_notify_added ( PurpleAccount *account    ,
 {
     xmlnode *alist = xnode_new( "alist" );
     char    *ID    = new_elim_id();
-    AL_STR( alist, "user"        , remote_user  );
-    AL_STR( alist, "alias"       , alias        );
-    AL_STR( alist, "message"     , message      );
-    AL_INT( alist, "account-uid" , (int)account );
-    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
-    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR( alist, "user"         , remote_user  );
+    AL_STR( alist, "alias"        , alias        );
+    AL_STR( alist, "message"      , message      );
+    AL_INT( alist, "account-uid"  , (int)account );
+    AL_STR( alist, "account-name" , purple_account_get_username   ( account ) );
+    AL_STR( alist, "im-protocol"  , purple_account_get_protocol_id( account ) );
     xmlnode *mcall = func_call( "elim-account-notify-added", ID, alist );
     g_free( ID );
     add_outbound_sexp( mcall );
@@ -92,11 +92,12 @@ static void _elim_status_changed ( PurpleAccount *account ,
     xmlnode          *alist = xnode_new( "alist" );
     char             *ID    = new_elim_id();
     PurpleStatusType *type  = purple_status_get_type( status );
-    AL_INT( alist, "account-uid" , (int)account );
-    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
-    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
-    AL_STR( alist, "status-name" , purple_status_get_name        ( status  ) );
-    AL_INT( alist, "status-type" , purple_status_type_get_primitive( type  ) );
+    AL_INT ( alist, "account-uid" , (int)account );
+    AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR ( alist, "status-name" , purple_status_get_name        ( status  ) );
+    AL_INT ( alist, "status-type" , purple_status_type_get_primitive( type  ) );
+    AL_BOOL( alist, "connected"   , purple_account_is_connected   ( account ) );
     xmlnode *mcall = func_call( "elim-account-status-changed", ID, alist );
     g_free( ID );
     add_outbound_sexp( mcall );
@@ -110,12 +111,12 @@ static void _elim_request_add ( PurpleAccount *account ,
 {
     xmlnode *alist = xnode_new( "alist" );
     char    *ID    = new_elim_id();
-    AL_STR( alist, "user"        , remote_user  );
-    AL_STR( alist, "alias"       , alias        );
-    AL_STR( alist, "message"     , message      );
-    AL_INT( alist, "account-uid" , (int)account );
-    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
-    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR ( alist, "user"        , remote_user  );
+    AL_STR ( alist, "alias"       , alias        );
+    AL_STR ( alist, "message"     , message      );
+    AL_INT ( alist, "account-uid" , (int)account );
+    AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
     xmlnode *mcall = func_call( "elim-account-request-add", ID, alist );
     g_free( ID );
     add_outbound_sexp( mcall );

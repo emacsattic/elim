@@ -1,0 +1,107 @@
+ELIM Sexp Protocol (ESP): Daemon to Client calls
+
+############################################################################
+General Notes:
+
+*) All calls come with an ID (a string) which should be returned as 
+   part of the response. Not all calls require a response, but it
+   should never cause problems to return a response that is not required.
+
+*) Call IDs for daemon-to-client calls (and their corresponding responses)
+   occupy a separate namespace than client-to-daemon calls: It is theoretically
+   possible for a daemon-to-client call to have the same ID as a 
+   client-to-daemon call, but this does not imply any relationship between 
+   them.
+
+############################################################################
+
+Calls can usefully be divided into categories. The ones implemented so far are:
+
+*) Account 
+*) Buddy List (blist)
+*) Connection
+*) Conversation
+*) Request
+
+############################################################################
+
+Account calls:
+
+The calls in this group roughly correspond to those which notify you of 
+changes to the state of IM accounts, they are:
+
+*) elim-account-notify-added
+
+   A buddy who is already on this account's buddy list added this account 
+   (ie you) to their buddy list.
+   NOTE: this would never actually happen on IRC, since IRC doesn't have 
+   buddy lists as such, but you get the idea:
+
+   Normally no user action would be required as a result of this notification.
+   A client might wish to update its internal buddy list representation, though.
+
+   (function-call nil
+     (elim-account-notify-added ((id . "001")))
+     (alist nil
+       (string ((name . "user"        )) "rudybot"  )
+       (string ((name . "alias"       )) "rudebot"  )
+       (int    ((name . "account-uid" )) "268435456")
+       (string ((name . "account-name")) "fsbot@irc.freenode.net")
+       (string ((name . "im-protocol" )) "prpl-irc" )))
+
+*) elim-account-status-changed
+
+   The status (Available, Away etc) of an account changed
+ 
+   (function-call nil
+     (elim-account-notify-added ((id . "002")))
+     (alist nil
+       (int    ((name . "account-uid" )) "268435456")
+       (string ((name . "account-name")) "fsbot@irc.freenode.net")
+       (string ((name . "im-protocol" )) "prpl-irc" )
+       (string ((name . "status-name" )) "Available")
+       (int    ((name . "status-type" )) "2"        )
+       (bool   ((name . "connected"   )) "0"        ) ))
+
+*) elim-account-request-add
+
+   A (potential) contact who is _not_ already in your buddy list added
+   you to their buddy list.
+
+   (function-call nil
+     (elim-account-notify-added ((id . "003")))
+     (alist nil
+       (string ((name . "user"        )) "rudybot"  )
+       (string ((name . "alias"       )) "rudebot"  )
+       (string ((name . "message"     )) "rudebot added you: retaliate? (y/n)")
+       (int    ((name . "account-uid" )) "268435456")
+       (string ((name . "account-name")) "fsbot@irc.freenode.net")
+       (string ((name . "im-protocol" )) "prpl-irc" )))
+   
+*) elim-account-request-auth
+
+   Someone has performed an operation that requires authorisation from you.
+
+   (function-call nil
+     (elim-account-notify-added ((id . "004")))
+     (alist nil
+       (string ((name . "user"        )) "rudybot"      )
+       (string ((name . "id"          )) "er, something")
+       (string ((name . "alias"       )) "rudebot"      )
+       (bool   ((name . "on-list"     )) "0"            )
+       (string ((name . "message"     )) "rudebot added you: retaliate? (y/n)")
+       (int    ((name . "account-uid" )) "268435456")
+       (string ((name . "account-name")) "fsbot@irc.freenode.net")
+       (string ((name . "im-protocol" )) "prpl-irc" )))
+    
+on-list: whether the other user is on your buddy list already
+
+   (function-response 
+     (elim-account-notify-added ((id . "004")))
+     (alist nil
+       (int  ((name . "status")) "0") 
+       (bool ((name . "value" )) "1")))
+
+The response indicates whether you should accept (bool 1) or reject (bool 0)
+the request.
+############################################################################

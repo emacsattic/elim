@@ -29,6 +29,12 @@ General Notes:
    See daemon-to-client.txt for details of those calls and what they 
    indicate.
 
+*) Call IDs for client-to-daemon calls (and their corresponding responses)
+   occupy a separate namespace than daemon-to-client calls: It is theoretically
+   possible for a client-to-daemon call to have the same ID as a 
+   daemon-to-client call, but this does not imply any relationship between 
+   them.
+
 ############################################################################
 
 The following calls are provided:

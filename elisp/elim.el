@@ -67,6 +67,7 @@ if the symbol to look for is the same as that of the protocol function.")
     (disconnect     . nil)
     (init           . elim-init-response)
     (list-protocols . elim-list-protocols-response)
+    (list-accounts  . elim-list-accounts-response )
     (message        . nil))
   "Alist of function response handlers. The car of a given element is the
 elim protocol function symbol. The cdr is the handler function, or nil
@@ -180,21 +181,22 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 (defun elim-debug (&rest args)
-  (set-buffer (get-buffer-create "*elim-debug*"))
-  (insert (apply 'format args) "\n\n\n"))
+  (with-current-buffer (get-buffer-create "*elim-debug*")
+    (insert (apply 'format args) "\n\n\n")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 (defun elim-handle-sexp (proc sexp)
-  (ignore-errors
-    (let ((type (car  sexp))
+  (progn
+    ;;(elim-debug "SEXP: %S" sexp)
+    (let ((type (car   sexp))
           (name (caar (cddr sexp)))
           (attr (car  (cdar (cddr sexp))))
           (args (cadr (cddr sexp))) )
       ;;(elim-debug "» %S %S %S" type name attr)
       ;;(elim-debug "»» %S" args)
       (setq args (elim-parse-proto-args args))
-      (elim-debug "« %S: (%S %S %S)" type name attr args)
+      ;;(elim-debug "« %S: (%S %S %S)" type name attr args)
       (cond
        ((eq type 'function-call    ) (elim-handle-call proc name attr args))
        ((eq type 'function-response) (elim-handle-resp proc name attr args))
@@ -213,7 +215,7 @@ and return an s-expression suitable for making a call to an elim daemon."
          (handler  nil) )
     (setq handler (or (elim-get-handler-by-id   proc id  ) 
                       (elim-get-handler-by-name proc name)))
-    ;; if told to use a handler but there's not a handler with that name:
+    ;; if told to use a handler but it hasn't been defined/loaded/implemented:
     (when (and handler (not (fboundp handler)))
       (setq handler 'elim-default-response-handler))
     ;; finally, we must have a valid handler symbol to proceed:
@@ -231,9 +233,18 @@ and return an s-expression suitable for making a call to an elim daemon."
     (insert      data)
     (goto-char   pt)
     (condition-case read-error
-        (while (setq sexp (read (current-buffer)))
-          (setq sexp-list (cons sexp sexp-list))
-          (delete-region pt (point)))
+        (progn
+          ;;(elim-debug "\n------------------------------------")
+          ;;(elim-debug (buffer-string))
+          ;;(elim-debug "\n====================================")
+          (while (setq sexp (read (current-buffer)))
+            ;;(elim-debug "....................................")
+            ;;(elim-debug (buffer-string))
+            ;;(elim-debug "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            (setq sexp-list (cons sexp sexp-list))
+            (delete-region pt (point))
+            ;;(message "read sexp: %S sexp" sexp)
+            (delete-region pt (point))))
       (error
        (elim-debug "-- no more sexps remaining --")
        (goto-char pt)))
@@ -289,6 +300,21 @@ and return an s-expression suitable for making a call to an elim daemon."
               store (cons adata store))
         (elim-store-process-data proc 'accounts store)))
       (or adata uid)))
+
+(defun elim-list-accounts-response (proc name id attr args)
+  (when (equal (cdr (assoc "status" args)) 0)
+    (message "accts: %S" args)
+    (let (acl uid data name proto conn (accts (cdr (assoc "value" args))))
+      (mapc
+       (lambda (acct) 
+         (setq data  (cdr   acct)
+               uid   (cdr  (assoc "account-uid"  data))
+               name  (cdr  (assoc "account-name" data))
+               proto (cdr  (assoc "im-protocol"  data))
+               acl   (cons (cons uid (list (cons :name  name )
+                                           (cons :proto proto))) acl))
+         (message "uid : %S" acl)) accts)
+      (elim-store-process-data proc 'accounts acl))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon calls not intended for direct client use:
@@ -379,10 +405,15 @@ be initialised to the value of `elim-directory' if you do not supply it."
     ;;(message "SET FILTER")
     (elim-init elim ui-string user-dir)
     ;;(message "CALLED INIT")
-    (elim-update-protocol-list elim) 
+    (elim-update-protocol-list elim)
+    (elim-update-account-list  elim)
     ;;(message "CALLED PROTO UPDATE")
     (sit-for 1)
     elim))
+
+(defun elim-update-account-list (process)
+  "Update (asynchronously) the IM account list cache."
+  (elim-process-send process (elim-daemon-call 'list-accounts nil nil)))
 
 (defun elim-update-protocol-list (process)
   "Updates (asynchronously) the alist of im protocol id's and names supported
