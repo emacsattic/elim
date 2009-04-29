@@ -101,6 +101,7 @@ xmlnode * _h_elim_join_chat( const char *name ,
     gpointer    auid  = ALIST_VAL_PTR( args, "account-uid"  );
     gpointer    cuid  = ALIST_VAL_PTR( args, "bnode-uid"    );
     GHashTable *opts  = NULL;
+    GHashTable *_opts = NULL;
 
     PurpleAccount *acct =
       auid ? find_acct_by_uid( auid ) : purple_accounts_find( aname, proto );
@@ -131,10 +132,9 @@ xmlnode * _h_elim_join_chat( const char *name ,
         cname = purple_chat_get_name      ( chat );
         opts  = purple_chat_get_components( chat );
     }
-    else if( alias && *alias )
+    else if( (_opts = ALIST_VAL_ALIST( args, "chat-options" )) )
     {
         PurpleChat *ch_2  = NULL;
-        GHashTable *_opts = ALIST_VAL_ALIST( args, "chat-options" );
 
         // create a purplechat so we can figure out its canonical name:
         // (this is the only way I can see to do this since chat naming

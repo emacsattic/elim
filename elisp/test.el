@@ -68,7 +68,7 @@
 (setq eproc-blist (elim-fetch-process-data (get-process "*elim*") :blist))
 (elim-fetch-process-data eproc :protocols     )
 (elim-fetch-process-data eproc :initialised   )
-(assq 'elim-blist-update-node (elim-fetch-process-data eproc :client-ops))
+(assq 'elim-blist-remove-node (elim-fetch-process-data eproc :client-ops))
 (elim-fetch-process-data eproc :callbacks     )
 
 (let ((garak-elim-process eproc) (garak-account-uid 134909176))

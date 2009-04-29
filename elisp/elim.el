@@ -294,6 +294,13 @@ and return an s-expression suitable for making a call to an elim daemon."
       (elim-debug "elim-handle-call %s -> client" name)
       (elim-call-client-handler proc name id 0 args)) ))
 
+(defun elim-process-sentinel (process message)
+  (sit-for 1)
+  (let ((status (process-status process)))
+    (when (memq status '(exit signal closed failed))
+      (when (buffer-live-p (process-buffer process))
+        (kill-buffer (process-buffer process))))))
+
 (defun elim-input-filter (process data)
   (let ((pt nil) (sexp nil) (read-error nil) (sexp-list nil))
     (with-current-buffer (process-buffer process)
@@ -483,11 +490,17 @@ into any clients."
   nil)
 
 (defun elim-blist-remove-node (proc name id status args)
-  (let ((store      (elim-fetch-process-data proc :blist))
-        (bnode-uid  (elim-avalue "bnode-uid" args))
-        (bnode-cons  nil))
-    (when (setq bnode-cons (assoc bnode-uid store))
-      (assq-delete-all (car bnode-cons) store)) ))
+  (let ((store     (elim-fetch-process-data proc :blist))
+        (bnode-uid (elim-avalue "bnode-uid" args))
+        (bnode      nil))
+    (when (setq bnode (assoc bnode-uid store))
+      (message "store: %S; slot: %S" (and store t) bnode)
+      (setq store (assq-delete-all (car bnode) store))
+      (elim-store-process-data proc :blist store)) )
+  ;; remember the data store for this buddy will be _gone_ now
+  ;; so the client must rely on args for all buddy related data:
+  (elim-call-client-handler proc name id status args))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon to client request handlers (requests are calls that require a
 ;; structured response and UI interaction with the user)
@@ -871,11 +884,13 @@ its data in the form (uid (:key . value) ...). :key items should include
         (setq parent node uid (car parent))
       (setq uid node parent (elim-buddy process uid)))
     (setq cuid (elim-avalue "bnode-child" parent) seen (list uid))
-    (while (and cuid (not (mbember cuid seen)))
-      (setq child    (elim-buddy process cuid)
-            children (cons child children)
-            seen     (cons cuid  seen)
-            cuid     (elim-avalue "bnode-next" child)))
+    (mapc (lambda (child)
+            (when (and (eql (elim-avalue "bnode-parent" child) uid)
+                       (setq cuid  (car child))
+                       (not (member cuid seen)))
+              (setq seen     (cons cuid seen)
+                    children (cons child children)) ))
+          (elim-fetch-process-data process :blist))
     children))
 
 (defun elim-buddy (process uid)
@@ -947,16 +962,25 @@ be initialised to the value of `elim-directory' if you do not supply it."
          (process-connection-type nil)
          (elim-initialising         t)
          (elim                    nil) )
+    ;; set up the process, io buffer, input filters etc:
     (setq elim (start-process-shell-command
                 (buffer-name buf) buf (elim-command)))
     (elim-store-process-data elim :client-ops      client-ops)
     (elim-store-process-data elim :initialised     0)
-    (set-process-filter elim 'elim-input-filter) 
+    (set-process-filter      elim 'elim-input-filter)
+    (set-process-sentinel    elim 'elim-process-sentinel)
+    ;; make the calls necessary to initialise the daemon state
+    ;; and prepare for handling IM related calls:
+    (elim-load-enum-values   elim) ;; Enumeration definitions
+    (while (and (eq (process-status elim) 'run)
+                (< (elim-fetch-process-data elim :initialised) 1))
+      (accept-process-output))
     (elim-init elim ui-string user-dir)
-    (elim-update-protocol-list elim)
-    (elim-update-account-list  elim)
-    (elim-load-enum-values     elim)
-    (while (< (elim-fetch-process-data elim :initialised) 3)
+    (elim-update-protocol-list elim) ;; IM protocols supported
+    (elim-update-account-list  elim) ;; User's accounts
+    ;; wait for the above three calls to finish:
+    (while (and (eq (process-status elim) 'run)
+                (< (elim-fetch-process-data elim :initialised) 3))
       (accept-process-output))
     elim))
 
@@ -1000,8 +1024,7 @@ OPTIONS (\"key\" \"value\" ...)."
                          arglist))
     (elim-process-send process 
     ;;(elim-debug "%S"
-                       (elim-daemon-call 'remove-buddy nil arglist)
-                       ) 
+                       (elim-daemon-call 'remove-buddy nil arglist)) 
     ))
 
 (defun elim-add-buddy (process account buddy &optional group)
@@ -1091,18 +1114,6 @@ may be started if none by that name exists."
                            (elim-daemon-call 'message nil arglist))
         (error "No such account: %S" account)) ))
 
-;; (defun elim-new-message (process account target text)
-;;   "Send a TEXT to ACCOUNT (name or uid) TARGET (name) via elim PROCESS"
-;;   (let (acct-args arglist conv-arg)
-;;     (setq acct-args (elim-account-proto-items  process  account)
-;;           conv-arg  (elim-atom-to-item "conv-name" target      )
-;;           text-arg  (elim-atom-to-item "text"      text        )
-;;           arglist   (nconc (list 'alist nil conv-arg text-arg) acct-args))
-;;     (if acct-args
-;;         (elim-process-send process
-;;                            (elim-daemon-call 'message nil arglist))
-;;         (error "No such account: %S" account)) ))
-
 (defun elim-join-chat-parse-chat-parameter (thing)
   (let (name)
     (when (setq name (cond ((numberp thing) "bnode-uid" )
@@ -1116,7 +1127,8 @@ must also be supplied."
   (let (chat-arg optitems acct-args arglist)
     (when options
       (setq optitems  (elim-simple-list-to-proto-alist  options )
-            optitems  (elim-sexp-to-item "chat-options" optitems)))
+            optitems  (elim-sexp-to-item "chat-options" optitems)
+            optitems  (list optitems)))
     (setq acct-args (elim-account-proto-items process account )
           chat-arg  (elim-join-chat-parse-chat-parameter  chat)
           arglist   (nconc (list 'alist nil chat-arg) acct-args optitems))
