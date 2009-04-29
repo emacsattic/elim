@@ -1,3 +1,25 @@
+/*
+Copyright © 2009 Vivek Dasmohapatra 
+
+email : vivek@etla.org
+irc   : fledermaus on freenode, oftc
+jabber: fledermaus@jabber.earth.li
+
+This file is part of elim.
+
+elim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+elim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with elim.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "conversation_ui_ops.h"
 #include <string.h>
 
@@ -98,7 +120,7 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
     AL_INT( alist, "account-uid"  , (int)acct );
     AL_INT( alist, "conv-uid"     , (int)conv );
     AL_STR( alist, "conv-name"    , cname );
-    AL_STR( alist, "conv-title"   , title );
+    AL_STR( alist, "conv-title"   , title ? title : cname );
     AL_INT( alist, "conv-type"    , ctype );
     AL_INT( alist, "conv-features", cflag );    
 }
@@ -134,12 +156,14 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-chat", ID, args );
     g_free( ID );
+
+    fprintf( stderr, "(elim-debug _elim_write_chat)\n" );
     
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
 
     _elim_conv_args( args, conv );
-    AL_STR( args, "who"  , who     );
+    AL_STR( args, "who"  , who ? who : ""      );
     AL_STR( args, "text" , msg ? msg : message );
     AL_INT( args, "flags", flags   );
     AL_INT( args, "time" , mtime   );
@@ -160,16 +184,27 @@ static void _elim_write_im ( PurpleConversation *conv    ,
     xmlnode *mcall = func_call( "elim-conv-write-im", ID, args );
     g_free( ID );
 
+    fprintf( stderr, "(elim-debug _elim_write_im 0)\n" );
+
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
 
+    fprintf( stderr, "(elim-debug _elim_write_im 1)\n" );
+
     _elim_conv_args( args, conv );
-    AL_STR( args, "who"  , who     );
+
+    fprintf( stderr, "(elim-debug _elim_write_im 2)\n" );
+    AL_STR( args, "who"  , who ? who : ""      );
+    fprintf( stderr, "(elim-debug _elim_write_im 3)\n" );
     AL_STR( args, "text" , msg ? msg : message );
+    fprintf( stderr, "(elim-debug _elim_write_im 4)\n" );
     AL_INT( args, "flags", flags   );
+    fprintf( stderr, "(elim-debug _elim_write_im 5)\n" );
     AL_INT( args, "time" , mtime   );
+    fprintf( stderr, "(elim-debug _elim_write_im 6)\n" );
 
     if( msg ) g_free( msg );
+    fprintf( stderr, "(elim-debug _elim_write_im 7)\n" );
     add_outbound_sexp( mcall );
 }
 
@@ -185,6 +220,8 @@ static void _elim_write_conv ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-sys", ID, args );
     g_free( ID );
+
+    fprintf( stderr, "(elim-debug _elim_write_conv)\n" );
 
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );

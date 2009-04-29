@@ -20,31 +20,31 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "list_protocols.h"
+#include "debug.h"
 #include "../ui_ops/ops.h"
 
-xmlnode * _h_elim_list_protocols ( const char *name ,
-                                   const char *id   ,
-                                   SEXP_VALUE *args ,
-                                   gpointer data    )
+xmlnode * _h_elim_debug_mode ( const char *name ,
+                               const char *id   ,
+                               SEXP_VALUE *args ,
+                               gpointer data    )
 {
-    xmlnode *rval = xnode_new( "alist" );
-    GList  *plist = NULL;
-
-    elim_ping();
-
-    for( plist = purple_plugins_get_protocols(); plist; plist = plist->next )
+    gboolean debug;
+    
+    if( args )
     {
-        PurplePlugin *plugin = plist->data;
-        if( !plugin                              ) continue;
-        if( !PURPLE_IS_PROTOCOL_PLUGIN( plugin ) ) continue;
-
-        const char *key = purple_plugin_get_id  ( plugin );
-        const char *val = purple_plugin_get_name( plugin );
-
-        AL_STR( rval, key, val );
+        debug = 
+          ( ( args->type == SEXP_ALIST ) ? ALIST_VAL_BOOL( args, "debug" ) :
+            ( args->type == SEXP_BOOL  ) ? args->x.bool                    : 
+            !purple_debug_is_enabled() );
     }
+    else 
+        debug = !purple_debug_is_enabled();
+
+    purple_debug_set_enabled( debug );
+    debug = purple_debug_is_enabled();
 
     sexp_val_free( args );
+    xmlnode *rval = xnode_new( "bool" );
+    xnode_insert_data( rval, debug ? "1" : "0", 1 );
     return response_value( 0, id, name, rval );
 }

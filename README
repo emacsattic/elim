@@ -1,0 +1,62 @@
+elim is currently alpha software. 
+Use at your own peril.
+
+Having said that, you will need the following packages (including header files,
+if your distro ships the -dev or -devel part as a separate package):
+
+glib-2.0 
+libxml-2.0 
+purple 
+libxml-2.0
+
+Note that the makefile will try to detect these and will complain if it 
+can't find them.
+
+You will also need GNU Make and a C compiler.
+
+Assuming the build dependencies are all installed, all you should need to 
+do is:
+
+  make
+
+this should produce a binary called "elim-client".
+
+If you want to test the daemon using the (currently incomplete) elisp 
+client suport, you need to do the following:
+
+* fire up emacs
+* load elisp/elim.el
+* customise or set elim-executable to the location of the elim-client binary
+
+eval the folling expressions:
+
+(setq eproc (elim-start))
+(setq uname (user-login-name))
+(elim-add-account eproc (concat uname "-elim@irc.freenode.net") "prpl-irc" nil)
+(elim-connect     eproc (concat uname "-elim@irc.freenode.net"))
+
+
+This will start the elim daemon, add a freenode IRC account with a 
+suitable name, and connecto to it.
+
+You should see debugging output appear in a *elim-debug* buffer. ( You may 
+need to switch to this buffer, it might not be displayed automatically )
+
+to send a message to a user:
+
+(elim-process-send eproc
+  (elim-daemon-call 'message nil
+    `(alist nil
+       (string ((name . "account-name")) 
+               ,(concat uname "-elim@irc.freenode.net"))
+       (string ((name . "conv-name"  ))
+               ,(read-string "USER> " "" nil "elim-test-string" t))
+       (string ((name . "text"       ))
+               ,(read-string "IM> "   "" nil "elim-test-string" t)))))
+
+to join an irc channel:
+
+(elim-join-chat eproc 
+  (concat uname "-elim@irc.freenode.net") "#emacs" '("channel" "#emacs"))
+
+

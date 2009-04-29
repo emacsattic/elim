@@ -1,3 +1,23 @@
+# Copyright © 2009 Vivek Dasmohapatra 
+
+# email : vivek@etla.org
+# irc   : fledermaus on freenode, oftc
+# jabber: fledermaus@jabber.earth.li
+
+# This file is part of elim.
+
+# elim is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# elim is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with elim.  If not, see <http://www.gnu.org/licenses/>.
 ############################################################################
 # make macro functions:
 INSTALLED   = $(if $(shell pkg-config $(1) --exists || echo t),\
@@ -78,7 +98,8 @@ clean:
 	          handler-list.h           \
 	          test/sexp-test.o         \
 	          ui_ops/ops.h             \
-	          elim-func-handlers.c    );
+	          elim-func-handlers.c     \
+	          TAGS                     );
 
 TAGS: $(CH_FILES)
 	@if [ x"$(TVER)" != x ]; then etags --recurse; fi

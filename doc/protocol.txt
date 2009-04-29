@@ -107,3 +107,6 @@ an alist but not necessarily so, representing the result of the call
 in more detail. If the status was non-zero, you can expect a "message"
 element, a string, with an error message.
 
+############################################################################
+
+Copyright © 2009 Vivek Dasmohapatra 

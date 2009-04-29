@@ -20,13 +20,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _ELIM_ACCOUNT_UI_OPS_H_
-#define _ELIM_ACCOUNT_UI_OPS_H_
+#ifndef _EMACSIM_HANDLER_JOIN_CHAT_H_
+#define _EMACSIM_HANDLER_JOIN_CHAT_H_
 
-#include <purple.h>
 #include "../elim-rpc.h"
-#include "../elim-client-queue.h"
 
-extern PurpleAccountUiOps elim_account_ui_ops;
+xmlnode * _h_elim_join_chat ( const char *name , 
+                              const char *id   ,
+                              SEXP_VALUE *args , 
+                              gpointer    data );
 
 #endif

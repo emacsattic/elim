@@ -10,18 +10,21 @@
 ;; accounts can be identified by either uid or name+protocol
 (elim-process-send eproc
   (elim-daemon-call 'message nil
-    '(alist nil
-       (string ((name . "account-name"))(concat uname "-elim@irc.freenode.net"))
-       (string ((name . "im-protocol" )) "prpl-irc")
-       (int    ((name . "conv-uid"    )) "134973608")
-       (string ((name . "text"        )) (shell-command-to-string "fortune")))))
+    `(alist nil
+       (string ((name . "account-name"))
+               ,(concat uname "-elim@irc.freenode.net"))
+       (string ((name . "im-protocol" )) "prpl-irc" )
+       (int    ((name . "conv-uid"    )) "135018696")
+       (string ((name . "text"        )) "bye"      ))))
 
 (elim-process-send eproc
   (elim-daemon-call 'message nil
-    '(alist nil
-       (int    ((name . "account-uid")) "135020992")
-       (int    ((name . "conv-uid"   )) "134995528")
-       (string ((name . "text"       )) "hmm..."   ))))
+    `(alist nil
+       (string ((name . "account-name")) 
+               ,(concat uname "-elim@irc.freenode.net"))
+       (string ((name . "conv-name"  )) "fledermaus")
+       (string ((name . "text"       )) 
+               ,(read-string "IM> " "" nil "elim-test-string" t)))))
 
 (elim-fetch-process-data eproc 'accounts)
 (elim-fetch-process-data eproc 'protocols)

@@ -124,11 +124,13 @@ This call triggers connection for an IM account. (sign on, log in, etc)
 
 This call toggles/sets/unsets libpurple debugging.
 
-  (function-call nil (debug ((id . "103"))))                ;; toggle debugging
-  (function-call nil (debug ((id . "103"))) (bool nil "1")) ;; set debugging
-  (function-call nil (debug ((id . "103"))) (bool nil "0")) ;; unset debugging
 
-  (function-response nil (debug ((id . "103"))) (bool nil "1"))
+  (function-call nil (debug-mode ((id . "103"))))                ;; toggle 
+  (function-call nil (debug-mode ((id . "103"))) (bool nil "1")) ;; turn on
+  (function-call nil (debug-mode ((id . "103"))) (bool nil "0")) ;; turn off
+
+  (function-response nil 
+    (debug-mode ((id . "103"))) (bool nil "1"))                  ;; new state
 
 The return value is the status after the call.
 
@@ -204,18 +206,20 @@ password is optional in this case.
 If no conversation exists for this chat entry yet, the response will be:
 
   (function-response mil
-    (join ((id . "106")))
+    (join-chat ((id . "106")))
+    (alist nil
       (int   ((name . "status")) "0")
       (alist ((name . "value" ))
         (int    ((name . "account-uid" )) "268435456")
         (string ((name . "account-name")) "USER@..." )
         (string ((name . "im-protocol" )) "prpl-irc" )
-        (string ((name . "chat-name"   )) "#emacs"   ))) 
+        (string ((name . "chat-name"   )) "#emacs"   ))))
 
 If we already have aconversation:
 
   (function-response mil
-    (join ((id . "106")))
+    (join-chat ((id . "106")))
+    (alist nil
       (int   ((name . "status")) "0")
       (alist ((name . "value" ))
         (int    ((name . "account-uid"  )) "268435456")
@@ -226,8 +230,81 @@ If we already have aconversation:
         (int    ((name . "conv-type"    )) "2"        ) ;; enum
         (int    ((name . "conv-features")) "16"       ) ;; &ed flags
         (string ((name . "conv-name"    )) "#emacs"   )
-        (string ((name . "conv-alias"   )) "#emacs"   ))) 
+        (string ((name . "conv-alias"   )) "#emacs"   ))))
 
 NOTE: enumerations will be covered later.
 
 ############################################################################
+
+List the protocol IDs and names supported by ths instance of elim:
+
+  (function-call (list-protocols ((id . "107"))))
+
+  (function-response nil
+    (list-protocols ((id . "107")))
+    (alist  nil
+      (int    ((name . "status")) "0")
+      (alist  ((name . "value"))
+        (string ((name . "prpl-aim"      )) "AIM"       )
+        (string ((name . "prpl-bonjour"  )) "Bonjour"   )
+        (string ((name . "prpl-gg"       )) "Gadu-Gadu" )
+        (string ((name . "prpl-novell"   )) "GroupWise" )
+        (string ((name . "prpl-icq"      )) "ICQ"       )
+        (string ((name . "prpl-irc"      )) "IRC"       )
+        (string ((name . "prpl-msn"      )) "MSN"       )
+        (string ((name . "prpl-myspace"  )) "MySpaceIM" )
+        (string ((name . "prpl-qq"       )) "QQ"        )
+        (string ((name . "prpl-silc"     )) "SILC"      )
+        (string ((name . "prpl-simple"   )) "SIMPLE"    )
+        (string ((name . "prpl-meanwhile")) "Sametime"  )
+        (string ((name . "prpl-jabber"   )) "XMPP"      )
+        (string ((name . "prpl-yahoo"    )) "Yahoo"     )
+        (string ((name . "prpl-zephyr"   )) "Zephyr"    ))))
+
+The keys of the alist in "value" as the libpurple protocol ids.
+The corresponding values are the human friendly IM protocol names.
+
+############################################################################
+
+Send an IM message. Note that messages are sent not to a particular user,
+as such, but to a "conversation", which should be identified by UID.
+elim will inform you of conversation UIDs as they are created;
+( see daemon-to-client.txt for details. ):
+
+;; to continue an existing conversation, supply the uid:
+  (function-call 
+    (message ((id . "108")))
+    (alist nil
+      (int    ((name . "account-uid"  )) "268435456")
+      (string ((name . "account-name" )) "USER@..." )
+      (string ((name . "im-protocol"  )) "prpl-irc" )
+      (int    ((name . "conv-uid"     )) "268433200")
+      (string ((name . "text"         )) "møøse"    )))
+
+;; to start a new conversation with a user, supply that user's name
+;; as the conv-name argument:
+;; NOTE: to start a multi-user chat/room/channel conversation, use 
+;; join-chat instead.
+  (function-call 
+    (message ((id . "108")))
+    (alist nil
+      (int    ((name . "account-uid"  )) "268435456")
+      (string ((name . "account-name" )) "USER@..." )
+      (string ((name . "im-protocol"  )) "prpl-irc" )
+      (string ((name . "conv-name"    )) "fsbot"    ) 
+      (string ((name . "text"         )) "møøse"    )))
+
+
+  (function-response 
+    (message ((id . "108")))
+    (alist nil
+      (int   ((name . "status")) "0")
+      (alist ((name . "value"))
+        (int    ((name . "account-uid" )) "268435456")
+        (string ((name . "account-name")) "USER@..." )
+        (string ((name . "im-protocol" )) "prpl-irc" )
+        (int    ((name . "bytes"       )) "7"        ))))
+
+############################################################################
+
+Copyright © 2009 Vivek Dasmohapatra 

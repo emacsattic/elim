@@ -1,3 +1,23 @@
+;; Copyright © 2009 Vivek Dasmohapatra 
+
+;; email : vivek@etla.org
+;; irc   : fledermaus on freenode, oftc
+;; jabber: fledermaus@jabber.earth.li
+
+;; This file is part of elim.
+
+;; elim is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; elim is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with elim.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables & global state functions:
@@ -99,12 +119,13 @@ a straightforward elisp s-expression."
 (defun elim-html-to-text (string)
   "Return a copy of STRING with the major named entities and numeric (byte)
 entities converted into characters."
-  (replace-regexp-in-string "&#\\([0-9]+\\);" 'elim-entity-to-string
-   (replace-regexp-in-string "&apos;" "'"
-    (replace-regexp-in-string "&quot;" "\""
-     (replace-regexp-in-string "&amp;" "&"
-      (replace-regexp-in-string "&lt;" "<"
-       (replace-regexp-in-string "&gt;" ">" string)) )) )))
+  (if string
+      (replace-regexp-in-string "&#\\([0-9]+\\);" 'elim-entity-to-string
+       (replace-regexp-in-string "&apos;" "'"
+        (replace-regexp-in-string "&quot;" "\""
+         (replace-regexp-in-string "&amp;" "&"
+          (replace-regexp-in-string "&lt;" "<"
+           (replace-regexp-in-string "&gt;" ">" string)) )) )) ""))
 
 (defun elim-number-to-proto (number &optional attr)
   "Take a NUMBER and return an elim protocol sexp representing it"
@@ -159,7 +180,8 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 (defun elim-debug (&rest args)
-  (message (apply 'format args)))
+  (set-buffer (get-buffer-create "*elim-debug*"))
+  (insert (apply 'format args) "\n\n\n"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -169,12 +191,14 @@ and return an s-expression suitable for making a call to an elim daemon."
           (name (caar (cddr sexp)))
           (attr (car  (cdar (cddr sexp))))
           (args (cadr (cddr sexp))) )
+      ;;(elim-debug "» %S %S %S" type name attr)
+      ;;(elim-debug "»» %S" args)
       (setq args (elim-parse-proto-args args))
-      (message "%S: (%S %S %S)" type name attr args)
-      (cond 
+      (elim-debug "« %S: (%S %S %S)" type name attr args)
+      (cond
        ((eq type 'function-call    ) (elim-handle-call proc name attr args))
        ((eq type 'function-response) (elim-handle-resp proc name attr args))
-       (t (message "unknown protocol envelope: %S" type))) )))
+       (t (elim-debug "unknown protocol envelope: %S" type))) )))
 
 ;; if we implement setting up response handlers for individual call instances
 ;; via elim-callback-stack, this is where we will fetch said handlers back:
@@ -196,7 +220,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (when handler (funcall handler proc name id attr args)) ))
 
 (defun elim-handle-call (proc name attr args)
-  (message "elim call %S" name)
+  (elim-debug "elim call %S" name)
   )
 
 (defun elim-input-filter (process data)
@@ -211,12 +235,12 @@ and return an s-expression suitable for making a call to an elim daemon."
           (setq sexp-list (cons sexp sexp-list))
           (delete-region pt (point)))
       (error
-       (message "read-error: %S" read-error)
+       (elim-debug "-- no more sexps remaining --")
        (goto-char pt)))
-    ;;(message "sexp-list:\n\n%S\n" sexp-list)
+    ;; (elim-debug "sexp-list:\n%S\n" sexp-list)
     (when sexp-list 
       ;;(setq sexp-list (nreverse sexp-list))
-      (mapcar (lambda (S) (elim-handle-sexp process S)) sexp-list)) ))
+      (mapc (lambda (S) (elim-handle-sexp process S)) sexp-list)) ))
 
 (defun elim-process-send (process sexp-value)
   (let ((print-level  nil) 
@@ -224,7 +248,7 @@ and return an s-expression suitable for making a call to an elim daemon."
         (sexp-string  nil))
     (setq sexp-string (prin1-to-string sexp-value))
     (process-send-string process sexp-string)
-    (message "sent %s" sexp-string)
+    (elim-debug "sent %s" sexp-string)
     (accept-process-output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -263,7 +287,6 @@ and return an s-expression suitable for making a call to an elim daemon."
               adata (cons uid (list (cons :name  name ) 
                                     (cons :proto proto)))
               store (cons adata store))
-        (message "storing: %S" store)
         (elim-store-process-data proc 'accounts store)))
       (or adata uid)))
 
@@ -272,13 +295,11 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defun elim-init (process &optional ui-string user-dir) 
   "Initialises the elim daemon. Not normally called by the user, 
 as it relies on initialisation done by `elim-start'."
-  (message "ELIM INIT ENTERED")
   (let ((init-call nil)
         (dummy     nil)
         (uiid     (or ui-string "elim"))
         (dir      (or user-dir  elim-directory))
         (arglist   nil))
-    (message "ELIM INIT ENTERED 2")
     (setq arglist    (list         "dot-dir" dir "ui-id" uiid)
           ;;dummy      (message "ELIM INIT ARGLIST %S arglist" arglist)
           arglist    (elim-simple-list-to-proto-alist arglist)
@@ -286,7 +307,6 @@ as it relies on initialisation done by `elim-start'."
           proto-call (elim-daemon-call  'init   nil   arglist)
           ;;dummy      (message "ELIM INIT DCALL   1")
           )
-    (message "elim-init: proto-call: %S" proto-call)
     (elim-process-send process proto-call) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -321,7 +341,7 @@ its data in the form (uid (:key . value) ...). :key items should include
            (elim-assoc account accounts 
                        (lambda (K C)
                          (equal K (cdr (assq :name (cdr C))))) t))
-           (t (message "account %S not found" account)) )))
+           (t (elim-debug "account %S not found" account)) )))
 
 (defun elim-account-proto-items (process account)
   (let ((adata (elim-account-data process account)) (arglist nil))
@@ -362,7 +382,6 @@ be initialised to the value of `elim-directory' if you do not supply it."
     (elim-update-protocol-list elim) 
     ;;(message "CALLED PROTO UPDATE")
     (sit-for 1)
-    (message "DONE")
     elim))
 
 (defun elim-update-protocol-list (process)
@@ -413,4 +432,4 @@ OPTIONS (\"key\" \"value\" ...)."
           acct-args (elim-account-proto-items process account )
           alias-arg (elim-atom-to-item "chat-alias"   alias   )
           arglist   (nconc (list 'alist nil alias-arg optitems) acct-args))
-    (elim-process-send process (elim-daemon-call 'join nil arglist)) ))
+    (elim-process-send process (elim-daemon-call 'join-chat nil arglist)) ))
