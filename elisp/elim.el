@@ -472,7 +472,8 @@ and return an s-expression suitable for making a call to an elim daemon."
     (if (setq bnode-cons (assoc bnode-uid store))
         (setcdr bnode-cons args)
       (setq store (cons (cons bnode-uid args) store))
-      (elim-store-process-data proc :blist store))))
+      (elim-store-process-data proc :blist store)))
+  (elim-call-client-handler proc name id status args))
 
 (defun elim-blist-create-node (proc name id status args) 
   "Create node calls are unreliable, since they are made before 
@@ -870,7 +871,7 @@ its data in the form (uid (:key . value) ...). :key items should include
         (setq parent node uid (car parent))
       (setq uid node parent (elim-buddy process uid)))
     (setq cuid (elim-avalue "bnode-child" parent) seen (list uid))
-    (while (and cuid (not (member cuid seen)))
+    (while (and cuid (not (mbember cuid seen)))
       (setq child    (elim-buddy process cuid)
             children (cons child children)
             seen     (cons cuid  seen)

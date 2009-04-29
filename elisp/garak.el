@@ -18,6 +18,9 @@
 (defface garak-nick-face '((default (:foreground "salmon"))) 
   "Default face for IM user names")
 
+(defface garak-marker-face '((default (:foreground "palegreen"))) 
+  "Default face for markers etc inserted into garak buffers")
+
 (defface garak-warning-face '((default (:foreground "red"))) 
   "Default face for IM warnings")
 
@@ -53,7 +56,7 @@
            (when (or (stringp (cadr attr))
                      (null    (cadr attr)))
              (let ((label (concat ":" (file-name-sans-extension (car attr))))
-                   (path  (concat garak-icon-directory "/" (car attr))))
+                   (path  (concat garak-icon-directory (car attr))))
                (cons label 
                      (create-image path nil nil
                                    :pointer 'hand
@@ -145,11 +148,41 @@
                                        'garak-system-message-face))) ))
       (message "%S response %s %S: no target buffer" call call-id args)) ))
 
+(defun garak-time-since (time-t)
+  (let ((delay    (- (float-time) time-t))
+        (dlabel   nil)
+        (ilabel   "")
+        (handled   0)
+        (absolute (format-time-string "%Y-%m-%d %T %Z" 
+                                      (seconds-to-time time-t)))) 
+    (when (< 86400 delay)
+      (setq handled (round delay 86400.0)
+            delay   (mod delay 86400)
+            dlabel  (format "%d day%s" handled    (if (< 1 handled) "s" ""))))
+    (message "dlabel: %s" dlabel)
+    (when (< 3600 delay)
+      (setq handled (round delay 3600.0)
+            delay   (mod delay 3600)
+            ilabel  (format "%d hour%s" handled   (if (< 1 handled) "s" ""))
+            dlabel  (concat dlabel (when dlabel " ") ilabel)))
+    (message "dlabel: %s" dlabel)
+    (when (< 60 delay)
+      (setq handled (round delay 60.0)
+            delay   (mod delay 60)
+            ilabel  (format "%d minute%s" handled (if (< 1 handled) "s" ""))
+            dlabel  (concat dlabel (when dlabel " ") ilabel)))
+    (message "dlabel: %s" dlabel)
+    (when (< 0 delay)
+      (setq ilabel (format "%d second%s" delay    (if (< 1 delay  ) "s" ""))
+            dlabel (concat dlabel (when dlabel " ") ilabel)))
+    (message "dlabel: %s" dlabel)
+    (format "%s (%s ago)" absolute dlabel)))
+
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer  (garak-conversation-buffer args t)) 
          (flags   (cdr (assoc "flags" args)))
          (mformat "<%s> %s")
-         text who nick-face title)
+         text who nick-face title when stamp)
     (when (not buffer)
       (setq buffer (garak-new-conversation process call call-id status args)))
     (with-current-buffer buffer
@@ -157,7 +190,7 @@
             who  (or (cdr (assoc "alias" args)) 
                      (cdr (assoc "who"   args))
                      (garak-abbreviate-nick garak-account-name) ))
-      (if (memq :system flags)
+      (if (memq :system  flags)
           (lui-insert 
            (elim-add-face (format "* %s *" (elim-interpret-markup text))
                           'garak-system-message-face))
@@ -172,6 +205,13 @@
           (setq text   (replace-regexp-in-string "^/me " "" text)
                 mformat "* %s %s")
           (elim-add-face text 'garak-emote-face))
+        ;; ok we're all set up. if this is a delayed message, insert 
+        ;; the delay marker
+        (when (memq :delayed flags)
+          (setq when  (elim-avalue "time" args)
+                stamp (garak-time-since when))
+          (lui-insert 
+           (elim-add-face (format "[%s]" stamp) 'garak-marker-face)))
         (lui-insert (format mformat (elim-add-face who nick-face) text)) )) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
@@ -217,19 +257,19 @@
               people  (elim-avalue "participants" args)
               people  (mapcar (lambda (P) (elim-avalue "name" P)) people))
         ;;(message "CHAT ADD: %S" new)
-        (if (not new)
-            (setq message (mapconcat 'identity people " ")
-                  message (concat "* Users in " cname ": " message)
-                  message (elim-add-face message 'garak-system-message-face))
-          (setq message
-                (mapcar 
-                 (lambda (N) 
-                   (elim-add-face (format "* %s has entered %s" N cname) 
-                                  'garak-system-message-face)) people)))
+        (when (not new)
+          (setq message (mapconcat 'identity people " ")
+                message (concat "* Users in " cname ": " message)
+                message (elim-add-face message 'garak-system-message-face)))
+          ;;(setq message
+          ;;      (mapcar 
+          ;;       (lambda (N) 
+          ;;         (elim-add-face (format "* %s has entered %s" N cname) 
+          ;;                        'garak-system-message-face)) people)))
         ;;(message "CHAT ADD: %S" message)
         (if (listp message)
             (mapc 'lui-insert message)
-          (lui-insert message)) )) ))
+          (when message (lui-insert message))) )) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UI functions (forms etc)
 (defun garak-account-param-widget (field)
@@ -325,6 +365,8 @@
                                        (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
+(defun garak-choice-item (tag value)
+  (list 'choice-item :format "%[%t%]" :tag tag :value value))
 (defun garak-buddy-list-node-widget (proc bnode)
   (let (kids uid menu type name remove plabel)
     (setq uid    (elim-avalue "bnode-uid"  bnode)
@@ -333,19 +375,16 @@
           remove (list 'choice-item :tag "Remove" :value (cons 'del uid))
           kids   (mapcar 
                   (lambda (N) (garak-buddy-list-node-widget proc N)) 
-                  (elim-buddy-children proc (elim-avalue "bnode-uid" bnode)))
-          menu   (cond 
-                  ((eq type :chat-node )
-                   (list 
-                    (list 'choice-item :tag "Join" :value (cons 'join uid))))
-                  ((eq type :buddy-node)
-                   (setq plabel 
-                         (if (elim-avalue "allowed" bnode) "Block" "Unblock"))
-                   (list
-                    (list 'choice-item :tag "Send IM" :value (cons 'msg  uid))
-                    (list 'choice-item :tag plabel    :value (cons 'priv uid))))
-                  (t nil))
-          menu   (nconc menu (list remove)))
+                  (delq nil (elim-buddy-children proc uid)))
+          menu   (cond ((eq type :chat-node )
+                        (list (garak-choice-item "Join" (cons 'join uid))))
+                       ((eq type :buddy-node)
+                        (setq plabel (if (elim-avalue "allowed" bnode) 
+                                         "Block" "Unblock"))
+                        (list (garak-choice-item "Send IM" (cons 'msg  uid))
+                              (garak-choice-item plabel    (cons 'priv uid)))) )
+          menu   (cons (garak-choice-item "---------" '(noop)) 
+                       (nconc menu (list remove))))
     (if kids
         (apply 'widget-convert 'tree-widget
                :open      t
@@ -355,7 +394,7 @@
                :node      (apply 'widget-convert 'menu-choice
                                  :format    "%[%t%]\n"
                                  :tag        name
-                                 :value      nil
+                                 :value      '(noop)
                                  :value-get 'widget-value-value-get
                                  :inline     t
                                  :notify    'garak-buddy-list-node-command 
@@ -365,7 +404,7 @@
              'menu-choice
              :format     "%[%t%]\n"
              :tag        name
-             :value      uid
+             :value      '(noop)
              :buddy      uid
              :value-get 'widget-value-value-get
              :inline     t
@@ -375,8 +414,12 @@
 (defun garak-buddy-list-skip (proc bnode)
   (if (equal (elim-avalue "contact-size" bnode) 1)
       (progn
-        ;;(message "degenerate bnode %s" (elim-avalue "bnode-name" bnode))
-        (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode))
+        ;;(message "degenerate bnode %s %s -> %s" 
+        ;;         (elim-avalue "bnode-name" bnode) 
+        ;;         (elim-avalue "bnode-uid"  bnode))
+        (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) 
+            bnode)
+        )
     bnode))
 
 (defun garak-buddy-list-node-children (widget)
@@ -415,48 +458,90 @@
         (garak-buddy-find-parent proc (car parent))
       (car parent)) ))
 
-(defun garak-buddy-list-find-node (uid)
-  (let ((wrap -1))
-    (save-excursion
-      (beginning-of-buffer)
-      (while (< wrap 1)
-        (when (bobp) (setq wrap (1+ wrap)))
-        
-        (widget-forward))
-      )
-    )
-  )
-
 (defconst garak-tree-container-classes '(tree-widget-open-icon 
                                          tree-widget-empty-icon
                                          tree-widget-close-icon))
+
+(defun garak-tree-widget-get (widget &optional prop) 
+  (let ((c (car widget)))
+    (when (not prop) (setq prop :value))
+    (when widget
+      (widget-get
+       (cond ((eq   c 'tree-widget-leaf-icon      ) (widget-get widget :node  ))
+             ((memq c garak-tree-container-classes) (widget-get widget :parent))
+             (t widget)) prop) )))
+
+(defun garak-buddy-list-find-node (uid)
+  (let ((last-point -1) (found nil) (widget nil) (inhibit-point-motion-hooks t))
+    (save-excursion
+      (beginning-of-buffer)
+      (while (and (not found) (< last-point (point)))
+        (when (and (setq widget (widget-at))
+                   ;(progn 
+                   ;  (message "  checking %S" 
+                   ;           (garak-tree-widget-get (widget-at) :buddy)) t)
+                   (eql (garak-tree-widget-get (widget-at) :buddy) uid))
+          (setq found (cons (point) (car widget))))
+        (setq last-point (point))
+        (widget-forward 1)) )
+    found))
+
+;;!! update icon of visible node
+(defun garak-update-buddy (proc name id status args)
+  (let (buid buddy where-widget point widget icon-name icon buffer dummy other)
+    (message "update icon for %S %S" 
+             (elim-avalue "bnode-name" args)
+             (elim-avalue "bnode-uid"  args))
+    (setq buffer (elim-fetch-process-data proc :blist-buffer))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (setq buid  (elim-avalue    "bnode-uid" args )
+              buddy (elim-buddy-data       proc buid )
+              other (garak-buddy-list-skip proc buddy))
+        (when (eq buddy other)
+          (setq buid         (elim-avalue "bnode-uid"    args)
+                dummy        (message "looking for %S"   buid)
+                where-widget (garak-buddy-list-find-node buid)
+                dummy        (message "found %S" where-widget)
+                point        (car where-widget)
+                end          (next-single-char-property-change point 'display)
+                widget       (cdr where-widget)
+                icon-name    (garak-buddy-list-choose-icon widget buddy)
+                icon         (tree-widget-find-image icon-name))
+          (when icon 
+            (let ((inhibit-read-only t))
+        ;;(message "adjust display prop %d -> %d : %S" point end icon)
+            (put-text-property point end 'display icon) ))) )) ))
+  
+;;!! clear cached kids from closed node (for removed or added node)
+;;!! add/remove node to/from opened node (update state of opened parent)
+
+(defun garak-buddy-list-choose-icon (widget buddy)
+  (let ((class (when (consp widget) (car widget) widget)) type)
+    (setq type (elim-avalue "bnode-type" buddy))
+    (cond ((eq class 'tree-widget-empty-icon) ":invisible")
+          ((eq type :chat-node              ) ":chat"     )
+          ((eq type :group-node             ) ":group"    )
+          ((eq type :contact-node           )
+           (setq online (elim-avalue "contact-online-buddies" buddy))
+           (if (and online (< 0 online)) ":person" ":off"))
+          ((eq type :buddy-node             )
+           (symbol-name (elim-avalue "status-type" buddy)))) ))
+
 (defun garak-buddy-list-node-setup-icon (wicon)
   (let ((class   (car wicon))
-        (parent  (widget-get wicon :parent)) 
         (process (cadr (memq :process elim-form-ui-args)))
-        buddy buid status icon type dummy tag)
-    (when (and (cond 
-                ((eq class 'tree-widget-leaf-icon)
-                 (setq buid (widget-get (widget-get wicon :node  ) :buddy)))
-                ((memq class garak-tree-container-classes)
-                 (setq buid (widget-get (widget-get wicon :parent) :buddy))))
-               (setq buddy (elim-buddy-data process buid)))
-      (setq type (elim-avalue "bnode-type" buddy))
-      (setq icon
-            (cond ((eq class 'tree-widget-empty-icon) ":invisible")
-                  ((eq type :contact-node) ":person")
-                  ((eq type :chat-node   ) ":chat"  )
-                  ((eq type :group-node  ) ":group" )
-                  ((eq type :buddy-node  )
-                   (symbol-name (elim-avalue "status-type" buddy)))))
+        buddy buid status icon tag online)
+    (when (and (setq buid  (garak-tree-widget-get wicon :buddy))
+               (setq buddy (elim-buddy-data process buid )))
+      (setq icon (garak-buddy-list-choose-icon wicon buddy))
       (when (and icon (assoc icon garak-icons))
-        ;;(message "ICON: %S" icon)
         (if tree-widget-image-enable
             (widget-put wicon :glyph-name icon)
           (when (setq tag (elim-avalue icon garak-icon-tags))
             (widget-put wicon :tag tag)) )) )))
 
-(defun garak-insert-buddy-list (proc) 
+(defun garak-create-ui-widget-buffer (proc) 
   (let ((blist   (elim-buddy-list proc))
         (icons   (copy-sequence garak-icons))
         (bbuffer (elim-fetch-process-data proc :blist-buffer)))
@@ -467,12 +552,12 @@
       (elim-init-ui-buffer)
       (tree-widget-set-theme)
       (setq icons (nconc icons (aref tree-widget--theme 3)))
-      (message "icons: %S" icons)
+      ;;(message "icons: %S" icons)
       (aset tree-widget--theme 3 icons)
       (add-hook 'tree-widget-before-create-icon-functions 
                 'garak-buddy-list-node-setup-icon nil t)
       (setq elim-form-ui-args (list :process proc))
-      (mapc 
+      (mapc
        (lambda (N)
          (garak-insert-buddy-list-toplevel proc N)) blist)
       (use-local-map widget-keymap)
@@ -766,6 +851,11 @@
   (set (make-local-variable 'lui-possible-completions-function) 
        'garak-complete)
   (lui-set-prompt (concat (propertize "garak>" 'face 'mode-line) " ")))
+
+(defun garak-buddy-list ()
+  "Create and display the garak buddy list"
+  (interactive)
+  (garak-create-ui-widget-buffer garak-elim-process))
 
 (defun garak ()
   (interactive)

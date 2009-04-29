@@ -114,5 +114,20 @@ usual way.
 That's all that's implemented for now, it's all only just been written so 
 hasn't had a lot of testing.
 
+To display the buddy list:
+
+M-x garak-buddy-list RET
+
+Not that the buddy list widget/buffer is only partially implemented, 
+you cannot block or unblock buddies (yet), even though the menu item 
+is present, and new buddies or removed buddies won't appear or disappear
+until you refresh the whole buffer by calling garak-buddy-list again.
+Buddy status should update correctly, though.
+
+Since buddies don't necessarily all arrive as soon as you log in, 
+it is probably worth (for now) waiting a little before displaying 
+the buddy list, or redisplaying it a short while after logging in.
+
+These limitations will be removed in due course.
 -- 
 fledermaus <vivek@etla.org>
