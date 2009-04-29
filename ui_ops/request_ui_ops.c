@@ -22,6 +22,8 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "request_ui_ops.h"
 
+#define PRF_SET( p, t, v ) purple_request_field_ ## t ## _set_value( (p), (v) )
+
 static void *_elim_request_input ( const char         *title         ,
                                    const char         *primary       ,
                                    const char         *secondary     ,
@@ -125,11 +127,16 @@ struct _REQ_RESP
         struct { PurpleRequestChoiceCb ok; PurpleRequestChoiceCb nok; } choice;
         struct { action_func        *func; int                 count; } action;
         struct { PurpleRequestFileCb   ok; PurpleRequestFileCb   nok; } path  ;
+        struct { PurpleRequestFields  *fields;
+                 PurpleRequestFieldsCb ok    ; 
+                 PurpleRequestFieldsCb nok   ; } fields;
     } req;
 };
 
 static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
 {
+    fprintf( stderr, "(_elim_request_input_cb)\n" );
+
     REQ_RESP *handle = ptr;
     if( handle ) 
     {
@@ -172,6 +179,8 @@ static void *_elim_request_input ( const char         *title         ,
                                    PurpleConversation *conv          ,
                                    void               *user_data     )
 {
+    fprintf( stderr, "(_elim_request_input)\n" );
+
     CB_HANDLER *cbh   = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp  = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist = xnode_new( "alist" );
@@ -182,8 +191,8 @@ static void *_elim_request_input ( const char         *title         ,
     AL_STR ( alist, "secondary" , secondary     );
     AL_STR ( alist, "default"   , default_value );
     AL_STR ( alist, "hint"      , hint          );
-    AL_STR ( alist, "ok_label"  , ok_text       );
-    AL_STR ( alist, "nok_label" , cancel_text   );
+    AL_STR ( alist, "ok-label"  , ok_text       );
+    AL_STR ( alist, "nok-label" , cancel_text   );
     AL_BOOL( alist, "multi-line", multiline     );
     AL_BOOL( alist, "secret"    , masked        );
 
@@ -225,6 +234,8 @@ static void *_elim_request_input ( const char         *title         ,
 
 static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
 {
+    fprintf( stderr, "(_elim_request_choice_cb)\n" );
+
     REQ_RESP *handle = ptr;
     if( handle ) 
     {
@@ -265,6 +276,8 @@ static void *_elim_request_choice( const char         *title         ,
                                    void               *user_data     ,
                                    va_list             choices       )
 {
+    fprintf( stderr, "(_elim_request_choice)\n" );
+
     CB_HANDLER *cbh    = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp   = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist  = xnode_new( "alist" );
@@ -276,8 +289,8 @@ static void *_elim_request_choice( const char         *title         ,
     AL_STR ( alist, "title"     , title         );
     AL_STR ( alist, "primary"   , primary       );
     AL_STR ( alist, "secondary" , secondary     );
-    AL_STR ( alist, "ok_label"  , ok_text       );
-    AL_STR ( alist, "nok_label" , cancel_text   );   
+    AL_STR ( alist, "ok-label"  , ok_text       );
+    AL_STR ( alist, "nok-label" , cancel_text   );   
     AL_STR ( alist, "who"       , who           );
     AL_INT ( alist, "default"   , default_value );
     AL_NODE( alist, "choices"   , choice        );
@@ -320,6 +333,8 @@ static void *_elim_request_choice( const char         *title         ,
 
 static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
 {
+    fprintf( stderr, "(_elim_request_action_cb)\n" );
+
     REQ_RESP *handle = ptr;
     if( handle )
     {
@@ -361,6 +376,8 @@ static void *_elim_request_action( const char          *title        ,
                                    size_t               action_count ,
                                    va_list              actions      )
 {
+    fprintf( stderr, "(_elim_request_action)\n" );
+
     CB_HANDLER *cbh   = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp  = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist = xnode_new( "alist" );
@@ -423,6 +440,86 @@ static void *_elim_request_action( const char          *title        ,
     return cbh;
 }
 
+static void _elim_merge_request_fields( PurpleRequestFields *fields , 
+                                        SEXP_VALUE          *value  )
+{
+    GList *gl; // group list (group of input widgets)
+
+    for( gl = purple_request_fields_get_groups(fields); gl; gl = gl->next )
+    {
+        GList                   *fl    = NULL; // field list (within a group)
+        PurpleRequestFieldGroup *group = gl->data;
+
+        if( !group ) continue;
+
+        fl = purple_request_field_group_get_fields( group );
+
+        for( ; fl; fl = fl->next )
+        {
+            PurpleRequestField *prf    = (PurpleRequestField *)fl->data;
+            const char         *fid    = purple_request_field_get_id   ( prf );
+            PurpleRequestFieldType t   = purple_request_field_get_type ( prf );
+            const char         *vstr   = NULL;
+
+            switch( t )
+            {
+              case PURPLE_REQUEST_FIELD_STRING  :
+                vstr = ALIST_VAL_STR( value, fid );
+                PRF_SET( prf, string, vstr ? vstr : "" );
+                break;
+              case PURPLE_REQUEST_FIELD_INTEGER :
+                PRF_SET( prf, int   , ALIST_VAL_INT (value, fid) );
+                break;
+              case PURPLE_REQUEST_FIELD_BOOLEAN :
+                PRF_SET( prf, bool  , ALIST_VAL_BOOL(value, fid) );
+                break;
+              case PURPLE_REQUEST_FIELD_CHOICE  :
+                PRF_SET( prf, choice, ALIST_VAL_INT (value, fid) );
+                break;
+              case PURPLE_REQUEST_FIELD_LABEL   : // noop
+                break;
+              case PURPLE_REQUEST_FIELD_LIST    :
+              case PURPLE_REQUEST_FIELD_IMAGE   :
+              case PURPLE_REQUEST_FIELD_ACCOUNT :
+              case PURPLE_REQUEST_FIELD_NONE    :
+              default:
+                fprintf( stderr, "Unsupported field type merge: %d\n", t );
+            }
+        }
+    }
+}
+
+static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
+{
+    fprintf( stderr, "(_elim_request_fields_cb)\n" );
+    
+    REQ_RESP *handle = ptr;
+    if( handle )
+    {
+        PurpleRequestFields *F = handle->req.fields.fields;
+        gpointer data = handle->data;
+        
+        if( args && (args->type == SEXP_ALIST) )
+        {
+            int         status = ALIST_VAL_INT  ( args, "status" );
+            GHashTable *value  = ALIST_VAL_ALIST( args, "value"  );
+
+            if( (status == 0) && value )
+            {
+                // copy the result data back:
+                _elim_merge_request_fields( F, ALIST_VAL(args, "value") );
+                handle->req.fields.ok( data, F );
+            } else { handle->req.fields.nok( data, F ); }
+        }
+        else { handle->req.fields.nok( data, F ); }
+    }
+
+    if( handle ) g_free( handle );
+    if( args   ) sexp_val_free( args );
+
+    return NULL;
+}
+
 static void *_elim_request_fields( const char          *title        ,
                                    const char          *primary      ,
                                    const char          *secondary    ,
@@ -436,11 +533,160 @@ static void *_elim_request_fields( const char          *title        ,
                                    PurpleConversation  *conv         ,
                                    void                *user_data    )
 {
-    return NULL;
+    fprintf( stderr, "(_elim_request_fields\n" );
+
+    CB_HANDLER *cbh    = g_new0( CB_HANDLER, 1 );
+    REQ_RESP   *resp   = g_new0( REQ_RESP  , 1 );
+    xmlnode    *alist  = xnode_new( "alist" );
+    xmlnode    *xflds  = xnode_new( "alist" );
+    char       *ID     = new_elim_id();
+
+    AL_STR ( alist, "title"     , title       );
+    AL_STR ( alist, "primary"   , primary     );
+    AL_STR ( alist, "secondary" , secondary   );
+    AL_STR ( alist, "ok-label"  , ok_text     );
+    AL_STR ( alist, "nok-label" , cancel_text );   
+    AL_STR ( alist, "who"       , who         );
+    AL_NODE( alist, "fields"    , xflds       );
+
+    if( account )
+    {
+        const char *aname = purple_account_get_username   ( account );
+        const char *proto = purple_account_get_protocol_id( account );
+        AL_INT ( alist, "account-uid" , (int)account );
+        AL_STR ( alist, "account-name", aname        );
+        AL_STR ( alist, "im-protocol" , proto        );
+    }
+
+    if( conv )
+    {
+        const char            *title = purple_conversation_get_title   ( conv );
+        const char            *cname = purple_conversation_get_name    ( conv );
+        PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
+        PurpleConversationType ctype = purple_conversation_get_type    ( conv );
+
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
+    }
+
+    GList *gl; // group list (group of input widgets)
+
+    for( gl = purple_request_fields_get_groups(fields); gl; gl = gl->next )
+    {
+        const char *gtitle             = NULL;
+        GList                   *fl    = NULL; // field list (within a group)
+        PurpleRequestFieldGroup *group = gl->data;
+        xmlnode *prfg                  = xnode_new( "alist" );
+
+        if( !group ) continue;
+
+        fl     = purple_request_field_group_get_fields( group );
+        gtitle = purple_request_field_group_get_title ( group );
+        AL_NODE( xflds, gtitle ? gtitle : "Fields", prfg );
+
+        for( ; fl; fl = fl->next )
+        {
+            PurpleRequestField *prf    = (PurpleRequestField *)fl->data;
+            const char         *flabel = purple_request_field_get_label( prf );
+            const char         *fid    = purple_request_field_get_id   ( prf );
+            PurpleRequestFieldType t   = purple_request_field_get_type ( prf );
+            xmlnode            *field  = xnode_new( "alist" );
+            const char         *dlabel = "Unknown";
+            gboolean       implemented = FALSE;
+
+            AL_ENUM( field, "type" , t, ":request-field-type" );
+            AL_BOOL( field, "required", purple_request_field_is_required(prf) );
+            AL_NODE( prfg , fid, field );
+
+            switch( t )
+            {
+              case PURPLE_REQUEST_FIELD_STRING  :
+                AL_BOOL( field, "multiline", prf->u.string.multiline );
+                AL_BOOL( field, "masked"   , prf->u.string.masked    );
+                AL_BOOL( field, "editable" , prf->u.string.editable  );
+                AL_STR ( field, "value"    , prf->u.string.value     );
+                AL_STR ( field, "default"  , prf->u.string.default_value );
+                implemented = TRUE;
+                dlabel      = "Text";
+                break;
+              case PURPLE_REQUEST_FIELD_INTEGER :
+                AL_INT ( field, "value"    , prf->u.integer.value         );
+                AL_INT ( field, "default"  , prf->u.integer.default_value );
+                implemented = TRUE;
+                dlabel      = "Number";
+                break;
+              case PURPLE_REQUEST_FIELD_BOOLEAN :
+                AL_BOOL( field, "value"    , prf->u.boolean.value         );
+                AL_BOOL( field, "default"  , prf->u.boolean.default_value );
+                implemented = TRUE;
+                dlabel      = "On/off";
+                break;
+              case PURPLE_REQUEST_FIELD_CHOICE  :
+                {
+                    xmlnode *choices = xnode_new( "list" );
+                    GList   *cl      = NULL;
+     
+                    AL_BOOL( field, "value"  , prf->u.choice.value         );
+                    AL_BOOL( field, "default", prf->u.choice.default_value );
+                    AL_NODE( field, "choices", choices );
+
+                    for( cl = prf->u.choice.labels; cl; cl = cl->next )
+                    {
+                        const char *l = cl->data;
+                        xmlnode    *c = xnode_new( "string" );
+                        xnode_insert_data ( c, l, -1 );
+                        xnode_insert_child( choices, c );
+                    }
+                    implemented = TRUE;
+                    dlabel      = "Choice";
+                };
+                break;
+              case PURPLE_REQUEST_FIELD_LIST    :
+                dlabel = "List";
+                break;
+              case PURPLE_REQUEST_FIELD_LABEL   :
+                dlabel = "Label";
+                break;
+              case PURPLE_REQUEST_FIELD_IMAGE   :
+                dlabel = "Image";
+                break;
+              case PURPLE_REQUEST_FIELD_ACCOUNT :
+                dlabel = "Account";
+                break;
+              case PURPLE_REQUEST_FIELD_NONE    :
+                dlabel = "None";
+              default:
+                fprintf( stderr, "Unknown field type: %d\n", t );
+            }
+
+            AL_BOOL( field, "implemented", implemented );
+            AL_STR ( field, "label", flabel ? flabel : dlabel );
+        }
+    }
+
+    resp->req.fields.fields = fields;
+    resp->req.fields.ok     = (PurpleRequestFieldsCb)ok_cb;
+    resp->req.fields.nok    = (PurpleRequestFieldsCb)cancel_cb;
+    resp->data              = user_data;
+    resp->type              = PURPLE_REQUEST_FIELDS;
+    resp->id                = ID;
+
+    cbh ->func = _elim_request_fields_cb;
+    cbh ->data = resp;
+
+    store_cb_data( ID, cbh );
+    xmlnode *mcall = func_call( "elim-request-fields", ID, alist );
+    add_outbound_sexp( mcall );
+    return cbh;
 }
 
 static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
 {
+    fprintf( stderr, "(_elim_request_path_cb)\n" );
+
     REQ_RESP *handle = ptr;
     if( handle ) 
     {
@@ -477,6 +723,8 @@ static void *_elim_request_file  ( const char            *title      ,
                                    PurpleConversation    *conv       ,
                                    void                  *user_data  )
 {
+    fprintf( stderr, "(_elim_request_file)\n" );
+
     CB_HANDLER *cbh   = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp  = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist = xnode_new( "alist" );
@@ -527,6 +775,8 @@ static void *_elim_request_file  ( const char            *title      ,
 
 static void _elim_close_request  ( PurpleRequestType type, void *ui_handle )
 {
+    fprintf( stderr, "(_elim_close_request)\n" );
+
     CB_HANDLER *cbh  = ui_handle;
     REQ_RESP   *resp = cbh->data;
 
@@ -545,6 +795,8 @@ static void *_elim_request_folder( const char            *title      ,
                                    PurpleConversation    *conv       ,
                                    void                  *user_data  )
 {
+    fprintf( stderr, "(_elim_request_folder)\n" );
+
     CB_HANDLER *cbh   = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp  = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist = xnode_new( "alist" );

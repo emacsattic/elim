@@ -75,6 +75,8 @@ static void _elim_notify_added ( PurpleAccount *account    ,
 {
     xmlnode *alist = xnode_new( "alist" );
     char    *ID    = new_elim_id();
+    fprintf( stderr, "(_elim_notify_added)\n" );
+
     AL_STR( alist, "user"         , remote_user  );
     AL_STR( alist, "alias"        , alias        );
     AL_STR( alist, "message"      , message      );
@@ -91,6 +93,8 @@ static void _elim_status_changed ( PurpleAccount *account ,
 {
     xmlnode              *alist = xnode_new( "alist" );
     char                 *ID    = new_elim_id();
+    fprintf( stderr, "(_elim_status_changed)\n" );
+
     PurpleStatusType     *type  = purple_status_get_type( status );
     PurpleStatusPrimitive statp = purple_status_type_get_primitive( type ); 
 
@@ -115,6 +119,8 @@ static void _elim_request_add ( PurpleAccount *account ,
 {
     xmlnode *alist = xnode_new( "alist" );
     char    *ID    = new_elim_id();
+    fprintf( stderr, "(_elim_request_add)\n" );
+
     AL_STR ( alist, "user"        , remote_user  );
     AL_STR ( alist, "alias"       , alias        );
     AL_STR ( alist, "message"     , message      );
@@ -169,6 +175,8 @@ static void *_elim_request_authorise ( PurpleAccount *account      ,
     AUI_RESP   *resp  = g_new0( AUI_RESP  , 1 );
     xmlnode    *alist = xnode_new( "alist" );
     char       *ID    = new_elim_id();
+    fprintf( stderr, "(_elim_request_authorise)\n" );
+
     AL_STR ( alist, "user"        , remote_user  );
     AL_STR ( alist, "id"          , id           );
     AL_STR ( alist, "alias"       , alias        );
@@ -193,6 +201,8 @@ static void _elim_close_account_request ( gpointer ui_handle )
 {
     CB_HANDLER *cbh  = ui_handle;
     AUI_RESP   *resp = cbh->data;
+    fprintf( stderr, "(_elim_close_account_request)\n" );
+
     if( !fetch_cb_data( resp->id ) ) // side effect: frees the key data
         g_free( resp->id );
     g_free( resp );

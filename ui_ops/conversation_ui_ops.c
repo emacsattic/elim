@@ -133,6 +133,7 @@ static void _elim_create_conversation  ( PurpleConversation *conv )
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-create", ID, args );
     g_free( ID );
+
     fprintf( stderr, "(_elim_create_conversation)\n" );
     _elim_conv_args( args, conv );
     add_outbound_sexp( mcall );
@@ -186,12 +187,10 @@ static void _elim_write_im ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-im", ID, args );
     g_free( ID );
-
-    fprintf( stderr, "(elim-debug _elim_write_im 0)\n" );
+    fprintf( stderr, "(_elim_write_im)\n" );
 
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
-
 
     _elim_conv_args( args, conv );
 
@@ -202,7 +201,6 @@ static void _elim_write_im ( PurpleConversation *conv    ,
 
     if( msg ) g_free( msg );
 
-    fprintf( stderr, "(elim-debug _elim_write_im 1)\n" );
     add_outbound_sexp( mcall );
 }
 
@@ -218,8 +216,7 @@ static void _elim_write_conv ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-sys", ID, args );
     g_free( ID );
-
-    fprintf( stderr, "(elim-debug _elim_write_conv)\n" );
+    fprintf( stderr, "(_elim_write_conv)\n" );
 
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
@@ -245,6 +242,7 @@ static void _elim_chat_add_users       ( PurpleConversation *conv         ,
     xmlnode *list  = xnode_new( "list"  );
     xmlnode *mcall = func_call( "elim-chat-add-users", ID, args );
     g_free( ID );
+    fprintf( stderr, "(_elim_chat_add_users)\n" );
 
     _elim_conv_args( args, conv );
     AL_BOOL( args, "new-arrivals" , new_arrivals );
@@ -302,6 +300,7 @@ static void _elim_chat_rename_user     ( PurpleConversation *conv      ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-chat-rename-user", ID, args );
     g_free( ID );
+    fprintf( stderr, "(_elim_chat_rename_user)\n" );
 
     _elim_conv_args( args, conv );
     AL_STR( args, "old-name" , old_name  );
@@ -331,10 +330,14 @@ static void _elim_custom_smiley_write  ( PurpleConversation *conv  ,
 static void _elim_custom_smiley_close  ( PurpleConversation *conv  , 
                                          const char         *smile ){}
 static void _elim_send_confirm         ( PurpleConversation *conv  , 
-                                         const char *message       ){}
+                                         const char *message       )
+{
+    fprintf( stderr, "(_elim_send_confirm)\n" );
+}
 
 static gboolean _elim_has_focus        ( PurpleConversation *conv )
 {
+    fprintf( stderr, "(_elim_has_focus)\n" );
     return TRUE;
 }
 
@@ -342,6 +345,7 @@ static gboolean _elim_custom_smiley_add( PurpleConversation *conv  ,
                                          const char         *smile , 
                                          gboolean           remote )
 {
+    fprintf( stderr, "(_elim_custom_smiley_add)\n" );
     return TRUE;
 }
 

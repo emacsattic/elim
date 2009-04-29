@@ -129,7 +129,7 @@ static guint input_add ( int                  fd        ,
 }
 
 static gboolean input_remove ( guint handle ) 
-{ 
+{
     return g_source_remove( handle );
 }
 

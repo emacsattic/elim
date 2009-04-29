@@ -64,6 +64,34 @@
     buffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; buddy management:
+(defvar garak-inserted-buddies nil)
+(defun garak-insert-buddy-list (process)
+  (let ((blist (elim-buddy-list process)) (top-level-uids nil))
+    (mapc 
+     (lambda (N)
+       (when (eq (cdr (assoc "bnode-type" (cdr N))) :group-node)
+         (garak-insert-buddy-item process N 0)
+         ;;(message "insert top level buddy: %S" N) 
+         )) blist) ))
+
+(defun garak-insert-buddy-spacer (level)
+  (when (and level (< 0 level))
+    (insert (make-string (1- level) ?\ ) "+-" )))
+
+(defun garak-insert-buddy-item (proc buddy &optional level)
+  (let ((uid (car buddy)) (data (cdr buddy)) name children next)
+    (setq level (or level 0)
+          name  (cdr (assoc "bnode-name"  data))
+          next  (cdr (assoc "bnode-prev"  data)));;NOTE. -next empty: use -prev
+    (garak-insert-buddy-spacer level)
+    (setq children (elim-buddy-children proc uid))
+    ;;(insert (format "%S\n" data))
+    (insert (propertize (format "[%s]\n" (or name "+")) :garak-bnode-uid uid))
+    (mapc 
+     (lambda (C) 
+       (garak-insert-buddy-item proc C (1+ level))) children) ))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message callbacks
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer (garak-conversation-buffer args t)) 

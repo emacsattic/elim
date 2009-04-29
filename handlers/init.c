@@ -23,6 +23,8 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "init.h"
 #include "../ui_ops/ops.h"
 
+static void _h_elim_warning( const gchar *msg ) { fputs( msg, stderr ); }
+
 xmlnode * _h_elim_init ( const char *name ,
                          const char *id   ,
                          SEXP_VALUE *args ,
@@ -53,6 +55,8 @@ xmlnode * _h_elim_init ( const char *name ,
         purple_set_blist( purple_blist_new() );
         purple_prefs_load();
         purple_blist_load();
+        g_set_print_handler( (GPrintFunc)_h_elim_warning );
+        purple_debug_set_enabled( FALSE );
     }
     else
     {

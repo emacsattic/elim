@@ -80,11 +80,13 @@ static void _elim_connect_progress        ( PurpleConnection *gc ,
                                             size_t    step_count )
 {
     PurpleAccount *acct = purple_connection_get_account( gc );
+    fprintf( stderr, "(_elim_connect_progress)\n" );
+
     if( acct )
     {
         char       *ID    = new_elim_id();
         xmlnode    *alist = xnode_new( "alist" );
-        xmlnode    *mcall = func_call( ID, "elim-connection-progress", alist );
+        xmlnode    *mcall = func_call( "elim-connection-progress", ID, alist );
         const char *aname = purple_account_get_username   ( acct );
         const char *proto = purple_account_get_protocol_id( acct );
         int         state = purple_connection_get_state   ( gc   );
@@ -105,11 +107,13 @@ static void _elim_connect_progress        ( PurpleConnection *gc ,
 
 static void _elim_connected ( PurpleConnection *gc )
 {
+    fprintf( stderr, "(_elim_connected)\n" );
     _elim_notice( gc, "connected" );
 }
 
 static void _elim_disconnected ( PurpleConnection *gc )
 {
+    fprintf( stderr, "(_elim_disconnected)\n" );
     _elim_notice( gc, "disconnected" );
 }
 
@@ -117,6 +121,8 @@ static void _elim_network    ( const char *call )
 {
     char       *ID    = new_elim_id();
     xmlnode    *mcall = func_call( call , ID, NULL );
+    fprintf( stderr, "(_elim_network)\n" );
+
     g_free( ID );
     add_outbound_sexp( mcall );
 }
@@ -133,6 +139,8 @@ static void _elim_report_disconnect_reason( PurpleConnection     *conn   ,
     {
         char       *ID    = new_elim_id();
         xmlnode    *alist = xnode_new( "alist" );
+        fprintf( stderr, "(_elim_report_disconnect_reason)\n" );
+
         xmlnode    *mcall = func_call( "elim-disconnect-reason", ID, alist );
         const char *aname = purple_account_get_username   ( acct );
         const char *proto = purple_account_get_protocol_id( acct );
