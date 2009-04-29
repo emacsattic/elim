@@ -8,15 +8,17 @@ xmlnode * _h_elim_debug ( const char *name ,
 {
     gboolean debug;
     
-    if     ( args && (args->type == SEXP_ALIST) ) 
-        debug = ALIST_VAL_BOOL( args, "debug" );
-    else if( args && (args->type == SEXP_BOOL ) )
-        debug = args->x.bool;
-    else
+    if( args )
+    {
+        debug = 
+          ( ( args->type == SEXP_ALIST ) ? ALIST_VAL_BOOL( args, "debug" ) :
+            ( args->type == SEXP_BOOL  ) ? args->x.bool                    : 
+            !purple_debug_is_enabled() );
+    }
+    else 
         debug = !purple_debug_is_enabled();
 
     purple_debug_set_enabled( debug );
-
     debug = purple_debug_is_enabled();
 
     sexp_val_free( args );

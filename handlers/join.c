@@ -123,11 +123,13 @@ xmlnode * _h_elim_join( const char *name ,
 
     xmlnode *rval = xnode_new( "alist" );
 
+    AL_STR( rval, "account-name" , purple_account_get_username   (acct) );
+    AL_STR( rval, "im-protocol"  , purple_account_get_protocol_id(acct) );
+    AL_INT( rval, "account-uid"  , (int)acct );
+    AL_STR( rval, "chat-name"    , chn );
+
     if( conv )
     {
-        AL_STR( rval, "account-name" , aname );
-        AL_STR( rval, "im-protocol"  , proto );
-        AL_INT( rval, "account-uid"  , (int)acct );
         AL_INT( rval, "conv-uid"     , (int)conv );
         AL_STR( rval, "conv-name"    , purple_conversation_get_name    (conv));
         AL_STR( rval, "conv-title"   , purple_conversation_get_title   (conv));
@@ -135,7 +137,6 @@ xmlnode * _h_elim_join( const char *name ,
         AL_INT( rval, "conv-features", purple_conversation_get_features(conv));
     }
 
-    AL_STR( rval, "chat-name", chn );
     
     sexp_val_free( args );
     return response_value( 0, id, name, rval );
