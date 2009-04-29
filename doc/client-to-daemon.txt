@@ -1,0 +1,73 @@
+ELIM Sexp Protocol (ESP): Client to Daemon calls
+
+The following calls are provided:
+
+############################################################################
+
+(function-call
+  (add-account ((id . "XXX")))
+  (alist nil
+    (string ((name . "account-name")) "USER@irc.freenode.net")
+    (string ((name . "im-protocol" )) "prpl-irc"             ) 
+    (string ((name . "password"    )) "PASSWORD"             ) 
+    (alist  ((name . "options"     )) ...                    )))
+
+account-name : the "screen name" or canonical identifier for the IM account
+im-protocol  : the libpurple protocol id (see list-protocols)
+password     : OPTIONAL password
+options      : OPTIONAL alist of account options, varies with protocol
+               details to follow. Not normally needed.
+
+(function-response
+  (add-account ((id . "XXX")))
+  (alist nil
+    (int   ((name . "status")) "0")
+    (alist ((name . "value" ))
+      (int    ((name . "account-uid" )) "268435456")
+      (string ((name . "account-name")) "USER@..." )
+      (string ((name . "im-protocol" )) "prpl-irc" )) )) 
+
+account-uid : integer (may exceed emacs integer limit) unique id for account
+account-name: [potentially] canonicalised screen name for IM account
+im-protocol : libpurple protocol id
+
+############################################################################
+
+  (function-call
+    (add-account ((id . "XXX")))
+    (alist nil
+      (int    ((name . "account-uid" ))  "268435456"            )
+      (string ((name . "account-name"))  "USER@irc.freenode.net")
+      (string ((name . "im-protocol" ))  "prpl-irc"             )
+      (string ((name . "buddy-name"  ))  "fsbot"                )
+      (string ((name . "group"       ))  "irc-buddies"          )))
+
+account-uid : see add-account
+account-name: ibid
+im-protocol : ibid
+buddy-name  : screen name of intended buddy. This can vary with protocol,
+              eg for irc it should not contain the @server part.
+group       : group into which this buddy should be placed. optional.
+
+NOTE: either account-uid OR (account-name & im-protocol) are sufficient,
+      you need not supply all three
+
+  (function-response
+    (add-account ((id . "XXX")))
+    (alist nil
+      (int   ((name . "status")) "0")
+      (alist ((name . "value" ))
+        (alist nil
+          (int    ((name . "buddy-uid"   )) "268436024"  )
+          (string ((name . "buddy-name"  )) "fsbot"      )
+          (string ((name . "buddy-alias" )) "fsbot"      )
+          (int    ((name . "group-uid"   )) "268435500"  )
+          (string ((name . "group-name"  )) "irc-buddies")
+          (int    ((name . "account-uid" )) "268435456"  )
+          (string ((name . "account-name")) "USER@..."   )
+          (string ((name . "im-protocol" )) "prpl-irc"   ))) ))
+
+############################################################################
+
+More to follow...
+

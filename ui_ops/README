@@ -1,0 +1,3 @@
+Functions for handling calls triggered by libpurple, ie calls from 
+the daemon to the elient, and for handling responses thereto (in those
+cases where this is required).

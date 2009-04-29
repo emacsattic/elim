@@ -1,0 +1,173 @@
+#include "account_ui_ops.h"
+
+// truly godawful type name. let's not type it any more than we have to:
+#define PARA_CB PurpleAccountRequestAuthorizationCb
+
+static void _elim_notify_added ( PurpleAccount *account    ,
+                                 const char    *remote_user,
+                                 const char    *id         ,
+                                 const char    *alias      ,
+                                 const char    *message    );
+
+static void _elim_status_changed ( PurpleAccount *account ,
+                                   PurpleStatus *status  );
+
+static void _elim_request_add ( PurpleAccount *account ,
+                                const char *remote_user,
+                                const char *id         ,
+                                const char *alias      ,
+                                const char *message    );
+
+static void *_elim_request_authorise ( PurpleAccount *account      ,
+                                       const char    *remote_user  ,
+                                       const char    *id           ,
+                                       const char    *alias        ,
+                                       const char    *message      ,
+                                       gboolean       on_list      ,
+                                       PARA_CB        authorize_cb ,
+                                       PARA_CB        deny_cb      ,
+                                       void          *user_data    );
+
+static void _elim_close_account_request ( void *ui_handle );
+
+
+PurpleAccountUiOps elim_account_ui_ops =
+{
+    _elim_notify_added         ,
+    _elim_status_changed       ,
+    _elim_request_add          ,
+    _elim_request_authorise    ,
+    _elim_close_account_request,
+    NULL ,
+    NULL ,
+    NULL ,
+    NULL
+};
+
+
+static void _elim_notify_added ( PurpleAccount *account    ,
+                                 const char    *remote_user,
+                                 const char    *id         ,
+                                 const char    *alias      ,
+                                 const char    *message    )
+{
+    xmlnode *alist = xnode_new( "alist" );
+    char    *ID    = new_elim_id();
+    AL_STR( alist, "user"        , remote_user  );
+    AL_STR( alist, "alias"       , alias        );
+    AL_STR( alist, "message"     , message      );
+    AL_INT( alist, "account-uid" , (int)account );
+    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    xmlnode *mcall = func_call( "elim-account-notify-added", ID, alist );
+    g_free( ID );
+    add_outbound_sexp( mcall );
+}
+
+static void _elim_status_changed ( PurpleAccount *account ,
+                                   PurpleStatus  *status  )
+{
+    xmlnode          *alist = xnode_new( "alist" );
+    char             *ID    = new_elim_id();
+    PurpleStatusType *type  = purple_status_get_type( status );
+    AL_INT( alist, "account-uid" , (int)account );
+    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR( alist, "status-name" , purple_status_get_name        ( status  ) );
+    AL_INT( alist, "status-type" , purple_status_type_get_primitive( type  ) );
+    xmlnode *mcall = func_call( "elim-account-status-changed", ID, alist );
+    g_free( ID );
+    add_outbound_sexp( mcall );
+}
+
+static void _elim_request_add ( PurpleAccount *account ,
+                                const char *remote_user,
+                                const char *id         ,
+                                const char *alias      ,
+                                const char *message    )
+{
+    xmlnode *alist = xnode_new( "alist" );
+    char    *ID    = new_elim_id();
+    AL_STR( alist, "user"        , remote_user  );
+    AL_STR( alist, "alias"       , alias        );
+    AL_STR( alist, "message"     , message      );
+    AL_INT( alist, "account-uid" , (int)account );
+    AL_STR( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    xmlnode *mcall = func_call( "elim-account-request-add", ID, alist );
+    g_free( ID );
+    add_outbound_sexp( mcall );
+}
+
+typedef struct _AUI_RESP AUI_RESP;
+struct _AUI_RESP
+{
+    char     *id   ;
+    gpointer  data ;
+    PARA_CB   ok   ;
+    PARA_CB   nok  ;
+};
+
+static xmlnode * _elim_request_authorise_cb( gpointer ptr, SEXP_VALUE *args )
+{
+    AUI_RESP *handle = ptr;
+    if( handle && args && (args->type == SEXP_ALIST) )
+    {
+        gpointer data   = handle->data;
+        int      status = ALIST_VAL_INT( args, "status" );
+        if( status == 0 )
+        {
+            gboolean ok = ALIST_VAL_BOOL( args, "value" );
+            ( ok ? handle->ok : handle->nok )( data );
+        }
+    }
+
+    if( handle ) g_free( handle );
+    if( args   ) sexp_val_free( args );
+
+    return NULL;
+}
+
+static void *_elim_request_authorise ( PurpleAccount *account      ,
+                                       const char    *remote_user  ,
+                                       const char    *id           ,
+                                       const char    *alias        ,
+                                       const char    *message      ,
+                                       gboolean       on_list      ,
+                                       PARA_CB        authorize_cb ,
+                                       PARA_CB        deny_cb      ,
+                                       void          *user_data    )
+{
+    CB_HANDLER *cbh   = g_new0( CB_HANDLER, 1 );
+    AUI_RESP   *resp  = g_new0( AUI_RESP  , 1 );
+    xmlnode    *alist = xnode_new( "alist" );
+    char       *ID    = new_elim_id();
+    AL_STR ( alist, "user"        , remote_user  );
+    AL_STR ( alist, "id"          , id           );
+    AL_STR ( alist, "alias"       , alias        );
+    AL_BOOL( alist, "on-list"     , on_list      );
+    AL_STR ( alist, "message"     , message      );
+    AL_INT ( alist, "account-uid" , (int)account );
+    AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    resp->ok   = authorize_cb;
+    resp->nok  = deny_cb;
+    resp->id   = ID;
+    resp->data = user_data;
+    cbh ->func = _elim_request_authorise_cb;
+    cbh ->data = resp;
+    store_cb_data( ID, cbh );
+    xmlnode *mcall = func_call( "elim-account-request-auth", ID, alist );
+    add_outbound_sexp( mcall );
+    return cbh;
+}
+
+static void _elim_close_account_request ( gpointer ui_handle )
+{
+    CB_HANDLER *cbh  = ui_handle;
+    AUI_RESP   *resp = cbh->data;
+    if( !fetch_cb_data( resp->id ) ) // side effect: frees the key data
+        g_free( resp->id );
+    g_free( resp );
+    g_free( cbh  );
+}
