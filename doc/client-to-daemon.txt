@@ -192,7 +192,7 @@ More or less idempotent.
     (join ((id . "106")))
     (alist nil
       (string ((name . "account-name")) "USER@irc.freenode.net")
-      (string ((name . "im-protocol" )) "#emacs"               ) 
+      (string ((name . "im-protocol" )) "prpl-irc"             ) 
       (int    ((name . "account-uid" )) "268435456"            )
       (string ((name . "chat-alias"  )) "#emacs"               ) 
       (alist  ((name . "chat-options")) ...                    )))

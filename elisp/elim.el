@@ -32,9 +32,14 @@ Buddy lists etc will be stored here"
   :group 'elim
   :type '(directory))
 
-(defvar elim-enum-alist      nil)
-(defvar elim-enum-flag-types nil)
-(defvar elim-initialising    nil)
+(defvar elim-enum-alist      nil
+  "An alist of (:key (:label0 . value0) (:label1 . value1)) entries describing 
+known libpurple enumerations.")
+(defvar elim-enum-flag-types nil
+  "A list of symbols which are keys in `elim-enum-alist' that are ORable
+flags rather than simple enumerations.")
+(defvar elim-initialising    nil
+  "True when elim is still starting up.")
 
 (defvar elim-call-handler-alist
   '(;; account ops
@@ -78,12 +83,11 @@ if the symbol to look for is the same as that of the protocol function.")
 elim protocol function symbol. The cdr is the handler function, or nil
 if we do not intend to wait for the response (this is the usual case).")
 
-(defvar elim-call-id          0)
-(defvar elim-proto-buffer   nil)
-(defvar elim-process        nil)
-(defvar elim-callback-stack nil)
-(defvar elim-conversations  nil)
-(defvar elim-accounts       nil)
+(defvar elim-call-id          0 "State variable for generating call ids.")
+(defvar elim-proto-buffer   nil "Buffer which the elim process filter uses.")
+(defvar elim-process        nil "The elim daemon process.")
+(defvar elim-conversations  nil "Alist of conversations keyed by uid.")
+(defvar elim-accounts       nil "Alist of IM accounts keyed by UID.")
 
 (defun elim-call-id ()
   (number-to-string (setq elim-call-id (1+ elim-call-id))))
@@ -142,20 +146,6 @@ a straightforward elisp s-expression."
 
 (defun elim-entity-to-string (match)
   (format "%c" (string-to-int (match-string 1 match))))
-
-;; this is just a temporary hack, replace it with something better
-;; we now unescape the pseudo-html from libpurple within elim-client,
-;; using code from libpurple.
-;; (defun elim-html-to-text (string)
-;;   "Return a copy of STRING with the major named entities and numeric (byte)
-;; entities converted into characters."
-;;   (if string
-;;       (replace-regexp-in-string "&#\\([0-9]+\\);" 'elim-entity-to-string
-;;        (replace-regexp-in-string "&apos;" "'"
-;;         (replace-regexp-in-string "&quot;" "\""
-;;          (replace-regexp-in-string "&amp;" "&"
-;;           (replace-regexp-in-string "&lt;" "<"
-;;            (replace-regexp-in-string "&gt;" ">" string)) )) )) ""))
 
 (defun elim-number-to-proto (number &optional attr)
   "Take a NUMBER and return an elim protocol sexp representing it"
@@ -231,10 +221,24 @@ and return an s-expression suitable for making a call to an elim daemon."
        (t (elim-debug "unknown protocol envelope: %S" type))) )))
 
 ;; if we implement setting up response handlers for individual call instances
-;; via elim-callback-stack, this is where we will fetch said handlers back:
-(defun elim-get-resp-handler-by-id   (proc id  ) nil)
+;; via elim-callback-alist, this is where we will fetch said handlers back:
+(defun elim-set-resp-handler-by-id (proc id handler)
+  (let ((store (elim-fetch-process-data proc :callbacks)) slot) 
+    (if (setq slot (cdr (assoc id store)))
+        (setcdr slot handler)
+      (setq store (cons (cons id handler) store)))
+    (elim-store-process-data proc :callbacks store)))
+
+(defun elim-get-resp-handler-by-id (proc id)
+  (let ((store (elim-fetch-process-data proc :callbacks)) slot)
+    (when (setq slot (assoc id store))
+      (setq store (assq-delete-all (car slot) store))
+      (elim-store-process-data proc :callbacks store))
+    (cdr slot)))
+
 (defun elim-get-resp-handler-by-name (proc name)
   (cdr (assq name elim-resp-handler-alist)))
+
 (defun elim-get-call-handler-by-name (proc name)
   (cdr (assq name elim-call-handler-alist)))
 
@@ -244,7 +248,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (setq handler (or (elim-get-resp-handler-by-id   proc id  ) 
                       (elim-get-resp-handler-by-name proc name)))
     ;; if told to use a handler but it hasn't been defined/loaded/implemented:
-    (when (and handler (not (fboundp handler)))
+    (when (and handler (not (functionp handler)))
       (setq handler 'elim-default-response-handler))
     ;; finally, we must have a valid handler symbol to proceed:
     (when handler (funcall handler proc name id attr args)) ))
@@ -252,28 +256,29 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defun elim-handle-call (proc name attr args)
   (let ( (handler (elim-get-call-handler-by-name proc name))
          (id      (cdr (assq 'id attr))) )
-    (if (fboundp handler)
+    (if (functionp handler)
         (funcall handler proc name id args)
+      (elim-debug "elim-handle-call %s -> client" name)
       (elim-call-client-handler proc name id 0 args)) ))
 
 (defun elim-input-filter (process data)
   (let ((pt nil) (sexp nil) (read-error nil) (sexp-list nil))
-    (set-buffer (elim-fetch-process-data process :protocol-buffer))
-    (setq pt    (point))
-    (goto-char  (point-max))
-    (insert      data)
-    (goto-char   pt)
-    (condition-case read-error
-        (progn
-          (while (setq sexp (read (current-buffer)))
-            (setq sexp-list (cons sexp sexp-list))
-            (delete-region pt (point))))
-      (error
-       (elim-debug "input filter: -- no more sexps remaining --")
+    (with-current-buffer (elim-fetch-process-data process :protocol-buffer)
+      (setq pt    (point))
+      (goto-char  (point-max))
+      (insert      data)
+      (goto-char   pt)
+      (condition-case read-error
+          (progn
+            (while (setq sexp (read (current-buffer)))
+              (setq sexp-list (cons sexp sexp-list))
+              (delete-region pt (point))))
+        (error
+         (elim-debug "input filter: -- no more sexps remaining --")
        (goto-char pt)))
-    (when sexp-list 
-      ;;(setq sexp-list (nreverse sexp-list))
-      (mapc (lambda (S) (elim-handle-sexp process S)) sexp-list)) ))
+      (when sexp-list 
+        ;;(setq sexp-list (nreverse sexp-list))
+        (mapc (lambda (S) (elim-handle-sexp process S)) sexp-list)) )))
 
 (defun elim-process-send (process sexp-value)
   (let ((print-level  nil) 
@@ -301,33 +306,53 @@ and return an s-expression suitable for making a call to an elim daemon."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon response handlers:
+(defun elim-unwrap-resp-args (status raw-args)
+  (let (value)
+    (when (not status) (setq status (cdr (assoc "status" raw-args))))
+    (cond ((equal status  0) (cdr (assoc "value"   raw-args)))
+          ((integerp status) (cdr (assoc "message" raw-args)))
+          (t raw-args)) ))
+
 (defun elim-default-fail-handler (proc name id status message)
   (warn "%s<%s> failed (%S)" name id status value))
 
 (defun elim-client-handler (proc name)
   (cdr (assq name (elim-fetch-process-data proc :client-ops))))
 
+(defun elim-store-response-by-id (proc name id attr args)
+  (let ((store (elim-fetch-process-data proc :response-by-id)))
+    (setq store (cons (list id name attr args) store))
+    (elim-store-process-data proc :response-by-id store)))
+
+(defun elim-fetch-response-by-id (proc id)
+  (let ((store (elim-fetch-process-data proc :response-by-id)) slot)
+    (when (setq slot (assoc id store))
+      (setq store (assq-delete-all (car slot) store))
+      (elim-store-process-data proc :response-by-id store))
+    slot))
+
 (defun elim-call-client-handler (proc name id status args)
   (let ( (handler (elim-client-handler proc name)) )
-    (when handler
-      (if (equal status 0)
-          (funcall handler proc name id status (cdr (assoc "value" args)))
-        (funcall handler proc name id status (cdr (assoc "message" args))) )) ))
+    (message "retrieved client handler : %S" handler)
+    (when (functionp handler)
+      (elim-debug "calling client handler: %S" handler)
+      (funcall handler proc name id status args)) ))
 
 (defun elim-default-response-handler (proc name id attr args)
-  (let ( (status (cdr (assoc "status" args))) )
+  (let ( (status (cdr (assoc "status" args))) call-arg)
+    (setq call-arg (elim-unwrap-resp-args status args))
     (if (equal status 0)
-        (elim-debug "%s<%s> successful %S" name id (cdr (assoc "value" args)))
-      (elim-default-fail-handler proc name id status
-                                 (cdr (assoc "message" args))) )
-    (elim-call-client-handler proc name id status args) ))
+        (elim-debug "%s<%s> successful %S" name id call-arg)
+      (elim-default-fail-handler proc name id status call-arg))
+    (elim-call-client-handler proc name id status call-arg) ))
 
 (defun elim-list-protocols-response (proc name id attr args)
-  (let ((status (cdr (assoc "status" args))))
+  (let ((status (cdr (assoc "status" args))) call-arg)
+    (setq call-arg (elim-unwrap-resp-args status args))
     (if (not (equal status 0))
         (elim-default-fail-handler proc name id attr args)
-      (elim-store-process-data proc :protocols (cdr (assoc "value" args))) )
-    (elim-call-client-handler proc name id status args)
+      (elim-store-process-data proc :protocols call-arg) )
+    (elim-call-client-handler proc name id status call-arg)
     (when elim-initialising (elim-init-step proc)) ))
 
 
@@ -442,21 +467,15 @@ or a cons of \(\"protocol-id\" . \"protocol-name\") if it is."
 its data in the form (uid (:key . value) ...). :key items should include
 :name and :proto, but others may also be present."
   (let ((accounts (elim-fetch-process-data process :accounts))) 
-  ;;   (let ((accounts '((1073741824.0 (:name . "foo@bar.org")
-  ;;                                   (:proto . "prpl-moose"))
-  ;;                     (1334324      (:name . "foo@blerg.x") 
-  ;;                                   (:proto . "prpl-moose"))) ))
     (cond ((numberp account) (elim-assoc account accounts '=))
           ((stringp account)
            (elim-assoc account accounts 
                        (lambda (K C)
                          (equal K (cdr (assq :name (cdr C))))) t))
-           (t (elim-debug "account %S not found" account)) )))
+           (t (elim-debug "account %S not found" account)     nil)) ))
 
 (defun elim-account-proto-items (process account)
   (let ((adata (elim-account-data process account)) (arglist nil))
-  ;;(let ((adata '(1073741824.0 (:name . "foo@bar.org")
-  ;;                            (:proto . "prpl-moose")) ))
     (when adata 
       (list 
        (elim-atom-to-item "account-uid"  (car adata))
@@ -552,6 +571,18 @@ add that user to your buddy list"
   "Connect to ACCOUNT (a uid (number) or string (account name))."
   (elim-co-disco process account 'connect))
 
+(defun elim-message (process account conversation text)
+  "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid) via elim PROCESS"
+  (let (acct-args arglist conv-arg)
+    (setq acct-args (elim-account-proto-items  process account)
+          conv-arg  (elim-atom-to-item "conv-uid" conversation)
+          text-arg  (elim-atom-to-item "text"     text        )
+          arglist   (nconc (list 'alist nil conv-arg text-arg) acct-args))
+    (if acct-args
+        (elim-process-send process
+                           (elim-daemon-call 'message nil arglist))
+        (error "No such account: %S" account)) ))
+
 (defun elim-join-chat (process account alias options)
   ""
   (let (alias-arg optitems acct-args arglist)
@@ -561,3 +592,23 @@ add that user to your buddy list"
           alias-arg (elim-atom-to-item "chat-alias"   alias   )
           arglist   (nconc (list 'alist nil alias-arg optitems) acct-args))
     (elim-process-send process (elim-daemon-call 'join-chat nil arglist)) ))
+
+(defun elim-chat-parameters (process protocol)
+  "Given an elim PROCESS and a PROTOCOL id, return an alist giving details
+on the parameters required to join a chat/room/channel on that PROTOCOL."
+  (when (elim-protocol-supported process protocol)
+    (let ((id       (elim-call-id))
+          (response nil)
+          (args     nil)
+          (arglist  (list 'alist nil 
+                          (elim-atom-to-item "im-protocol" protocol))))
+      (elim-set-resp-handler-by-id process id 'elim-store-response-by-id)
+      (elim-process-send process
+                         (elim-daemon-call 'chat-params id arglist))
+      (while (not (setq response (elim-fetch-response-by-id process id)))
+        (accept-process-output))
+      ;;(message "response for id %s received: %S" id response)
+      (setq args (nth 3 response))
+      (if (equal (cdr (assoc "status" args)) 0)
+        (cdr (assoc "parameters" (cdr (assoc "value" args)))) nil) )))
+

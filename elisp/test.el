@@ -38,7 +38,7 @@
 
 (elim-process-send eproc
   (elim-daemon-call 'chat-params nil 
-   '(alist nil (string ((name . "im-protocol")) "prpl-jabber"))))
+   '(alist nil (string ((name . "im-protocol")) "prpl-irc"))))
 
 (elim-process-send eproc
   (elim-daemon-call 'list-accounts nil nil))
@@ -46,13 +46,21 @@
 (elim-process-send eproc
   (elim-daemon-call 'list-protocols nil nil))
 
-
+(elim-fetch-process-data eproc :response-by-id)
 (elim-fetch-process-data eproc :accounts)
 (elim-fetch-process-data eproc :protocols)
 (elim-fetch-process-data eproc :initialised)
+(elim-fetch-process-data eproc :client-ops)
+
+(let ((garak-elim-process eproc) (garak-account-uid 134909176))
+  (garak-cmd-join "#emacs -")
+  )
+
+(assq :proto (cdr (elim-account-data eproc "vivek-elim@irc.freenode.net")))
+
+(message "room-params: %S" (elim-chat-parameters eproc "prpl-irc"))
 
 (process-plist eproc)
-
 
 (progn
   (mapcar 
