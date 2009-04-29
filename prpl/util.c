@@ -59,6 +59,18 @@ PurpleAccount *find_acct_by_uid(gpointer uid)
     return acct;
 }
 
+PurpleBlistNode *find_blist_node_by_uid(gpointer uid, gboolean offline)
+{
+    PurpleBlistNode *node = NULL;
+    PurpleBlistNode *find = (PurpleBlistNode *)uid;
+    PurpleBlistNode *root = purple_blist_get_root();
+
+    for( node = root; node; node = purple_blist_node_next(node, offline) )
+        if( find == node ) return node;
+
+    return NULL;
+}
+
 PurplePlugin *find_plugin_by_protocol( const char *name )
 {
     GList        *plist = NULL;

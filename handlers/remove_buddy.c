@@ -24,6 +24,21 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
+#define FETCH_ACCOUNT(s,i,n,aptr,uid,name,proto) \
+     aptr =                                                               \
+       uid ? find_acct_by_uid(uid) : purple_accounts_find( name, proto ); \
+     if( !aptr )                                                          \
+     {                                                                    \
+         sexp_val_free( s );                                              \
+         return response_error( ENXIO, (i), (n), "unknown account" );     \
+     }
+
+#define BNODE_ACCOUNT_CHECK( type , ptr, aptr, s, i, n ) \
+     if( purple_ ## type ## _get_account(ptr) != aptr )                   \
+     {                                                                    \
+         sexp_val_free( s );                                              \
+         return response_error( EINVAL, i, n, "account/buddy mismatch" ); \
+     }                                                                    \
 
 xmlnode * _h_elim_remove_buddy ( const char *name ,
                                  const char *id   ,
@@ -32,59 +47,142 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
 {
     ASSERT_ALISTP( args, id, name );
 
+    fprintf( stderr, "(elim-remove-buddy)\n" );
+
     elim_ping();
     
-    const char *aname = ALIST_VAL_STR( args, "account-name" );
-    const char *proto = ALIST_VAL_STR( args, "im-protocol"  );
-    gpointer    auid  = ALIST_VAL_PTR( args, "account-uid"  );
+    const char    *aname = ALIST_VAL_STR( args, "account-name" );
+    const char    *proto = ALIST_VAL_STR( args, "im-protocol"  );
+    gpointer       auid  = ALIST_VAL_PTR( args, "account-uid"  );
+    PurpleAccount *acct  = NULL;
 
-    PurpleAccount *acct = 
-      auid ? find_acct_by_uid( auid ) : purple_accounts_find( aname, proto );
+    fprintf( stderr, "(elim-remove-buddy:02)\n" );
 
-    if( !acct )
+    fprintf( stderr, "(elim-remove-buddy:03)\n" );
+
+    gpointer     b_uid = ALIST_VAL_PTR( args, "bnode-uid" );
+    const char  *b_arg = NULL;
+    const char  *bname = NULL;
+    const char  *gname = NULL; 
+    PurpleGroup *group = NULL; 
+    PurpleBuddy *buddy = NULL;
+    gboolean     gone  = FALSE;
+
+    fprintf( stderr, "(elim-remove-buddy:04)\n" );
+
+    if( b_uid )
+    {
+        fprintf( stderr, "(elim-remove-buddy:04a)\n" );
+        PurpleBlistNodeType type = PURPLE_BLIST_OTHER_NODE;
+        PurpleBlistNode    *node = find_blist_node_by_uid( b_uid , TRUE );
+        fprintf( stderr, "(elim-remove-buddy:04a0)\n" );
+        if( !node )
+        {
+            sexp_val_free( args );
+            return response_error( EINVAL, id, name, "rogue buddy pointer" );
+        }
+        type = purple_blist_node_get_type( node );
+        fprintf( stderr, "(elim-remove-buddy:04a1)\n" );
+        switch( type )
+        {
+          case PURPLE_BLIST_GROUP_NODE  :
+            purple_blist_remove_group  ( (PurpleGroup   *)node );
+            gone = TRUE;
+            break;
+          case PURPLE_BLIST_CONTACT_NODE:
+            purple_blist_remove_contact( (PurpleContact *)node );
+            gone = TRUE;
+            break;
+          case PURPLE_BLIST_CHAT_NODE   :
+            FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
+            BNODE_ACCOUNT_CHECK(chat,(PurpleChat *)node, acct, args, id, name);
+            purple_blist_remove_chat   ( (PurpleChat    *)node );
+            gone = TRUE;
+            break;
+          case PURPLE_BLIST_BUDDY_NODE  :
+            buddy = (PurpleBuddy *)node;
+            FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
+            BNODE_ACCOUNT_CHECK( buddy, buddy, acct, args, id, name );
+            b_arg = purple_buddy_get_name( buddy );
+            bname = purple_normalize( acct, b_arg );
+            break;
+          default:
+            sexp_val_free( args );
+            return response_error( EINVAL, id, name, 
+                                   "Unknown buddy list node type" );
+        }
+        fprintf( stderr, "(elim-remove-buddy:04a2)\n" );
+        if( gone )
+        {
+            xmlnode *rval = xnode_new( "alist" );
+            if( acct )
+            {
+                AL_STR( rval, "account-name", aname );
+                AL_STR( rval, "im-protocol" , proto );
+                AL_PTR( rval, "account-uid" , acct  );
+            }
+            AL_PTR ( rval, "bnode-uid" , buddy );
+            AL_ENUM( rval, "bnode-type", type  , ":blist-node-type" );
+            fprintf( stderr, "(elim-remove-buddy:04a3)\n" );
+            sexp_val_free( args );
+            return response_value( 0, id, name, rval );
+        }
+    }
+    else
+    {
+        fprintf( stderr, "(elim-remove-buddy:04b)\n" );
+        b_arg = ALIST_VAL_STRING( args, "buddy-name" );
+        bname = purple_normalize( acct, b_arg        );
+        gname = ALIST_VAL_STRING( args, "group"      );
+        fprintf( stderr, "(elim-remove-buddy:04b0)\n" );
+        group = ( gname && *gname ) ? purple_find_group( gname ) : NULL;
+        buddy = ( group ?
+                  purple_find_buddy_in_group( acct, bname, group ) :
+                  purple_find_buddy         ( acct, bname        ) );
+        fprintf( stderr, "(elim-remove-buddy:04b1)\n" );
+    }
+    fprintf( stderr, "(elim-remove-buddy:05)\n" );
+
+    if( !b_arg || !*b_arg )
     {
         sexp_val_free( args );
-        return response_error( ENXIO, id, name, "unknown account" );
+        return response_error( EINVAL, id, name, "buddy not specified" );
     }
-
-    const char  *b_arg = ALIST_VAL_STRING( args, "buddy-name" );
-    const char  *bname = purple_normalize( acct, b_arg        );
-    const char  *gname = ALIST_VAL_STRING( args, "group"      );
-    PurpleGroup *group = (gname && *gname) ? purple_find_group( gname ) : NULL;
-    PurpleBuddy *buddy = ( group ? 
-                           purple_find_buddy_in_group( acct, bname, group ) :
-                           purple_find_buddy         ( acct, bname        ) );
-
-    // buddy must be in our local blist or libpurple won't remove it 
-    // from the server list (determined empirically and by inspecting code)
+    fprintf( stderr, "(elim-remove-buddy:06)\n" );
+    // buddy must be in our local list or libpurple won't remove it from the
+    // server list ( determined empirically, confirmed by inspecting code ):
     if( !buddy )
     {
         buddy = purple_buddy_new( acct, bname, bname );
         purple_blist_add_buddy  ( buddy, NULL, NULL, NULL );
     }
-
+    fprintf( stderr, "(elim-remove-buddy:07)\n" );
     if( buddy )
     {
+        fprintf( stderr, "(elim-remove-buddy:07a)\n" );
         // the order of the remove operations is important: it has to be
         // this way round, as noted above: account buddy removal won't 
         // happen if the buddy is not in the blist when we try:
         if( !group ) group = purple_buddy_get_group( buddy );
         purple_account_remove_buddy( acct, buddy, group );
         purple_blist_remove_buddy  ( buddy );
+        fprintf( stderr, "(elim-remove-buddy:07a0)\n" );
     }
     else 
     {
+        fprintf( stderr, "(elim-remove-buddy:07b)\n" );
         sexp_val_free( args );
         return response_error( ENXIO, id, name, "no such buddy" );
     }
-
-
+    
+    fprintf( stderr, "(elim-remove-buddy:08)\n" );
     xmlnode *rval = xnode_new( "alist" );
-    AL_STR( rval, "account-name", purple_account_get_username   ( acct ) );
-    AL_STR( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
-    AL_PTR( rval, "account-uid" , acct  );
-    AL_PTR( rval, "buddy-uid"   , buddy );
-
+    AL_STR ( rval, "account-name", purple_account_get_username   ( acct ) );
+    AL_STR ( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
+    AL_PTR ( rval, "account-uid" , acct  );
+    AL_PTR ( rval, "buddy-uid"   , buddy );
+    AL_ENUM( rval, "bnode-type", PURPLE_BLIST_BUDDY_NODE, ":blist-node-type" );
+    fprintf( stderr, "(elim-remove-buddy:09)\n" );
     sexp_val_free( args );
     return response_value( 0, id, name, rval );
 }

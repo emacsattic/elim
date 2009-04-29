@@ -20,14 +20,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _EMACSIM_HANDLER_UTIL_H_
-#define _EMACSIM_HANDLER_UTIL_H_
+#ifndef _EMACSIM_HANDLER_REMOVE_ACCOUNT_H_
+#define _EMACSIM_HANDLER_REMOVE_ACCOUNT_H_
 
-#include <purple.h>
+#include "../elim-rpc.h"
 
-PurpleConversation *find_conv_by_acct_uid  ( PurpleAccount *acct, gpointer id );
-PurpleAccount      *find_acct_by_uid       ( gpointer uid );
-PurpleConversation *find_conv_by_uid       ( gpointer uid );
-PurplePlugin       *find_plugin_by_protocol( const char *name );
-PurpleBlistNode    *find_blist_node_by_uid ( gpointer uid, gboolean offline );
+xmlnode * _h_elim_remove_account ( const char *name , 
+                                   const char *id   ,
+                                   SEXP_VALUE *args , 
+                                   gpointer    data );
+
 #endif

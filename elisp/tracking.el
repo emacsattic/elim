@@ -171,7 +171,8 @@ decided according to `tracking-faces-priorities'."
           (setcar entry (tracking-buttonise-string (car entry) buffer faces))
         (setq tracking-buffers
               (nconc tracking-buffers
-                     (list (tracking-faces-merge (buffer-name buffer)
+                     (list 
+                      (tracking-buttonise-string (buffer-name buffer) buffer
                                                  faces))))))
     (setq tracking-mode-line-buffers (tracking-status))
     (sit-for 0) ;; Update mode line

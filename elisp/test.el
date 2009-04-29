@@ -65,10 +65,10 @@
 
 (elim-fetch-process-data eproc :response-by-id)
 (elim-fetch-process-data eproc :accounts      )
-(setq eproc-blist (elim-fetch-process-data eproc :blist))
+(setq eproc-blist (elim-fetch-process-data (get-process "*elim*") :blist))
 (elim-fetch-process-data eproc :protocols     )
 (elim-fetch-process-data eproc :initialised   )
-(elim-fetch-process-data eproc :client-ops    )
+(assq 'command (elim-fetch-process-data eproc :client-ops    ))
 (elim-fetch-process-data eproc :callbacks     )
 
 (let ((garak-elim-process eproc) (garak-account-uid 134909176))

@@ -69,14 +69,38 @@ xmlnode * _h_elim_command ( const char *name ,
     const char     *cmd = ALIST_VAL_STRING( args, "command" );
     char           *esc = g_markup_escape_text( cmd, -1 );
     char           *err = NULL;
-
+    const char   *error = NULL;
     c_s = purple_cmd_do_command( pc, cmd, esc, &err );
+
+    if( c_s != PURPLE_CMD_STATUS_OK && (!err || !*err) )
+        switch( c_s )
+        {
+          case PURPLE_CMD_STATUS_FAILED    :
+            error = "Command failed";
+            break;
+          case PURPLE_CMD_STATUS_NOT_FOUND :
+            error = "Command not found";
+            break;
+          case PURPLE_CMD_STATUS_WRONG_ARGS:
+            error = "Bad command arguments";
+            break;
+          case PURPLE_CMD_STATUS_WRONG_PRPL:
+            error = "Command not valid for this IM protocol";
+            break;
+          case PURPLE_CMD_STATUS_WRONG_TYPE:
+            error = "Command not valid in this conversation";
+            break;
+          default:
+            error = "Unknown command error";
+        }
 
     xmlnode *rval = xnode_new( "alist" );
     AL_PTR ( rval, "conv-uid"      , pc  );
-    AL_ENUM( rval, "command-status", c_s , ":cmd-status" );
-    AL_STR ( rval, "command-error" , err );
     AL_STR ( rval, "conv-name"     , purple_conversation_get_name(pc) );
+
+    AL_ENUM( rval, "command-status", c_s , ":cmd-status" );
+    AL_STR ( rval, "command-error" , err ? err : error   );
+    AL_STR ( rval, "command-line"  , cmd );
 
     g_free       ( err  );
     g_free       ( esc  );

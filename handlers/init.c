@@ -56,7 +56,7 @@ xmlnode * _h_elim_init ( const char *name ,
         purple_prefs_load();
         purple_blist_load();
         g_set_print_handler( (GPrintFunc)_h_elim_warning );
-        purple_debug_set_enabled( FALSE );
+        purple_debug_set_enabled( TRUE );
     }
     else
     {

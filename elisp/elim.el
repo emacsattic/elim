@@ -92,7 +92,8 @@ if the symbol to look for is the same as that of the protocol function.")
     (init           . elim-init-response)
     (list-protocols . elim-list-protocols-response)
     (list-accounts  . elim-list-accounts-response )
-    (message        . nil))
+    (message        . nil)
+    (remove-account . elim-remove-account))
   "Alist of function response handlers. The car of a given element is the
 elim protocol function symbol. The cdr is the handler function, or nil
 if we do not intend to wait for the response (this is the usual case).")
@@ -235,7 +236,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon i/o loop
 (defun elim-handle-sexp (proc sexp)
-  (elim-debug "RECEIVED: %S" sexp)
+  ;;(elim-debug "RECEIVED: %S" sexp)
   (when (listp sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))
@@ -277,7 +278,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (setq handler (or (elim-get-resp-handler-by-id   proc id  ) 
                       (elim-get-resp-handler-by-name proc name)))
     ;; if told to use a handler but it hasn't been defined/loaded/implemented:
-    (when (and handler (not (functionp handler)))
+    (when (or (not handler) (and handler (not (functionp handler))))
       (setq handler 'elim-default-response-handler))
     (elim-debug "handler for %s.%s: %S" name id handler)
     ;; finally, we must have a valid handler symbol to proceed:
@@ -358,7 +359,7 @@ and return an s-expression suitable for making a call to an elim daemon."
           (t raw-args)) ))
 
 (defun elim-default-fail-handler (proc name id status message)
-  (warn "%s<%s> failed (%S)" name id status value))
+  (warn "%s<%s> failed (%S)" name id status message))
 
 (defun elim-client-handler (proc name)
   (cdr (assq name (elim-fetch-process-data proc :client-ops))))
@@ -377,6 +378,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 
 (defun elim-call-client-handler (proc name id status args)
   (let ( (handler (elim-client-handler proc name)) )
+    (elim-debug "(elim-call-client-handler %S %S %s ...)" name id status)
     (message "retrieved client handler : %S" handler)
     (when (functionp handler)
       (elim-debug "calling client handler: %S" handler)
@@ -433,6 +435,16 @@ and return an s-expression suitable for making a call to an elim daemon."
         (elim-store-process-data proc :accounts store)))
       (or adata uid)))
 
+(defun elim-remove-account (proc name id attr args)
+  (when (equal (elim-avalue "status" args) 0)
+    (let (uid store slot)
+      (setq store (elim-fetch-process-data proc :accounts)
+            uid   (elim-avalue "account-uid" args)
+            slot  (assoc uid store))
+      (when slot 
+        (setq store (delq slot store))
+        (elim-store-process-data proc :accounts store)) )))
+
 (defun elim-list-accounts-response (proc name id attr args)
   (when (equal (elim-avalue "status" args) 0)
     (let (acl uid data name proto conn (accts (elim-avalue "value" args)))
@@ -463,10 +475,16 @@ and return an s-expression suitable for making a call to an elim daemon."
   (let ((store      (elim-fetch-process-data proc :blist))
         (bnode-uid  (elim-avalue "bnode-uid" args))
         (bnode-cons  nil))
-    (if (setq bnode-cons (assoc bnode-uid store))
-        nil ;; noop, we already have an entry so don't touch it.
-      (setq store (cons (cons bnode-uid args) store))
-      (elim-store-process-data proc :blist store))))
+    ;; create-node calls can happen very early, when the bnode is 
+    ;; incomplete, or even for ephemeral bnodes that we should really
+    ;; ignore, so don't touch orphan nodes or apparent orphans
+    ;; unless they are groups (groups are always top level)
+    (when (or (eq (elim-avalue "bnode-type" args) :group-node)
+              (elim-avalue "bnode-parent" args))
+      (if (setq bnode-cons (assoc bnode-uid store))
+          nil ;; noop, we already have an entry so don't touch it.
+        (setq store (cons (cons bnode-uid args) store))
+        (elim-store-process-data proc :blist store)) )))
 
 (defun elim-blist-remove-node (proc name id status args)
   (let ((store      (elim-fetch-process-data proc :blist))
@@ -765,18 +783,40 @@ or a cons of \(\"protocol-id\" . \"protocol-name\") if it is."
 
 (defun elim-avalue (key alist) (cdr (assoc key alist)))
 
-(defun elim-assoc  (key list &optional test test-cons)
+(defun elim-assoc  (key alist &optional test test-cons)
+  "Look up KEY in ALIST using TEST as a perdicate. If TEST-CONS is set, 
+the predicate receives the whole cons cell as its argument, not just the key."
   (let ((slot nil) (pred (or test 'equal)))
     (mapc 
      (lambda (C)
-       (when (ignore-errors (funcall pred key (if test-cons C (car C))))
-         (setq slot C))) list) slot))
+       (when (and (not slot)
+                  (ignore-errors (funcall pred key (if test-cons C (car C)))))
+         (setq slot C))) alist) slot))
+
+(defun elim-buddy-data (process buddy &optional account)
+  "Given an ACCOUNT (an account name string or account uid number), and
+BUDDY (name or uid) return its data in the form (uid (:key . value) ...).
+ACCOUNT need not be supplied if BUDDY is a uid"
+  (let (adata auid blist bdata s)
+    (setq blist (elim-fetch-process-data process :blist))
+    (cond
+     ((numberp buddy) (assoc buddy blist)) 
+     ((stringp buddy)
+      (setq adata (elim-account-data process account)
+            auid  (car adata))
+      (message "searching for %s in %S" buddy adata)
+      (elim-assoc buddy blist
+                  (lambda (K C)
+                    (setq s (cdr C))
+                    (and (eql   auid (elim-avalue "account-uid" s))
+                         (equal K    (elim-avalue "bnode-name"  s)))) t) )) ))
 
 (defun elim-account-data (process account)
   "Given an ACCOUNT (an account name string or account uid number), return
 its data in the form (uid (:key . value) ...). :key items should include
 :name and :proto, but others may also be present."
-  (let ((accounts (elim-fetch-process-data process :accounts))) 
+  (let ((accounts (elim-fetch-process-data process :accounts)))
+    (message "account uids: %S" (mapcar 'car accounts))
     (cond ((numberp account) (elim-assoc account accounts '=))
           ((stringp account)
            (elim-assoc account accounts 
@@ -790,7 +830,7 @@ its data in the form (uid (:key . value) ...). :key items should include
       (list 
        (elim-atom-to-item "account-uid"  (car adata))
        (elim-atom-to-item "account-name" (cdr (assq :name  (cdr adata))))
-       (elim-atom-to-item "account-name" (cdr (assq :proto (cdr adata))))) )))
+       (elim-atom-to-item "im-protocol"  (cdr (assq :proto (cdr adata))))) )))
 
 (defun elim-buddy-list (process)
   (elim-fetch-process-data process :blist))
@@ -802,14 +842,14 @@ its data in the form (uid (:key . value) ...). :key items should include
       (setq uid node parent (elim-buddy process uid)))
     (setq cuid (elim-avalue "bnode-child" parent) seen (list uid))
     (while (and cuid (not (member cuid seen)))
-      (setq child    (elim-buddy cuid)
+      (setq child    (elim-buddy process cuid)
             children (cons child children)
             seen     (cons cuid  seen)
             cuid     (elim-avalue "bnode-next" child)))
     children))
 
 (defun elim-buddy (process uid)
-  (elim-avalue uid (elim-fetch-process-data proc :blist)))
+  (elim-avalue uid (elim-fetch-process-data process :blist)))
 
 (defun elim-action-click (e &optional p)
   (interactive "e")
@@ -920,16 +960,31 @@ OPTIONS (\"key\" \"value\" ...)."
         t)
     (error "Unsupported IM protocol: %s" protocol)))
 
+(defun elim-remove-buddy (process account buddy) 
+  (let (bdata arglist bname dummy)
+    (setq bdata   (elim-buddy-data process buddy account)
+          account (or account (elim-avalue "account-uid" (cdr bdata)))
+          arglist (elim-account-proto-items process account)
+          arglist (nconc (list 'alist nil)
+                         (list (elim-atom-to-item "bnode-uid" (car bdata)))
+                         arglist))
+    (elim-process-send process 
+    ;;(elim-debug "%S"
+                       (elim-daemon-call 'remove-buddy nil arglist)
+                       ) 
+    ))
+
 (defun elim-add-buddy (process account buddy &optional group)
   "Given an elim PROCESS an ACCOUNT name or uid and a BUDDY (im screen name),
 add that user to your buddy list"
   (let ((arglist (elim-account-proto-items process account)))
     (if arglist
         (progn
-          (setq arglist (nconc (list 'alist nil)
-                               (elim-atom-to-item "buddy-name" buddy)
-                               (elim-atom-to-item "group" (or group "Buddies"))
-                               arglist))
+          (setq arglist 
+                (nconc (list 'alist nil)
+                       (list (elim-atom-to-item "buddy-name" buddy)
+                             (elim-atom-to-item "group" (or group "Buddies")))
+                       arglist))
           (elim-process-send process (elim-daemon-call 'add-buddy nil arglist)))
       (error "No such account: %s" account)) ))
 
@@ -941,6 +996,8 @@ add that user to your buddy list"
                          (elim-daemon-call 'end-conversation nil arglist)) )))
 
 (defun elim-account-op (process account operation)
+  "Perform an OPERATION (symbol) on ACCOUNT (name or uid) which needs no other 
+parameters. Used by `elim-disconnect', `elim-connect' and similar functions."
   (let ((arglist (elim-account-proto-items process account)))
     (when arglist
       (setq arglist (nconc (list 'alist nil) arglist))
@@ -957,6 +1014,18 @@ add that user to your buddy list"
 (defun elim-register (process account)
   "Register a new ACCOUNT (a uid (number) or string (account name))."
   (elim-account-op process account 'register))
+
+(defun elim-unregister (process account)
+  "Unregister (delete from server) ACCOUNT (a uid or string (account name))."
+  (display-warning 
+   'elim 
+   (format "I'm sorry %s, I can't do that.\n
+libpurple unregister support is too flaky right now." user-login-name) 
+   :warning) )
+
+(defun elim-remove-account (process account)
+  "Remove ACCOUNT (a uid or string (account name)) from elim's account list."
+  (elim-account-op process account 'remove-account))
 
 (defun elim-do-cmd  (process account conversation cmd)
   "Execute a CONVERSATION (name or uid) command CMD (a string, excluding the 

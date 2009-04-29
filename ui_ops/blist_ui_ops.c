@@ -41,6 +41,13 @@ static void _elim_bl_request_add_chat ( PurpleAccount *account  ,
                                         const char    *name     );
 
 #define PBLN_GET(thing,node) purple_blist_node_get_##thing( node )
+
+#define UPDATE_RELATIVE( x, r_type, node, test )                              \
+    {                                                                         \
+        x = PBLN_GET( r_type, node );                                         \
+        if( x && (test) )                                                     \
+            add_outbound_sexp( __elim_bl_xnode(x, "elim-blist-update-node") );\
+    }
 // ==========================================================================
 
 PurpleBlistUiOps elim_blist_ui_ops =
@@ -57,6 +64,17 @@ PurpleBlistUiOps elim_blist_ui_ops =
 };
 
 // ==========================================================================
+static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b );
+static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name );
+
+static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )
+{
+    xmlnode *blnode = _elim_blnode_to_xnode( node );
+    char    *ID     = new_elim_id   ();
+    xmlnode *rval   = func_call( name, ID, blnode );
+    g_free( ID );
+    return rval;
+}
 
 static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
 {
@@ -69,12 +87,12 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
 
     fprintf( stderr, "(_elim_blnode_to_xnode)\n" );
 
-    gboolean    contact = FALSE;
     int         type    = PBLN_GET( type, b );
 
-    PurpleAccount    *acct  = NULL;
-    PurplePresence   *pres  = NULL;
-    PurpleStatus     *stat  = NULL;
+    PurpleAccount    *acct = NULL;
+    PurplePresence   *pres = NULL;
+    PurpleStatus     *stat = NULL;
+    PurpleContact *contact = NULL;
 
     switch( type )
     {
@@ -94,9 +112,19 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
         break;
       case PURPLE_BLIST_CONTACT_NODE:
         fprintf( stderr, "(_elim_blnode_to_xnode CONTACT)\n" );
-        bname   = purple_contact_get_alias( (PurpleContact *)b );
-        contact = TRUE;
-        alias   = bname;
+        contact = (PurpleContact *)b;
+        if( contact->alias ) { bname = alias = contact->alias; }
+        else
+        {
+            PurpleBuddy     *buddy = purple_contact_get_priority_buddy(contact);
+            PurpleBlistNode *child = NULL;
+            if ( !buddy ) child = purple_blist_node_get_first_child( b );
+            if( child )
+                if ( PBLN_GET(type,child) == PURPLE_BLIST_BUDDY_NODE )
+                    buddy = (PurpleBuddy *)child;
+            if (  buddy ) bname = alias = purple_buddy_get_alias( buddy );
+            else          bname = alias = "-";
+        }
         break;
       case PURPLE_BLIST_GROUP_NODE  :
         fprintf( stderr, "(_elim_blnode_to_xnode GROUP)\n" );
@@ -115,35 +143,25 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
     xmlnode *alist = xnode_new( "alist" );
 
     AL_PTR ( alist, "bnode-uid" , b );
-    AL_ENUM( alist, "bnode-type", type, ":blist-node-type"   );
+    AL_ENUM( alist, "bnode-type", type, ":blist-node-type" );
 
-    if( bname   ) AL_STR ( alist, "bnode-name"   , bname     );
-    if( acct    ) AL_PTR ( alist, "account-uid"  , acct      );
-    if( aname   ) AL_STR ( alist, "account-name" , aname     );
-    if( proto   ) AL_STR ( alist, "im-protocol"  , proto     );
-    if( alias   ) AL_STR ( alist, "bnode-alias"  , alias     );
-    if( s_alias ) AL_STR ( alist, "server-alias" , s_alias   );
-    if( c_alias ) AL_STR ( alist, "contact-alias", c_alias   );
+    if( bname   ) AL_STR ( alist, "bnode-name"   , bname   );
+    if( acct    ) AL_PTR ( alist, "account-uid"  , acct    );
+    if( aname   ) AL_STR ( alist, "account-name" , aname   );
+    if( proto   ) AL_STR ( alist, "im-protocol"  , proto   );
+    if( alias   ) AL_STR ( alist, "bnode-alias"  , alias   );
+    if( s_alias ) AL_STR ( alist, "server-alias" , s_alias );
+    if( c_alias ) AL_STR ( alist, "contact-alias", c_alias );
 
     gpointer x = NULL;
     if((x = PBLN_GET(sibling_prev, b))) AL_PTR( alist, "bnode-prev"  , x );
     if((x = PBLN_GET(sibling_next, b))) AL_PTR( alist, "bnode-next"  , x );
     if((x = PBLN_GET(first_child , b))) AL_PTR( alist, "bnode-child" , x );
-
-    if     ((x = PBLN_GET(parent      , b)))   AL_PTR(alist, "bnode-parent", x);
-    else if( (type != PURPLE_BLIST_CHAT_NODE ) && 
-             (type != PURPLE_BLIST_GROUP_NODE)  )
-    {
-        if((x = purple_find_group("Buddies"))) AL_PTR(alist, "bnode-parent", x);
-    }
-    else if( type == PURPLE_BLIST_CHAT_NODE )
-    {
-        if((x = purple_find_group("Chats"))  ) AL_PTR(alist, "bnode-parent", x);
-    }
+    if((x = PBLN_GET(parent      , b))) AL_PTR( alist, "bnode-parent", x );
 
     AL_ENUM( alist, "bnode-flags" , PBLN_GET( flags, b ), ":blist-node-flags" );
 
-    if( contact )
+    if( contact && b )
     {
         PurpleContact *pc  = (PurpleContact *)b;
         PurpleBuddy   *pbn = purple_contact_get_priority_buddy( pc );
@@ -178,27 +196,22 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
         AL_STR ( alist, "status-msg" , msg );
     }
 
+    PurpleBlistNode *r = NULL;
+    UPDATE_RELATIVE( r, sibling_prev, b, TRUE );
+    UPDATE_RELATIVE( r, parent      , b, PBLN_GET( first_child, r ) == b );
+
     return alist;
 }
-
 
 // ==========================================================================
 
 static void _elim_bl_new_list          ( PurpleBuddyList *list ) { }
 
-static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )
-{
-    xmlnode *blnode = _elim_blnode_to_xnode( node );
-    char    *ID     = new_elim_id   ();
-    xmlnode *rval   = func_call( name, ID, blnode );
-    g_free( ID );
-    return rval;
-}
-
 static void _elim_bl_new_node( PurpleBlistNode *node )
 {
     fprintf( stderr, "(_elim_bl_new_node)\n" );
-    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-create-node" ) );
+    if( !PURPLE_BLIST_NODE_IS_CONTACT(node) )
+        add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-create-node" ) );
 }
 
 static void _elim_bl_update ( PurpleBuddyList *list , PurpleBlistNode *node )
