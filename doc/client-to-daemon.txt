@@ -315,4 +315,42 @@ elim will inform you of conversation UIDs as they are created;
 
 ############################################################################
 
+Request a list of the parameters required to join a multi-user 
+chat/room/channel/etc on a given protocol.
+
+  (function-call 
+    (chat-params ((id . "109")))
+    (alist nil (string ((name . "im-protocol")) "prpl-jabber")))
+
+  (function-response
+    (chat-params ((id . "109")))
+    (alist nil 
+      (string ((name . "im-protocol")) "prpl-jabber")
+      (alist  ((name . "parameters" )) 
+        (alist ((name . "room")) 
+          (string ((name . "label"   )) "_Room:") 
+          (bool   ((name . "required")) "1") 
+          (bool   ((name . "secret"  )) "0"))
+        (alist ((name . "server")) 
+          (string ((name . "label"   )) "_Server:")
+          (bool   ((name . "required")) "1") 
+          (bool   ((name . "secret"  )) "0"))
+        (alist ((name . "handle")) 
+          (string ((name . "label"   )) "_Handle:")
+          (bool   ((name . "required")) "1") 
+          (bool   ((name . "secret"  )) "0"))
+        (alist ((name . "password")) 
+          (string ((name . "label"   )) "_Password:") 
+          (bool   ((name . "required")) "0") 
+          (bool   ((name . "secret"  )) "1"))
+        (alist ((name . "made-up-example")) 
+          (string ((name . "label"   )) "_A-Thing:") 
+          (bool   ((name . "is-integer")) "1")
+          (int    ((name . "minimum"   )) "1001" )
+          (int    ((name . "maximum"   )) "65534")
+          (bool   ((name . "required"  )) "0")
+          (bool   ((name . "secret"    )) "0")) )))
+
+############################################################################
+
 Copyright © 2009 Vivek Dasmohapatra 

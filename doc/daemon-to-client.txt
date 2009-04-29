@@ -133,7 +133,7 @@ The main calls here (there are other but they are not implemented yet)
 Have very similar return structures: Some details are simple omitted 
 for those blist node types which do not support them:
 
-*) elim-blist-new-node
+*) elim-blist-create-node
 
    This call informs you that a new node has been created. However,
    investigation of the libpurple code reveaks that this means a 

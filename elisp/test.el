@@ -25,9 +25,9 @@
     `(alist nil
        (string ((name . "account-name")) 
                ,(concat uname "-elim@irc.freenode.net"))
-       (string ((name . "conv-name"  )) "#elim")
+       (int    ((name . "conv-uid"   )) "135065544")
        (string ((name . "text"       )) 
-               ,(read-string "IM> " "" nil "elim-test-string" t)))))
+               ,(read-string "IM> " "" nil "elim-test-string" t)))) )
 
 (elim-process-send eproc
   (elim-daemon-call 'enumerations nil `(alist nil)))
@@ -37,14 +37,19 @@
    `(alist nil (string ((name . "enum-type")) ":connection-error"))) )
 
 (elim-process-send eproc
+  (elim-daemon-call 'chat-params nil 
+   '(alist nil (string ((name . "im-protocol")) "prpl-jabber"))))
+
+(elim-process-send eproc
   (elim-daemon-call 'list-accounts nil nil))
 
 (elim-process-send eproc
   (elim-daemon-call 'list-protocols nil nil))
 
 
-(elim-fetch-process-data eproc 'accounts)
-(elim-fetch-process-data eproc 'protocols)
+(elim-fetch-process-data eproc :accounts)
+(elim-fetch-process-data eproc :protocols)
+(elim-fetch-process-data eproc :initialised)
 
 (process-plist eproc)
 

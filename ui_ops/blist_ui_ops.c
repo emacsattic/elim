@@ -169,7 +169,7 @@ static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )
 
 static void _elim_bl_new_node( PurpleBlistNode *node )
 {
-    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-new-node" ) );
+    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-create-node" ) );
 }
 
 static void _elim_bl_update ( PurpleBuddyList *list , PurpleBlistNode *node )

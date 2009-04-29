@@ -32,8 +32,9 @@ Buddy lists etc will be stored here"
   :group 'elim
   :type '(directory))
 
-(defvar elim-enum-alist nil)
+(defvar elim-enum-alist      nil)
 (defvar elim-enum-flag-types nil)
+(defvar elim-initialising    nil)
 
 (defvar elim-call-handler-alist
   '(;; account ops
@@ -42,7 +43,7 @@ Buddy lists etc will be stored here"
     (elim-account-request-add   )
     (elim-account-request-auth  )
     ;; blist (buddy list) ops
-    (elim-blist-insert-node     )
+    (elim-blist-create-node     )
     (elim-blist-remove-node     )
     (elim-blist-update-node     )
     ;; connection ops
@@ -218,16 +219,12 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;
 (defun elim-handle-sexp (proc sexp)
   (progn
-    ;;(elim-debug "received: %S" sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))
           (attr (car  (cdar (cddr sexp))))
           (args (cadr (cddr sexp))) )
-      ;;(elim-debug "» %S %S %S" type name attr)
-      ;;(elim-debug "»» %S" args)
       (setq args (elim-parse-proto-args args))
       (elim-debug "received: %S.%S %S" type name args)
-      ;;(elim-debug "« %S: (%S %S %S)" type name attr args)
       (cond
        ((eq type 'function-call    ) (elim-handle-call proc name attr args))
        ((eq type 'function-response) (elim-handle-resp proc name attr args))
@@ -235,17 +232,17 @@ and return an s-expression suitable for making a call to an elim daemon."
 
 ;; if we implement setting up response handlers for individual call instances
 ;; via elim-callback-stack, this is where we will fetch said handlers back:
-(defun elim-get-handler-by-id   (proc id  ) nil)
-(defun elim-get-handler-by-name (proc name)
-  ;; in case the handler list has been localised for this process:
-  ;;(set-buffer (process-buffer proc))
+(defun elim-get-resp-handler-by-id   (proc id  ) nil)
+(defun elim-get-resp-handler-by-name (proc name)
   (cdr (assq name elim-resp-handler-alist)))
+(defun elim-get-call-handler-by-name (proc name)
+  (cdr (assq name elim-call-handler-alist)))
 
 (defun elim-handle-resp (proc name attr args)
   (let ( (id      (cdr (assq 'id attr))) 
          (handler  nil) )
-    (setq handler (or (elim-get-handler-by-id   proc id  ) 
-                      (elim-get-handler-by-name proc name)))
+    (setq handler (or (elim-get-resp-handler-by-id   proc id  ) 
+                      (elim-get-resp-handler-by-name proc name)))
     ;; if told to use a handler but it hasn't been defined/loaded/implemented:
     (when (and handler (not (fboundp handler)))
       (setq handler 'elim-default-response-handler))
@@ -253,33 +250,27 @@ and return an s-expression suitable for making a call to an elim daemon."
     (when handler (funcall handler proc name id attr args)) ))
 
 (defun elim-handle-call (proc name attr args)
-  (elim-debug "elim call: %S" name)
-  )
+  (let ( (handler (elim-get-call-handler-by-name proc name))
+         (id      (cdr (assq 'id attr))) )
+    (if (fboundp handler)
+        (funcall handler proc name id args)
+      (elim-call-client-handler proc name id 0 args)) ))
 
 (defun elim-input-filter (process data)
   (let ((pt nil) (sexp nil) (read-error nil) (sexp-list nil))
-    (set-buffer (elim-fetch-process-data process 'protocol-buffer))
+    (set-buffer (elim-fetch-process-data process :protocol-buffer))
     (setq pt    (point))
     (goto-char  (point-max))
     (insert      data)
     (goto-char   pt)
     (condition-case read-error
         (progn
-          ;;(elim-debug "\n------------------------------------")
-          ;;(elim-debug (buffer-string))
-          ;;(elim-debug "\n====================================")
           (while (setq sexp (read (current-buffer)))
-            ;;(elim-debug "....................................")
-            ;;(elim-debug (buffer-string))
-            ;;(elim-debug "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             (setq sexp-list (cons sexp sexp-list))
-            (delete-region pt (point))
-            ;;(message "read sexp: %S sexp" sexp)
             (delete-region pt (point))))
       (error
-       (elim-debug "-- no more sexps remaining --")
+       (elim-debug "input filter: -- no more sexps remaining --")
        (goto-char pt)))
-    ;; (elim-debug "sexp-list:\n%S\n" sexp-list)
     (when sexp-list 
       ;;(setq sexp-list (nreverse sexp-list))
       (mapc (lambda (S) (elim-handle-sexp process S)) sexp-list)) ))
@@ -296,68 +287,86 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fetching and storing per-daemon data:
 (defun elim-store-process-data (proc key value)
-  (let ((elim-data (process-get proc 'elim-data)))
+  (let ((elim-data (process-get proc :elim-data)))
     (setcdr (or (assq key elim-data)
                 (car (setq elim-data (cons (cons key nil) elim-data)))) value)
-    (process-put proc 'elim-data elim-data)))
+    (process-put proc :elim-data elim-data)))
 
 (defun elim-fetch-process-data (proc key)
-  (cdr (assq key (process-get proc 'elim-data))))
+  (cdr (assq key (process-get proc :elim-data))))
+
+(defun elim-init-step (proc)
+  (elim-store-process-data proc :initialised 
+                           (1+ (elim-fetch-process-data proc :initialised))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon response handlers:
-(defun elim-default-fail-handler (proc name id attr args)
-  (warn "%s<%s> failed (%S)" name id args))
+(defun elim-default-fail-handler (proc name id status message)
+  (warn "%s<%s> failed (%S)" name id status value))
+
+(defun elim-client-handler (proc name)
+  (cdr (assq name (elim-fetch-process-data proc :client-ops))))
+
+(defun elim-call-client-handler (proc name id status args)
+  (let ( (handler (elim-client-handler proc name)) )
+    (when handler
+      (if (equal status 0)
+          (funcall handler proc name id status (cdr (assoc "value" args)))
+        (funcall handler proc name id status (cdr (assoc "message" args))) )) ))
 
 (defun elim-default-response-handler (proc name id attr args)
-  (if (equal (cdr (assoc "status" args)) 0)
-      (elim-debug "%s<%s> successful %S" name id (cdr (assoc "value" args)))
-    (elim-default-fail-handler proc name id attr args)))
+  (let ( (status (cdr (assoc "status" args))) )
+    (if (equal status 0)
+        (elim-debug "%s<%s> successful %S" name id (cdr (assoc "value" args)))
+      (elim-default-fail-handler proc name id status
+                                 (cdr (assoc "message" args))) )
+    (elim-call-client-handler proc name id status args) ))
 
 (defun elim-list-protocols-response (proc name id attr args)
-  (if (not (equal (cdr (assoc "status" args)) 0)) 
-      (elim-default-fail-handler proc name id attr args)
-    (elim-store-process-data proc 'protocols (cdr (assoc "value" args))) ))
+  (let ((status (cdr (assoc "status" args))))
+    (if (not (equal status 0))
+        (elim-default-fail-handler proc name id attr args)
+      (elim-store-process-data proc :protocols (cdr (assoc "value" args))) )
+    (elim-call-client-handler proc name id status args)
+    (when elim-initialising (elim-init-step proc)) ))
+
+
+(defun elim-enum-symbol (name)
+  (intern (concat ":" (replace-regexp-in-string "_" "-" (downcase name)))))
 
 (defun elim-enumerations-response (proc name id attr args)
   (when (equal (cdr (assoc "status" args)) 0)
-    (message "parsing enums")
     (let ((enum-alist (cdr (assoc "value" args))) key entry) 
       (mapc 
        (lambda (E) 
          (setq key   (intern (car E))
-               entry 
-               (mapcar 
-                (lambda (F)
-                  (cons (intern 
-                         (concat 
-                          ":" (replace-regexp-in-string 
-                               "_" "-" (downcase (car F))) ))
-                              (cdr F))) (cdr E)))
+               entry (mapcar 
+                      (lambda (F)
+                        (cons (elim-enum-symbol (car F)) (cdr F))) (cdr E)))
          (setcdr (or (assq key elim-enum-alist)
                      (car (setq elim-enum-alist 
                                 (cons (cons key nil) elim-enum-alist)))) entry))
        enum-alist))
     (mapc (lambda (E) 
             (when (string-match "-flags$" (symbol-name (car E))) 
-              (add-to-list 'elim-enum-flag-types (car E)))) elim-enum-alist)))
+              (add-to-list 'elim-enum-flag-types (car E)))) elim-enum-alist))
+  (when elim-initialising (elim-init-step proc)) )
 
 (defun elim-response-filter-account-data (proc name id attr args)
   (let (uid proto name store adata (val (cdr (assoc "value" args))))
     (when (setq uid (cdr (assoc "account-uid" val)))
-      (setq store (elim-fetch-process-data proc 'accounts))
+      (setq store (elim-fetch-process-data proc :accounts))
       (when (not (assoc uid store))
         (setq name  (cdr (assoc "account-name" val))
               proto (cdr (assoc "im-protocol"  val))
               adata (cons uid (list (cons :name  name ) 
                                     (cons :proto proto)))
               store (cons adata store))
-        (elim-store-process-data proc 'accounts store)))
+        (elim-store-process-data proc :accounts store)))
       (or adata uid)))
 
 (defun elim-list-accounts-response (proc name id attr args)
   (when (equal (cdr (assoc "status" args)) 0)
-    (message "accts: %S" args)
     (let (acl uid data name proto conn (accts (cdr (assoc "value" args))))
       (mapc
        (lambda (acct) 
@@ -366,9 +375,28 @@ and return an s-expression suitable for making a call to an elim daemon."
                name  (cdr  (assoc "account-name" data))
                proto (cdr  (assoc "im-protocol"  data))
                acl   (cons (cons uid (list (cons :name  name )
-                                           (cons :proto proto))) acl))
-         (message "uid : %S" acl)) accts)
-      (elim-store-process-data proc 'accounts acl))))
+                                           (cons :proto proto))) acl))) accts)
+      (elim-store-process-data proc :accounts acl)))
+  (when elim-initialising (elim-init-step proc)) )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; daemon-to-client call handlers:
+
+(defun elim-blist-update-node (proc name id status args)
+  (let ((store      (elim-fetch-process-data proc :blist))
+        (bnode-uid  (cdr (assoc "bnode-uid" args)))
+        (bnode-cons  nil))
+    (if (setq bnode-cons (assoc bnode-uid store))
+        (setcdr bnode-cons args)
+      (setq store (cons (cons bnode-uid args) store))
+      (elim-store-process-data proc :blist store))))
+
+(defun elim-blist-remove-node (proc name id status args)
+  (let ((store      (elim-fetch-process-data proc :blist))
+        (bnode-uid  (cdr (assoc "bnode-uid" args)))
+        (bnode-cons  nil))
+    (when (setq bnode-cons (assoc bnode-uid store))
+      (assq-delete-all (car bnode-cons) store)) ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -382,12 +410,8 @@ as it relies on initialisation done by `elim-start'."
         (dir      (or user-dir  elim-directory))
         (arglist   nil))
     (setq arglist    (list         "dot-dir" dir "ui-id" uiid)
-          ;;dummy      (message "ELIM INIT ARGLIST %S arglist" arglist)
           arglist    (elim-simple-list-to-proto-alist arglist)
-          ;;dummy      (message "ELIM INIT ARGLIST 2")
-          proto-call (elim-daemon-call  'init   nil   arglist)
-          ;;dummy      (message "ELIM INIT DCALL   1")
-          )
+          proto-call (elim-daemon-call  'init   nil   arglist))
     (elim-process-send process proto-call) ))
 
 (defun elim-load-enum-values (process)
@@ -398,12 +422,13 @@ as it relies on initialisation done by `elim-start'."
 ;; non-daemon functions intended for the user, and general utilities
 (defun elim-protocol-alist (process)
   "Fetches the cached alist of im protocol ids and names supported by PROCESS."
-  (elim-fetch-process-data process 'protocols))
+  (elim-fetch-process-data process :protocols))
 
 (defun elim-protocol-supported (process protocol)
   "Returns nil if PROTOCOL is not in the cache of supported im protocols, 
 or a cons of \(\"protocol-id\" . \"protocol-name\") if it is."
-  (assoc protocol (elim-protocol-alist process)))
+  (or (assoc  protocol                 (elim-protocol-alist process))
+      (assoc (concat "prpl-" protocol) (elim-protocol-alist process))))
 
 (defun elim-assoc (key list &optional test test-cons)
   (let ((slot nil) (pred (or test 'equal)))
@@ -416,7 +441,7 @@ or a cons of \(\"protocol-id\" . \"protocol-name\") if it is."
   "Given an ACCOUNT (an account name string or account uid number), return
 its data in the form (uid (:key . value) ...). :key items should include
 :name and :proto, but others may also be present."
-  (let ((accounts (elim-fetch-process-data process 'accounts))) 
+  (let ((accounts (elim-fetch-process-data process :accounts))) 
   ;;   (let ((accounts '((1073741824.0 (:name . "foo@bar.org")
   ;;                                   (:proto . "prpl-moose"))
   ;;                     (1334324      (:name . "foo@blerg.x") 
@@ -440,7 +465,7 @@ its data in the form (uid (:key . value) ...). :key items should include
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; elim daemon calls:
 
-(defun elim-start (&optional ui-string user-dir)
+(defun elim-start (&optional ui-string user-dir client-ops)
   "Starts up an elim daemon with the standard location and command, and 
 initialises it (setq up the elim user directory, loads the list of 
 supported protocols asynchronously). Returns the elim object (a process)
@@ -455,16 +480,20 @@ be initialised to the value of `elim-directory' if you do not supply it."
   (let ( (buf       (generate-new-buffer "*elim*"))
          (proto-buf (generate-new-buffer "*elim-proto*"))
          (process-connection-type nil)
+         (elim-initialising         t)
          (elim                    nil) )
-    (setq elim (start-process-shell-command 
+    (setq elim (start-process-shell-command
                 (buffer-name buf) buf (elim-command)))
-    (elim-store-process-data elim 'protocol-buffer proto-buf)
+    (elim-store-process-data elim :client-ops      client-ops)
+    (elim-store-process-data elim :protocol-buffer proto-buf)
+    (elim-store-process-data elim :initialised     0)
     (set-process-filter elim 'elim-input-filter) 
     (elim-init elim ui-string user-dir)
     (elim-update-protocol-list elim)
     (elim-update-account-list  elim)
     (elim-load-enum-values     elim)
-    (sit-for 1)
+    (while (< (elim-fetch-process-data elim :initialised) 3)
+      (accept-process-output))
     elim))
 
 (defun elim-update-account-list (process)
@@ -475,7 +504,6 @@ be initialised to the value of `elim-directory' if you do not supply it."
   "Updates (asynchronously) the alist of im protocol id's and names supported
 by PROCESS. Not normally useful to the user."
   (elim-process-send process (elim-daemon-call 'list-protocols nil nil)))
-
 
 (defun elim-add-account (process account protocol password &optional options)
   "Given an elim PROCESS, add the account defined by 
@@ -495,7 +523,20 @@ OPTIONS (\"key\" \"value\" ...)."
         (when options (setq arglist (nconc arglist (list optitem))))
         (elim-process-send process (elim-daemon-call 'add-account nil arglist))
         t)
-    (ignore "debug here")))
+    (error "Unsupported IM protocol: %s" protocol)))
+
+(defun elim-add-buddy (process account buddy &optional group)
+  "Given an elim PROCESS an ACCOUNT name or uid and a BUDDY (im screen name),
+add that user to your buddy list"
+  (let ((arglist (elim-account-proto-items process account)))
+    (if arglist
+        (progn
+          (setq arglist (nconc (list 'alist nil)
+                               (elim-atom-to-item "buddy-name" buddy)
+                               (elim-atom-to-item "group" (or group "Buddies"))
+                               arglist))
+          (elim-process-send process (elim-daemon-call 'add-buddy nil arglist)))
+      (error "No such account: %s" account)) ))
 
 (defun elim-co-disco (process account operation)
   (let ((arglist (elim-account-proto-items process account)))
