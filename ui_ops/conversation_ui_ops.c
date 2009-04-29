@@ -114,6 +114,8 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
     const char    *cname = purple_conversation_get_name   ( conv );
     PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
     PurpleConversationType ctype = purple_conversation_get_type    ( conv );
+
+    fprintf( stderr, "(_elim_conv_args)\n" );
     
     AL_STR( alist, "account-name" , aname );
     AL_STR( alist, "im-protocol"  , proto );
@@ -131,6 +133,7 @@ static void _elim_create_conversation  ( PurpleConversation *conv )
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-create", ID, args );
     g_free( ID );
+    fprintf( stderr, "(_elim_create_conversation)\n" );
     _elim_conv_args( args, conv );
     add_outbound_sexp( mcall );
 }
@@ -141,6 +144,7 @@ static void _elim_destroy_conversation ( PurpleConversation *conv )
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-destroy", ID, args );
     g_free( ID );
+    fprintf( stderr, "(_elim_destroy_conversation)\n" );
     _elim_conv_args( args, conv );
     add_outbound_sexp( mcall );
 }
@@ -156,9 +160,7 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-chat", ID, args );
     g_free( ID );
-
-    fprintf( stderr, "(elim-debug _elim_write_chat)\n" );
-    
+    fprintf( stderr, "(_elim_write_chat)\n" );
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
 
@@ -169,6 +171,7 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
     AL_INT( args, "time" , mtime   );
 
     if( msg ) g_free( msg );
+    fprintf( stderr, "(_elim_write_chat:DONE)\n" );
     add_outbound_sexp( mcall );
 }
 
@@ -176,7 +179,7 @@ static void _elim_write_im ( PurpleConversation *conv    ,
                              const char         *who     ,
                              const char         *message , 
                              PurpleMessageFlags flags    ,
-                             time_t mtime                )
+                             time_t             mtime    )
 {
     char    *msg   = NULL;
     char    *ID    = new_elim_id();
@@ -189,22 +192,17 @@ static void _elim_write_im ( PurpleConversation *conv    ,
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
 
-    fprintf( stderr, "(elim-debug _elim_write_im 1)\n" );
 
     _elim_conv_args( args, conv );
 
-    fprintf( stderr, "(elim-debug _elim_write_im 2)\n" );
     AL_STR( args, "who"  , who ? who : ""      );
-    fprintf( stderr, "(elim-debug _elim_write_im 3)\n" );
     AL_STR( args, "text" , msg ? msg : message );
-    fprintf( stderr, "(elim-debug _elim_write_im 4)\n" );
     AL_INT( args, "flags", flags   );
-    fprintf( stderr, "(elim-debug _elim_write_im 5)\n" );
     AL_INT( args, "time" , mtime   );
-    fprintf( stderr, "(elim-debug _elim_write_im 6)\n" );
 
     if( msg ) g_free( msg );
-    fprintf( stderr, "(elim-debug _elim_write_im 7)\n" );
+
+    fprintf( stderr, "(elim-debug _elim_write_im 1)\n" );
     add_outbound_sexp( mcall );
 }
 
@@ -234,6 +232,7 @@ static void _elim_write_conv ( PurpleConversation *conv    ,
     AL_INT( args, "time" , mtime   );
 
     if( msg ) g_free( msg );
+    fprintf( stderr, "(elim-debug _elim_write_conv:DONE)\n" );
     add_outbound_sexp( mcall );
 }
 
@@ -243,33 +242,73 @@ static void _elim_chat_add_users       ( PurpleConversation *conv         ,
 {
     char    *ID    = new_elim_id();
     xmlnode *args  = xnode_new( "alist" );
+    xmlnode *list  = xnode_new( "list"  );
     xmlnode *mcall = func_call( "elim-chat-add-users", ID, args );
     g_free( ID );
 
     _elim_conv_args( args, conv );
-    AL_BOOL( args, "new_arrivals" , new_arrivals );
+    AL_BOOL( args, "new-arrivals" , new_arrivals );
+    AL_NODE( args, "participants" , list         );
+
+    fprintf( stderr, "(_elim_chat_add_users)\n" );
 
     for( ; cbuddies; cbuddies = cbuddies->next )
     {
         xmlnode             *cbuddy = xnode_new( "alist" );
         PurpleConvChatBuddy *pccb   = cbuddies->data;
-        const char          *name   = pccb->name ? pccb->name : "";
         AL_STR ( cbuddy, "name"     , pccb->name      ? pccb->name      : "" );
         AL_STR ( cbuddy, "alias"    , pccb->alias     ? pccb->alias     : "" );
         AL_STR ( cbuddy, "alias-key", pccb->alias_key ? pccb->alias_key : "" );
         AL_BOOL( cbuddy, "on-blist" , pccb->buddy );
         AL_INT ( cbuddy, "flags"    , pccb->flags );
-        AL_NODE( args  , name , cbuddy );
+        xnode_insert_child( list, cbuddy );
     }
 
-    add_outbound_sexp( mcall );     
+    add_outbound_sexp( mcall );
+    fprintf( stderr, "(_elim_chat_add_users:DONE)\n" );
 }
+
+static void _elim_chat_remove_users    ( PurpleConversation *conv  , 
+                                         GList              *users )
+{
+    char    *ID    = new_elim_id();
+    xmlnode *args  = xnode_new( "alist" );
+    xmlnode *mcall = func_call( "elim-chat-remove-users", ID, args );
+    xmlnode *list  = xnode_new( "list" );
+    g_free( ID );
+    fprintf( stderr, "(_elim_chat_remove_users)\n" );
+
+    _elim_conv_args( args, conv );
+    for( ; users; users = users->next )
+    {
+        xmlnode *user = xnode_new_child( list, "string" );
+        xnode_insert_data( user, users->data ? users->data : "", -1 );
+    }
+
+    AL_NODE( args, "participants", list );
+
+    fprintf( stderr, "(_elim_chat_remove_users:DONE)\n" );
+    add_outbound_sexp( mcall );
+}
+
 static void _elim_chat_rename_user     ( PurpleConversation *conv      , 
                                          const char         *old_name  ,
                                          const char         *new_name  , 
-                                         const char         *new_alias ){}
-static void _elim_chat_remove_users    ( PurpleConversation *conv  , 
-                                         GList              *users ){}
+                                         const char         *new_alias )
+{
+    char    *ID    = new_elim_id();
+    xmlnode *args  = xnode_new( "alist" );
+    xmlnode *mcall = func_call( "elim-chat-rename-user", ID, args );
+    g_free( ID );
+
+    _elim_conv_args( args, conv );
+    AL_STR( args, "old-name" , old_name  );
+    AL_STR( args, "new-name" , new_name  );
+    AL_STR( args, "new-alias", new_alias );
+    
+    add_outbound_sexp( mcall );
+}
+
 static void _elim_chat_update_user     ( PurpleConversation *conv, 
                                          const char         *user ){}
 static void _elim_present              ( PurpleConversation *conv )
@@ -278,8 +317,9 @@ static void _elim_present              ( PurpleConversation *conv )
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-present", ID, args );
     g_free( ID );
-
+    fprintf( stderr, "(_elim_present)\n" );
     _elim_conv_args( args, conv );
+    fprintf( stderr, "(_elim_present:DONE)\n" );
     add_outbound_sexp( mcall ); 
 }
 static void _elim_custom_smiley_write  ( PurpleConversation *conv  , 

@@ -43,7 +43,7 @@ Buddy lists etc will be stored here"
     (elim-blist-remove-node     )
     (elim-blist-update-node     )
     ;; connection ops
-    (elim-connection-status     )
+    (elim-connection-state      )
     (elim-connection-progress   )
     (elim-disconnect-reason     )
     ;; network status
@@ -182,13 +182,14 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;
 (defun elim-debug (&rest args)
   (with-current-buffer (get-buffer-create "*elim-debug*")
-    (insert (apply 'format args) "\n\n\n")))
+    (beginning-of-buffer)
+    (insert (apply 'format args) "\n\n")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 (defun elim-handle-sexp (proc sexp)
   (progn
-    ;;(elim-debug "SEXP: %S" sexp)
+    (elim-debug "received: %S" sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))
           (attr (car  (cdar (cddr sexp))))
@@ -222,7 +223,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (when handler (funcall handler proc name id attr args)) ))
 
 (defun elim-handle-call (proc name attr args)
-  (elim-debug "elim call %S" name)
+  (elim-debug "elim call: %S" name)
   )
 
 (defun elim-input-filter (process data)
@@ -259,7 +260,7 @@ and return an s-expression suitable for making a call to an elim daemon."
         (sexp-string  nil))
     (setq sexp-string (prin1-to-string sexp-value))
     (process-send-string process sexp-string)
-    (elim-debug "sent %s" sexp-string)
+    (elim-debug "sent: %s" sexp-string)
     (accept-process-output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

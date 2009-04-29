@@ -58,7 +58,7 @@ static void _elim_notice ( PurpleConnection *conn, const char *msg )
     {
         char       *ID    = new_elim_id();
         xmlnode    *alist = xnode_new( "alist" );
-        xmlnode    *mcall = func_call( "elim-connection-status", ID, alist );
+        xmlnode    *mcall = func_call( "elim-connection-state", ID, alist );
         const char *aname = purple_account_get_username   ( acct );
         const char *proto = purple_account_get_protocol_id( acct );
         int         state = purple_connection_get_state   ( conn );

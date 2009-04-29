@@ -6,8 +6,8 @@
 (elim-join-chat   eproc (concat uname "-elim@irc.freenode.net") "#emacs" 
                   '("channel" "#emacs"))
 
-(elim-join-chat   eproc (concat uname "-elim@irc.freenode.net") "##cinema" 
-                  '("channel" "##cinema"))
+(elim-join-chat   eproc (concat uname "-elim@irc.freenode.net") "#elim" 
+                  '("channel" "#elim"))
 
 ;; you'll need to grab conbversation UIDs from *Messages*
 ;; accounts can be identified by either uid or name+protocol
@@ -17,8 +17,8 @@
        (string ((name . "account-name"))
                ,(concat uname "-elim@irc.freenode.net"))
        (string ((name . "im-protocol" )) "prpl-irc" )
-       (int    ((name . "conv-uid"    )) "135018696")
-       (string ((name . "text"        )) "bye"      ))))
+       (int    ((name . "conv-uid"    )) "134985920")
+       (string ((name . "text"        )) "wootles"  ))))
 
 (elim-process-send eproc
   (elim-daemon-call 'message nil
