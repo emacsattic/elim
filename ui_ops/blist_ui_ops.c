@@ -117,10 +117,10 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
         acct  = purple_chat_get_account( (PurpleChat *)b );
         break;
       case PURPLE_BLIST_CONTACT_NODE:
-        fprintf( stderr, "(_elim_blnode_to_xnode CONTACT)\n" );
+        fprintf( stderr, "(_elim_blnode_to_xnode CONTACT\n" );
         contact = (PurpleContact *)b;
-        if( contact->alias ) { bname = alias = contact->alias; }
-        else
+        bname = alias = contact->alias ? contact->alias : NULL;
+        if( !bname )
         {
             PurpleBuddy     *buddy = purple_contact_get_priority_buddy(contact);
             PurpleBlistNode *child = NULL;
@@ -130,7 +130,9 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
                     buddy = (PurpleBuddy *)child;
             if (  buddy ) bname = alias = purple_buddy_get_alias( buddy );
             else          bname = alias = "-";
+
         }
+        fprintf( stderr, "   name %s)\n", bname );
         break;
       case PURPLE_BLIST_GROUP_NODE  :
         fprintf( stderr, "(_elim_blnode_to_xnode GROUP)\n" );
@@ -202,17 +204,20 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
         AL_STR ( alist, "status-msg" , msg );
     }
 
-    if( !secondary_update )
+    // used to think we needed this for deletes, but we no longer rely on the
+    // child/sibling info being up to date. The parent contact has _already_
+    // been deleted by the time we ge there if we were its only child, so we
+    // can't prod an update for tha parent here as it may already be an invalid
+    // pointer: revist later if we need this data to be correct at the other
+    // end:
+    if( !delete && !secondary_update )
     {
         PurpleBlistNode *r = NULL;
         secondary_update   = TRUE;
 
         UPDATE_RELATIVE( r, sibling_next, b, TRUE );
         UPDATE_RELATIVE( r, sibling_prev, b, TRUE );
-        if( delete )
-            UPDATE_RELATIVE( r, parent , b, TRUE );
-        else
-            UPDATE_RELATIVE( r, parent , b, PBLN_GET( first_child, r ) == b );
+        UPDATE_RELATIVE( r, parent , b, PBLN_GET( first_child, r ) == b );
 
         secondary_update = FALSE;
     }

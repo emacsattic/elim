@@ -40,12 +40,12 @@ xmlnode * _h_elim_list_accounts ( const char *name ,
         PurpleAccount *a = acl->data;
         if( !a ) continue;
 
-        g_string_printf( akey, "%d", (int)a );
+        g_string_printf( akey, "%ld", (long)a );
         alist = xmlnode_new( "alist" );
         AL_STR ( alist, "account-name", purple_account_get_username   ( a ) );
         AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( a ) );
         AL_BOOL( alist, "connected"   , purple_account_is_connected   ( a ) );
-        AL_INT ( alist, "account-uid" , (int)a );
+        AL_PTR ( alist, "account-uid" , a      );
         AL_NODE( rval , akey->str     , alist  );
     }
 

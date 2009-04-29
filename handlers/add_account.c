@@ -80,7 +80,7 @@ xmlnode * _h_elim_add_account ( const char *name ,
     // =================================================================
 
     xmlnode *rval = xnode_new( "alist" );
-    AL_INT( rval, "account-uid" , (int)acct );
+    AL_PTR( rval, "account-uid" , acct );
     AL_STR( rval, "account-name", purple_account_get_username   ( acct ) );
     AL_STR( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
 

@@ -34,6 +34,7 @@ xmlnode * _h_elim_add_buddy ( const char *name ,
 
     elim_ping();
     
+    int         loopc = 0;
     const char *aname = ALIST_VAL_STR( args, "account-name" );
     const char *proto = ALIST_VAL_STR( args, "im-protocol"  );
     gpointer    auid  = ALIST_VAL_PTR( args, "account-uid"  );
@@ -54,20 +55,40 @@ xmlnode * _h_elim_add_buddy ( const char *name ,
 
     PurpleGroup *group = purple_group_new( gname );
     PurpleBuddy *buddy = purple_buddy_new( acct, bname, b_arg );
-    
-    fprintf( stderr, "add-buddy( b: %p, g: %p )\n", buddy, group );
+    PurpleBuddy *clone = NULL;
+    //fprintf( stderr, "add-buddy( b: %p, g: %p )\n", buddy, group );
+    // remove other references to this buddy
     purple_blist_add_buddy  ( buddy, NULL, group, NULL );
     purple_account_add_buddy( acct , buddy );
+    while( ( clone = (PurpleBuddy*)find_blist_node_clone( buddy ) ) )
+    {
+        if( loopc++ > 99   ) 
+        {
+            fprintf( stderr, "ARGH! clone reaping looped: %d\n", loopc );
+            break;
+        }
+        if( clone == buddy ) 
+        { 
+            fprintf( stderr, "ARGH! %p not a clone of %p\n", buddy, clone );
+            break;
+        }
+        fprintf( stderr, "(removing clone %p %ld (of buddy: %p)\n", 
+                 clone, (long)clone, buddy );
+        fprintf( stderr, "   name : %s\n", purple_buddy_get_name(clone) );
+        fprintf( stderr, "   group: %s)\n", 
+                 purple_group_get_name( purple_buddy_get_group(clone) ) );
+        purple_blist_remove_buddy( clone );
+    }
 
     xmlnode *rval = xnode_new( "alist" );
-    AL_INT( rval, "account-uid" , (int)acct  );
-    AL_INT( rval, "buddy-uid"   , (int)buddy );
-    AL_INT( rval, "group-uid"   , (int)group );
-    AL_STR( rval, "buddy-name"  , purple_buddy_get_name ( buddy ) );
-    AL_STR( rval, "account-name", purple_account_get_username   ( acct ) );
-    AL_STR( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
-    AL_STR( rval, "buddy-alias" , purple_buddy_get_alias( buddy ) );
-    AL_STR( rval, "group-name"  , purple_group_get_name ( group ) );
+    AL_PTR( rval, "account-uid" , acct  );
+    AL_PTR( rval, "buddy-uid"   , buddy );
+    AL_PTR( rval, "group-uid"   , group );
+    AL_STR( rval, "buddy-name"  , purple_buddy_get_name         ( buddy ) );
+    AL_STR( rval, "buddy-alias" , purple_buddy_get_alias        ( buddy ) );
+    AL_STR( rval, "account-name", purple_account_get_username   ( acct  ) );
+    AL_STR( rval, "im-protocol" , purple_account_get_protocol_id( acct  ) );
+    AL_STR( rval, "group-name"  , purple_group_get_name         ( group ) );
 
     sexp_val_free( args );
     return response_value( 0, id, name, rval );

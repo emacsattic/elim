@@ -139,15 +139,15 @@ xmlnode * _h_elim_add_chat( const char *name ,
 
     AL_STR( rval, "account-name", purple_account_get_username   (acct) );
     AL_STR( rval, "im-protocol" , purple_account_get_protocol_id(acct) );
-    AL_INT( rval, "account-uid" , (int)acct );
-    AL_STR( rval, "chat-name"   , chn       );
+    AL_PTR( rval, "account-uid" , acct );
+    AL_STR( rval, "chat-name"   , chn  );
 
     if( conv )
     {
         PurpleConversationType pct = purple_conversation_get_type    ( conv );
         PurpleConnectionFlags  pcf = purple_conversation_get_features( conv );
 
-        AL_INT ( rval, "conv-uid"     , (int)conv );
+        AL_PTR ( rval, "conv-uid"     , conv );
         AL_STR ( rval, "conv-name"    , purple_conversation_get_name (conv) );
         AL_STR ( rval, "conv-title"   , purple_conversation_get_title(conv) );
         AL_ENUM( rval, "conv-type"    , pct, ":conversation-type" );

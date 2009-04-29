@@ -838,7 +838,7 @@
     (condition-case errval
         (progn
           (elim-add-buddy garak-elim-process account buddy group)
-          (format "/add-buddy %s %s %S" buddy group items))
+          (format "/add-buddy %s %s" buddy group))
         (error "Could not add buddy: %S" errval)) ))
 
 (defun garak-cmd-remove-buddy (args)

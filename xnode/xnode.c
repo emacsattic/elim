@@ -613,8 +613,8 @@ xnode_to_str_helper( xmlnode *node, int *len, gboolean formatting, int depth )
             if( 0 && pretty && !depth )
             {
                 fprintf( stderr, "XX> closing %s [%d]\n", node_name, depth );
-                fprintf( stderr, "XX> length: %d; actual: %d\n", 
-                         text->len, strlen( text->str ) );
+                fprintf( stderr, "XX> length: %ld; actual: %ld\n", 
+                         (long)text->len, (long)strlen( text->str ) );
             }
         }
     } 

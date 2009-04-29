@@ -29,5 +29,6 @@ PurpleConversation *find_conv_by_acct_uid  ( PurpleAccount *acct, gpointer id );
 PurpleAccount      *find_acct_by_uid       ( gpointer uid );
 PurpleConversation *find_conv_by_uid       ( gpointer uid );
 PurplePlugin       *find_plugin_by_protocol( const char *name );
-PurpleBlistNode    *find_blist_node_by_uid ( gpointer uid, gboolean offline );
+PurpleBlistNode    *find_blist_node_by_uid ( gpointer uid , gboolean offline );
+PurpleBlistNode    *find_blist_node_clone  ( gpointer uid );
 #endif

@@ -240,7 +240,8 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon i/o loop
 (defun elim-handle-sexp (proc sexp)
-  ;;(elim-debug "RECEIVED: %S" sexp)
+  (when (eq (caar (cddr sexp)) 'elim-blist-remove-node)
+    (elim-debug "RECEIVED: %S" sexp))
   (when (listp sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))

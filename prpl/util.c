@@ -48,7 +48,7 @@ PurpleConversation *find_conv_by_uid( gpointer uid )
     return conv;
 }
 
-PurpleAccount *find_acct_by_uid(gpointer uid)
+PurpleAccount *find_acct_by_uid( gpointer uid )
 {
     GList         *alist = NULL;
     PurpleAccount *acct  = NULL;
@@ -59,7 +59,7 @@ PurpleAccount *find_acct_by_uid(gpointer uid)
     return acct;
 }
 
-PurpleBlistNode *find_blist_node_by_uid(gpointer uid, gboolean offline)
+PurpleBlistNode *find_blist_node_by_uid( gpointer uid, gboolean offline )
 {
     PurpleBlistNode *node = NULL;
     PurpleBlistNode *find = (PurpleBlistNode *)uid;
@@ -67,6 +67,56 @@ PurpleBlistNode *find_blist_node_by_uid(gpointer uid, gboolean offline)
 
     for( node = root; node; node = purple_blist_node_next(node, offline) )
         if( find == node ) return node;
+
+    return NULL;
+}
+
+#define PG(type,thing,arg) purple_ ## type ## _get_ ## thing( arg )
+PurpleBlistNode *find_blist_node_clone( PurpleBlistNode *bnode )
+{
+    PurpleBlistNode *clone = NULL;
+    PurpleBlistNode * root = purple_blist_get_root();
+    PurpleBlistNodeType  t = PURPLE_BLIST_OTHER_NODE;
+
+    if( !bnode ) return NULL;
+    
+    t = purple_blist_node_get_type( bnode );
+
+    for( clone = root; clone; clone = purple_blist_node_next(clone, TRUE) )
+    {
+        if( clone == bnode                         ) continue;
+        if( purple_blist_node_get_type(clone) != t ) continue;
+
+        switch( t )
+        {
+          case PURPLE_BLIST_BUDDY_NODE :
+            if( PG(buddy,account,(PurpleBuddy*)clone) !=
+                PG(buddy,account,(PurpleBuddy*)bnode) )               continue;
+            if( strcmp( PG(buddy,name,(PurpleBuddy*)clone) ,
+                        PG(buddy,name,(PurpleBuddy*)bnode) ) )        continue;
+            break;
+          case PURPLE_BLIST_CHAT_NODE  :
+            if( PG(chat, account, (PurpleChat*)clone) !=
+                PG(chat, account, (PurpleChat*)bnode)  )              continue;
+            if( strcmp( PG(chat, name, (PurpleChat*)clone) ,
+                        PG(chat, name, (PurpleChat*)bnode) ) )        continue;
+            break;
+          case PURPLE_BLIST_GROUP_NODE  :
+            if( strcmp( PG(group, name, (PurpleGroup*)clone) ,
+                        PG(group, name, (PurpleGroup*)bnode) ) )      continue;
+            break;
+          case PURPLE_BLIST_CONTACT_NODE:
+            if( strcmp( PG(contact, alias, (PurpleContact*)clone) ,
+                        PG(contact, alias, (PurpleContact*)bnode) ) ) continue;
+            if( PG(contact,priority_buddy, (PurpleContact*)clone) !=
+                PG(contact,priority_buddy, (PurpleContact*)bnode)  )  continue;
+            break;
+          default:
+            continue;
+        }
+
+        return clone;
+    }
 
     return NULL;
 }

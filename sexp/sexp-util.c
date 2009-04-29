@@ -239,7 +239,7 @@ SEXP_VALUE * sexp_value( xmlnode *node )
         break;
       case SEXP_B64:
         {
-            guint len;
+            gsize len;
             char *raw = NULL; 
             if( (raw = BASE64_DECODE( data, &len )) )
             {
@@ -249,7 +249,7 @@ SEXP_VALUE * sexp_value( xmlnode *node )
         };
         break;
       case SEXP_INT:
-        value->x.integer = atoi( data );
+        value->x.integer = atol( data );
         break;
       case SEXP_FLOAT:
         {

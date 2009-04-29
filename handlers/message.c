@@ -95,7 +95,7 @@ xmlnode * _h_elim_message ( const char *name ,
 
     xmlnode *rval = xnode_new( "alist" );
     AL_INT( rval, "bytes"    , len     );
-    AL_INT( rval, "conv-uid" , (int)pc );
+    AL_PTR( rval, "conv-uid" , pc      );
     AL_STR( rval, "conv-name", purple_conversation_get_name(pc) );
 
     g_free       ( esc  );

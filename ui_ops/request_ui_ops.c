@@ -302,9 +302,9 @@ static void *_elim_request_choice( const char         *title         ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
@@ -357,12 +357,12 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
                 for( x = 0; x < max; x++ )
                     if( f == *(F + x) ) 
                     {
-                        fprintf( stderr, "     matched action: %p\n", *(F +x) );
+                        fprintf( stderr, "     matched action: %p\n", *(F+x) );
                         (*(F + x))( data ); break; 
                     }
                     else
                     {
-                        fprintf( stderr, "   unmatched action: %p\n", *(F +x) );
+                        fprintf( stderr, "   unmatched action: %p\n", *(F+x) );
                     }
             }
             else { (handle->req.input.nok)( data, "" ); }
@@ -408,6 +408,7 @@ static void *_elim_request_action( const char          *title        ,
         {
             action_func func = va_arg( actions, action_func );
             AL_PTR( acts, label, func );
+            fprintf( stderr, "storing action func: %s = %p\n", label, func );
             if( offs < action_count )
                 *(resp->req.action.func + offs++) = func;
         }
@@ -570,9 +571,9 @@ static void *_elim_request_fields( const char          *title        ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
