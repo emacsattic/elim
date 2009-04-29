@@ -105,3 +105,136 @@ on-list: whether the other user is on your buddy list already
 The response indicates whether you should accept (bool 1) or reject (bool 0)
 the request.
 ############################################################################
+
+Blist calls:
+
+These are concerned with changes to your buddy list:
+
+Some terminology:
+
+A "buddy"   is a contact, typically another IM user.
+A "contact" is slightly different: a contact is a logical grouping of 
+            buddies. For example, if you have two different sets of 
+            IM details for one person (eg on different IM networks)
+            You might place them in a contact together.
+A "group"   Is a logical group into which you can place a buddy
+            or contact. Some protocols support groups on the server,
+            others leave it entirely up to clients.
+            The default group is "Buddies" for buddies and contacts
+            And "Chats" for multi-user rooms/chats/channels/
+
+The main calls here (there are other but they are not implemented yet)
+Have very similar return structures: Some details are simple omitted 
+for those blist node types which do not support them:
+
+*) elim-blist-new-node
+
+   This call informs you that a new node has been created. However,
+   investigation of the libpurple code reveaks that this means a 
+   new node has been allocated, but _not_ that it has been added to 
+   the buddy list... so in general you don;t have to do anything
+   when you see this.
+
+*) elim-blist-update-node
+
+   A node was added to the buddy list and/or changed
+
+*) elim-blist-remove-node
+
+  A node was removed from the buddy list
+
+Some of the fields require clarification:
+
+bnode-type  : an integer specifying the type of node: see be,ow for details
+bnode-parent: if this node is contained within another node, the uid
+              of the container is given here.
+bnode-child : if this node contains other nodes, the uid of the first child
+              node will be given here
+bnode-prev  : the preceding sibling node, if any
+bnode-next  : the subsequent sibling node, if any
+bnode-flags : usually uninteresting. if (logand flags 1), then the node
+              is ephemeral and should not be saved.
+allowed     : false if you have blocked this IM user
+status-id   : canonical IM status ID
+status-name : human friendly status name
+status-type : status type code - what type of status is this.
+status-msg  : extended status message
+
+A buddy:
+
+   (function-call nil 
+     (elim-blist-update-node ((id . "010")))
+     (alist nil
+       (int    ((id . "bnode-uid"    )) "268435500")
+       (int    ((id . "bnode-type"   )) "2"        )
+       (string ((id . "bnode-name"   )) "fsbot"    )
+       (int    ((id . "account-uid"  )) "268435456")
+       (string ((id . "account-name" )) "elim@irc.freenode.net")
+       (string ((id . "im-protocol"  )) "prpl-im"  )
+       (string ((id . "bnode-alias"  )) "fsbot"    )
+       (string ((id . "server-alias" )) "fsbot"    )
+       (string ((id . "contact-alias")) "erbot"    )
+       (string ((id . "bnode-prev"   )) "126346445")
+       (string ((id . "bnode-next"   )) "126313246")
+       (string ((id . "bnode-parent" )) "133313123")
+       (string ((id . "bnode-child"  )) "216313141")
+       (string ((id . "bnode-flags"  )) "0"        )
+       (bool   ((id . "allowed"      )) "1"        )
+       (bool   ((id . "available"    )) "0"        )
+       (bool   ((id . "online"       )) "1"        )
+       (bool   ((id . "idle"         )) "1"        )
+       (string ((id . "status-name"  )) "Away"     )
+       (string ((id . "status-id"    )) "away"     )
+       (int    ((id . "status-type"  )) "5"        )
+       (string ((id . "status-msg"   )) "Off to lunch") ))
+
+A chat node (channel, room, etc):
+
+   (function-call nil 
+     (elim-blist-update-node ((id . "010")))
+     (alist nil
+       (int    ((id . "bnode-uid"    )) "268435500")
+       (int    ((id . "bnode-type"   )) "3"        )
+       (string ((id . "bnode-name"   )) "fsbot"    )
+       (int    ((id . "account-uid"  )) "268435456")
+       (string ((id . "account-name" )) "elim@irc.freenode.net")
+       (string ((id . "im-protocol"  )) "prpl-im"  )
+       (string ((id . "bnode-prev"   )) "126346445")
+       (string ((id . "bnode-next"   )) "126313246")
+       (string ((id . "bnode-parent" )) "133313123")
+       (string ((id . "bnode-child"  )) "216313141")
+       (string ((id . "bnode-flags"  )) "0"        )
+       (bool   ((id . "allowed"      )) "1"        ) ))
+
+A Contact node:
+
+   (function-call nil 
+     (elim-blist-update-node ((id . "010")))
+     (alist nil
+       (int    ((id . "bnode-uid"    )) "268435500")
+       (int    ((id . "bnode-type"   )) "1"        )
+       (string ((id . "bnode-name"   )) "fsbot"    )
+       (string ((id . "bnode-prev"   )) "126346445")
+       (string ((id . "bnode-next"   )) "126313246")
+       (string ((id . "bnode-parent" )) "133313123")
+       (string ((id . "bnode-child"  )) "216313141")
+       (string ((id . "bnode-flags"  )) "0"        ) ))
+
+A group node:
+
+   (function-call nil 
+     (elim-blist-update-node ((id . "010")))
+     (alist nil
+       (int    ((id . "bnode-uid"    )) "268435500" )
+       (int    ((id . "bnode-type"   )) "0"         )
+       (string ((id . "bnode-name"   )) "fsbot"     )
+       (string ((id . "bnode-prev"   )) "126346445" )
+       (string ((id . "bnode-next"   )) "126313246" )
+       (string ((id . "bnode-parent" )) "133313123" )
+       (string ((id . "bnode-child"  )) "216313141" )
+       (string ((id . "bnode-flags"  )) "0"         ) ))
+
+############################################################################
+
+Connection calls:
+

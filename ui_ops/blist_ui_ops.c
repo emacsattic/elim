@@ -104,11 +104,6 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
         proto = purple_account_get_protocol_id( acct );
     }
 
-    if( stat )
-    {
-        stype = purple_status_get_type( stat );
-    }
-
     xmlnode *alist = xnode_new( "alist" );
 
     AL_INT( alist, "bnode-uid" , (int)b );
@@ -174,7 +169,7 @@ static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )
 
 static void _elim_bl_new_node( PurpleBlistNode *node )
 {
-    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-insert-node" ) );
+    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-new-node" ) );
 }
 
 static void _elim_bl_update ( PurpleBuddyList *list , PurpleBlistNode *node )
