@@ -40,7 +40,7 @@ CFLAGS      += -Wall -std=c99 $(DEFINES)
 CFLAGS      += $(foreach P, $(PACKAGES), $(shell pkg-config --cflags $P)) 
 LDFLAGS     += $(foreach P, $(PACKAGES), $(shell pkg-config --libs   $P)) 
 TVER        := $(shell etags --version | head -n 1 | grep -i exuberant)
-BINARIES    := elim-client test/sexp-test
+BINARIES    := elim-client
 CH_FILES    := $(wildcard *.c         ) \
                $(wildcard prpl/*.c    ) \
                $(wildcard xnode/*.c   ) \
@@ -60,9 +60,8 @@ all: $(BINARIES)
 
 ############################################################################
 # test scripts/utils etc, such as there are:
-test/sexp-test: test/sexp-test.o test/sexp-example.h $(UTIL_OBJ)
-
-test/sexp-test.o: test/sexp-test.c test/sexp-example.h
+#test/sexp-test: test/sexp-test.o test/sexp-example.h $(UTIL_OBJ)
+#test/sexp-test.o: test/sexp-test.c test/sexp-example.h
 
 ############################################################################
 # object files and dependencies thereof:
@@ -96,7 +95,6 @@ diag:
 clean:
 	@( rm -fv $(BINARIES) $(OBJ_FILES) \
 	          handler-list.h           \
-	          test/sexp-test.o         \
 	          ui_ops/ops.h             \
 	          elim-func-handlers.c     \
 	          TAGS                     );

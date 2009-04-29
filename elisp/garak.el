@@ -1,5 +1,21 @@
-(add-to-list 'load-path "~/src/elisp/lui/")
-(require 'lui)
+(require 'lui  nil t)
+(require 'elim nil t)
+
+(let ((load-path (cons (file-name-directory 
+                        (or load-file-name buffer-file-name)) load-path)))
+  (when (not (featurep 'lui )) (require 'lui ))
+  (when (not (featurep 'elim)) (require 'elim)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; faces
+(defface garak-nick-face '((default (:foreground "salmon"))) 
+  "Default face for IM user names")
+
+(defface garak-own-nick-face '((default (:foreground "aquamarine"))) 
+  "Default face your IM user name(s)")
+
+(defface garak-system-message-face '((default (:foreground "grey"))) 
+  "Default face for system (non user generated) messages")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffer tracking data structures
@@ -23,7 +39,7 @@
      (elim-account-request-add    . garak-stranger-added-you  )
      (elim-account-request-auth   . garak-auth-requested      )
      ;; blist (buddy list) ops
-     ;;(elim-blist-create-node                              )
+     ;;(elim-blist-create-node                                )
      (elim-blist-update-node      . garak-update-buddy        )
      (elim-blist-remove-node      . garak-delete-buddy        )
      ;; connection ops
@@ -36,6 +52,7 @@
      ;; conversation
      (elim-conv-create            . garak-new-conversation    )
      (elim-conv-destroy           . garak-end-conversation    )
+     (elim-chat-add-users         . garak-chat-add-users      )
      ;; messages:
      (elim-conv-write-chat        . garak-chat-message        )
      (elim-conv-write-im          . garak-user-message        )
@@ -56,6 +73,9 @@
 (defun garak-conversation-buffer (args &optional do-not-create)
   (let ((uid (cdr (assoc "conv-uid" args))) buffer)
     (when uid (setq buffer (cdr (assoc uid garak-conversation-buffers))))
+    (when (and (bufferp buffer) (not (buffer-live-p buffer)))
+      (rassq-delete-all buffer garak-conversation-buffers)
+      (setq buffer nil))
     (when (and (not buffer) (not do-not-create))
       (progn
         (setq buffer (generate-new-buffer (cdr (assoc "conv-name" args)))
@@ -96,7 +116,7 @@
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer (garak-conversation-buffer args t)) 
          (flags  (cdr (assoc "flags" args))) 
-         text who)
+         text who nick-face)
     (when (not buffer)
       (setq buffer (garak-new-conversation process call call-id status args)))
     (with-current-buffer buffer
@@ -104,8 +124,16 @@
             who  (or (cdr (assoc "alias" args)) 
                      (cdr (assoc "who"   args))))
       (if (memq :system flags)
-          (lui-insert (format "* %s *" text))
-        (lui-insert (format "<%s> %s" (or who garak-account-name) text)) )) ))
+          (lui-insert 
+           (elim-add-face (format "* %s *" (elim-interpret-markup text))
+                          'garak-system-message-face))
+        (setq nick-face (if (memq :send flags)
+                            'garak-own-nick-face
+                          'garak-nick-face))
+        (lui-insert 
+         (format "<%s> %s" 
+                 (elim-add-face (or who garak-account-name) nick-face) 
+                 text)) )) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
@@ -137,6 +165,33 @@
               garak-conversation-buffers
               (rassq-delete-all buffer garak-conversation-buffers))
         (lui-insert "*conversation ended*") )) ))
+
+(defun garak-chat-add-users (process call call-id status args) 
+  (let ((buffer (garak-conversation-buffer args t)) 
+        people name new message cname)
+    (when (not buffer) 
+      (setq buffer (garak-new-conversation process call call-id status args)))
+    (when buffer
+      (with-current-buffer buffer
+        (setq new     (elim-avalue "new-arrivals" args)
+              cname   (elim-avalue "conv-name"    args)
+              people  (elim-avalue "participants" args)
+              people  (mapcar (lambda (P) (elim-avalue "name" P)) people))
+        (message "CHAT ADD: %S" new)
+        (if (not new)
+            (setq message (mapconcat 'identity people " ")
+                  message (concat "* Users in " cname ": " message)
+                  message (elim-add-face message 'garak-system-message-face))
+          (setq message
+                (mapcar 
+                 (lambda (N) 
+                   (elim-add-face (format "* %s has entered %s" N cname) 
+                                  'garak-system-message-face)) people)))
+        (message "CHAT ADD: %S" message)
+        (if (listp message)
+            (mapc 'lui-insert message)
+          (lui-insert message)) )) ))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commands
 (defun garak-read-username (proc proto)
@@ -224,6 +279,12 @@
             (format "/join %s: protocol plugin does not support command")))
       (format "/join %s: no account found" args)) ))
 
+(defun garak-cmd-leave (args)
+  (if (not garak-conv-uid)
+      "/part: not a conversation buffer"
+    (elim-leave-conversation garak-elim-process garak-conv-uid)
+    "/part"))
+
 (defun garak-cmd-connect (args)
   (let ((account-data (elim-account-data garak-elim-process args)))
     (if (not account-data)
@@ -244,19 +305,35 @@
 (defun garak-cmd-not-implemented (args)
   "Command not implemented")
 
+(defvar garak-command-handlers
+  '((add-account . garak-cmd-add-account)
+    (add-buddy   . garak-cmd-add-buddy  )
+    (connect     . garak-cmd-connect    )
+    (disconnect  . garak-cmd-disconnect )
+    (help        . garak-cmd-help       )
+    (join        . garak-cmd-join       )
+    (leave       . garak-cmd-leave      )
+    (quit        . garak-cmd-quit       )))
+
+(defun garak-command-match (cmd)
+  (cond
+   ((string-match "\\(?:^\\|/\\)add.account\\>"         cmd) 'add-account)
+   ((string-match "\\(?:^\\|/\\)add.buddy\\>"           cmd) 'add-buddy  )
+   ((string-match "\\(?:^\\|/\\)connect\\>"             cmd) 'connect    )
+   ((string-match "\\(?:^\\|/\\)login\\>"               cmd) 'connect    )
+   ((string-match "\\(?:^\\|/\\)disconnect\\>"          cmd) 'disconnect )
+   ((string-match "\\(?:^\\|/\\)logout\\>"              cmd) 'disconnect )
+   ((string-match "\\(?:^\\|/\\)logoff\\>"              cmd) 'disconnect )
+   ((string-match "\\(?:^\\|/\\)part\\>"                cmd) 'leave      )
+   ((string-match "\\(?:^\\|/\\)leave\\>"               cmd) 'leave      )
+   ((string-match "\\(?:^\\|/\\)\\(?:help\\>\\|\\?\\)"  cmd) 'help       )
+   ((string-match "\\(?:^\\|/\\)join\\(?:.\\S-+\\)?\\>" cmd) 'join       )
+   ((string-match "\\(?:^\\|/\\)quit\\>"                cmd) 'quit       )))
+
 (defun garak-command-handler (cmd args)
-  (let ((handler nil))
-    (setq handler
-          (cond
-           ((string-match "^add.account"         cmd) 'garak-cmd-add-account)
-           ((string-match "^add.buddy"           cmd) 'garak-cmd-add-buddy  )
-           ((string-match "^connect"             cmd) 'garak-cmd-connect    )
-           ((string-match "^login"               cmd) 'garak-cmd-connect    )
-           ((string-match "^disconnect"          cmd) 'garak-cmd-disconnect )
-           ((string-match "^logout"              cmd) 'garak-cmd-disconnect )
-           ((string-match "^logoff"              cmd) 'garak-cmd-disconnect )
-           ((string-match "^\\(?:help\\|\\?\\)"  cmd) 'garak-cmd-help       )
-           ((string-match "^join\\(?:.\\S-+\\)?" cmd) 'garak-cmd-join       )))
+  (let (command handler)
+    (setq command (garak-command-match cmd)
+          handler (cdr (assq command garak-command-handlers)))
     (elim-debug "handler: %S" handler)
     (if (fboundp handler)
         (progn 
@@ -268,16 +345,80 @@
     (if (string-match "^/\\(\\S-+\\)\\s-*\\(.*\\)" input)
         (setq command (match-string 1 input)
               args    (match-string 2 input)
-              output  (garak-command-handler command args)) 
+              output  (garak-command-handler command args))
+      (set-text-properties 0 (length output) nil output)
       (elim-message garak-elim-process garak-account-uid garak-conv-uid output)
       (setq output nil))
   (when output (lui-insert output)) ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; completion:
+(defvar garak-commands 
+  '("/add-account" "/add-buddy" "/connect" "/login"
+    "/disconnect"  "/logout"    "/logoff"  "/quit" ))
+
+(defvar garak-command-completers 
+  '((add-account . garak-comp-add-account)
+    (add-buddy   . garak-comp-add-buddy  )
+    (connect     . garak-comp-connect    )
+    (disconnect  . garak-comp-disconnect )
+    (help        . garak-comp-help       )
+    (join        . garak-comp-join       )))
+
+(defun garak-comp-add-account (prefix &optional protocol)
+  (let (proto args available)
+    (setq args      (split-string prefix split-string-default-separators nil)
+          available (mapcar 'car (elim-protocol-alist garak-elim-process))
+          proto     (or (nth 2 args) ""))
+    ;;(message "rval: %S" (all-completions proto available))
+    (when (and (= (length args) 3) (not (member proto available)))
+      (all-completions proto available)) ))
+
+(defun garak-comp-add-buddy   (prefix &optional protocol)
+  (let (acct args available)
+    (setq args      (split-string prefix split-string-default-separators nil)
+          available (mapcar (lambda (A) (cdr (assq :name (cdr A))))
+                            (elim-account-alist garak-elim-process))
+          acct      (or (nth 1 args) ""))
+    (when (and (= (length args) 2) (not (member acct available)))
+      (all-completions acct available)) ))
+
+(defun garak-comp-connect     (prefix &optional protocol)
+  (garak-comp-add-buddy prefix))
+(defun garak-comp-disconnect  (prefix &optional protocol)
+  (garak-comp-add-buddy prefix))
+
+(defun garak-comp-help (prefix &optional protocol)
+  (let (cmd args)
+    (setq args (split-string prefix split-string-default-separators nil)
+          cmd  (or (nth 1 args) ""))
+    (when (and (= (length args) 2) (not (member cmd garak-commands)))
+      (all-completions cmd garak-commands)) ))
+
+(defun garak-comp-join (prefix &optional protocol))
+
+(defun garak-complete-commands (&optional prefix protocol) 
+  (if (zerop (length prefix))
+      garak-commands
+    (cons (try-completion  prefix garak-commands) 
+          (all-completions prefix garak-commands)) ))
+
+(defun garak-complete (&optional at-start prefix)
+  (if at-start
+      (garak-complete-commands nil garak-im-protocol)
+    (when (not prefix)
+      (setq prefix (buffer-substring lui-input-marker (point))))
+    (let ((completer (garak-command-match prefix)))
+      (when (setq completer (cdr (assq completer garak-command-completers)))
+        (funcall completer prefix garak-im-protocol)) )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-derived-mode garak-mode lui-mode "Garak"
   "An IM mode based on elim"
   (setq lui-input-function 'garak-input-handler)
+  (set (make-local-variable 'lui-possible-completions-function) 
+       'garak-complete)
   (lui-set-prompt (concat (propertize "garak>" 'face 'mode-line) " ")))
 
 (defun garak ()
@@ -290,3 +431,4 @@
        (elim-start "garak" nil garak-callbacks))
   (end-of-buffer))
 
+(provide 'garak)

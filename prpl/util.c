@@ -37,6 +37,17 @@ PurpleConversation *find_conv_by_acct_uid( PurpleAccount *acct, gpointer id )
         conv : NULL;
 }
 
+PurpleConversation *find_conv_by_uid( gpointer uid )
+{
+    GList              *clist = NULL;
+    PurpleConversation *conv  = NULL;
+
+    for( clist = purple_get_conversations(); clist; clist = clist->next )
+        if( uid == clist->data ) { conv = clist->data; break; }
+
+    return conv;
+}
+
 PurpleAccount *find_acct_by_uid(gpointer uid)
 {
     GList         *alist = NULL;

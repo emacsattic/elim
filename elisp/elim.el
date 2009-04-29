@@ -21,7 +21,11 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables & global state functions:
-(defcustom elim-executable "elim-client" 
+(defcustom elim-executable 
+  (expand-file-name
+   (concat 
+    (file-name-directory 
+     (or load-file-name buffer-file-name)) "../elim-client"))
   "Location of the elim binary, or one that talks the same protocol"
   :group 'elim
   :type  '(file))
@@ -60,6 +64,7 @@ flags rather than simple enumerations.")
     (elim-network-down          )
     ;; requests
     (elim-request-fields        )
+    (elim-request-input         )
     ;; conversation
     (elim-conv-create           )
     (elim-conv-destroy          )
@@ -460,20 +465,26 @@ and return an s-expression suitable for making a call to an elim daemon."
 
 (defun elim-form-ui-ok-cb (&optional parent child event &rest stuff) 
   (when elim-form-ui-args
-    (let (value item-name item-value proc name id args response)
-      (mapc
-       (lambda (W) 
-         (setq item-name  (widget-get W 'ident) 
-               item-value (widget-value W))
-         (when item-name
-           (message "widget %s == %S" item-name item-value)
-           (setq value (cons (elim-atom-to-item item-name item-value) value))))
-       elim-form-ui-data)
+    (let (value iname ivalue proc name id args response)
       (setq proc (cadr (memq :process elim-form-ui-args))
             name (cadr (memq :name    elim-form-ui-args))
             id   (cadr (memq :call-id elim-form-ui-args)))
-      (setq response 
-            (elim-daemon-response name id 0 (nconc (list 'alist nil) value)))
+      (cond 
+       ((eq 'elim-request-fields name)
+        (mapc
+         (lambda (W) 
+           (setq iname  (widget-get W 'ident) 
+                 ivalue (widget-value W))
+           (when iname
+             (message "widget %s == %S" iname ivalue)
+             (setq value (cons (elim-atom-to-item iname ivalue) value))))
+         elim-form-ui-data)
+        (setq response 
+              (elim-daemon-response name id 0 (nconc (list 'alist nil) value))))
+       (t 
+        (setq value (elim-atom-to-item "value"
+                                       (widget-value (car elim-form-ui-data)))
+              response (elim-daemon-response name id 0 ))))
       (elim-process-send proc response)) 
     (kill-buffer nil) ))
 
@@ -514,9 +525,9 @@ and return an s-expression suitable for making a call to an elim daemon."
            'choice
            id
            :notify 'elim-form-ui-handle-event
-           :tag    (or (elim-avalue "label" data) id)
+           :tag    (or (elim-avalue "label"   data) id)
            :value  (or (elim-avalue "value"   data)
-                       (elim-avalue "default" data) 0) 
+                       (elim-avalue "default" data)  0)
            (mapcar
             (lambda (o)
               (setq item (list 'const :tag o idx) idx (1+ idx)) item)
@@ -557,6 +568,54 @@ and return an s-expression suitable for making a call to an elim daemon."
     (mapc 'elim-request-field fields)
     (widget-insert "====================================================\n")))
 
+(defun elim-request-item (proc name id status args)
+  (let (field-buf buf-name ok-label nok-label prompt secret default)
+    (setq prompt    (concat (or (elim-avalue "title"        args)
+                                (elim-avalue "primary"      args)
+                                (elim-avalue "who"          args)
+                                (elim-avalue "account-name" args) "Input:"))
+          default   (elim-avalue "default" args)
+          secret    (elim-avalue "secret"  args)
+          buf-name  (concat "* " prompt " *")
+          field-buf (generate-new-buffer buf-name))
+    (with-current-buffer field-buf 
+      (kill-all-local-variables)
+      (let ((inhibit-read-only t)) (erase-buffer))
+      (remove-overlays)
+      (make-local-variable 'elim-form-ui-data)
+      (make-local-variable 'elim-form-ui-args)
+      (setq elim-form-ui-args (list :process proc 
+                                    :name    name 
+                                    :call-id id  ))
+      (widget-insert (concat (or (elim-avalue "primary" args)
+                                 (elim-avalue "title"   args)) "\n"
+                             (elim-avalue "secondary" args)))
+      ;; actually create the widget:
+      (cond ((memq name '(elim-request-input 
+                          elim-request-file 
+                          elim-request-directory)) 
+             (elim-request-field-string "value" 
+                                        (list (cons "default" default)
+                                              (cons "label"   prompt )
+                                              (cons "masked"  secret ))))
+            (t (error "request type %S not implemented" name)))
+      (setq ok-label  (elim-avalue "ok-label"  args)
+            nok-label (elim-avalue "nok-label" args))
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" nok-label)
+                               :notify 'elim-form-ui-nok-cb)
+      (widget-insert " ")
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" ok-label)
+                               :notify 'elim-form-ui-ok-cb)
+      (use-local-map widget-keymap)
+      (widget-setup)
+      (beginning-of-buffer)
+      (widget-forward 1))
+    (display-buffer field-buf)))
+
 (defun elim-request-fields (proc name id status args)
   (let (fields field-buf buf-name ok-label nok-label)
     (setq fields    (elim-avalue "fields" args)
@@ -574,8 +633,7 @@ and return an s-expression suitable for making a call to an elim daemon."
       (make-local-variable 'elim-form-ui-args)
       (setq elim-form-ui-args (list :process proc 
                                     :name    name 
-                                    :call-id id 
-                                    :args    args))
+                                    :call-id id  ))
       (widget-insert (concat (or (elim-avalue "primary" args)
                                  (elim-avalue "title"   args)) "\n"
                              (elim-avalue "secondary" args)))
@@ -623,6 +681,9 @@ as it relies on initialisation done by `elim-start'."
   "Fetches the cached alist of im protocol ids and names supported by PROCESS."
   (elim-fetch-process-data process :protocols))
 
+(defun elim-account-alist (process)
+  (elim-fetch-process-data process :accounts))
+
 (defun elim-protocol-supported (process protocol)
   "Returns nil if PROTOCOL is not in the cache of supported im protocols, 
 or a cons of \(\"protocol-id\" . \"protocol-name\") if it is."
@@ -661,20 +722,69 @@ its data in the form (uid (:key . value) ...). :key items should include
 (defun elim-buddy-list (process)
   (elim-fetch-process-data process :blist))
 
-(defun elim-buddy-children (process uid)
-  (let (cdata children (seen (list uid)) cuid)
-    (mapc 
-     (lambda (X)
-       (setq cuid (car X) cdata (cdr X))
-       (when (not (member cuid seen))
-         (setq seen (cons cuid seen))
-         (when (eql (elim-avalue "bnode-parent" cdata) uid)
-           (setq children (cons X children)))))
-     (elim-fetch-process-data process :blist))
+(defun elim-buddy-children (process node)
+  (let (uid child children seen cuid parent)
+    (if (consp node) 
+        (setq parent node uid (car parent))
+      (setq uid node parent (elim-buddy process uid)))
+    (setq cuid (elim-avalue "bnode-child" parent) seen (list uid))
+    (while (and cuid (not (member cuid seen)))
+      (setq child    (elim-buddy cuid)
+            children (cons child children)
+            seen     (cons cuid  seen)
+            cuid     (elim-avalue "bnode-next" child)))
     children))
 
 (defun elim-buddy (process uid)
   (elim-avalue uid (elim-fetch-process-data proc :blist)))
+
+(defun elim-action-click (e &optional p)
+  (interactive "e")
+  (if e (setq p (cadr (event-start e))))
+  (let ((type (get-text-property p :action)))
+    (cond ((eq type :url) (browse-url (get-text-property p :url)))
+          (t nil)) ))
+
+(defvar elim-action-button-map (make-sparse-keymap))
+(define-key elim-action-button-map (kbd "RET"      ) 'elim-action-click)
+(define-key elim-action-button-map (kbd "<mouse-2>") 'elim-action-click)
+
+(defun elim-add-face (object face &optional start end) 
+  (let (fprop a b)
+    (or start (setq start 0))
+    (or end   (setq end (if (bufferp object) 
+                            (1+ (buffer-size object)) 
+                          (length object))))
+    (setq b start a start)
+    (while (< b end)
+      (setq fprop (get-text-property a 'face object)
+            fprop (if (and fprop (listp fprop)) (cons face fprop) 
+                    (if fprop (list face fprop) face))
+            b     (next-single-char-property-change a 'face object end))
+      (add-text-properties a b (list 'face fprop) object)
+      (setq a b)) object))
+
+(defun elim-buttonised-url (str)
+  (let ((url  (match-string 1 str))
+        (link (match-string 2 str)))
+    (propertize link 
+                :action     :url 
+                :url        url
+                'fontified  t
+                'mouse-face 'bold
+                'local-map  elim-action-button-map)))
+
+(defun elim-italicised-text (str)
+  (elim-add-face (match-string 1 str) 'italic))
+
+(defun elim-interpret-markup (text)
+  (setq text (replace-regexp-in-string 
+              "<a.+?href=\"\\(.*?\\)\".*?>\\(\\(?:.\\|\n\\)*?\\)</a>"
+              'elim-buttonised-url text)
+        text (replace-regexp-in-string "<I>\\(\\(?:.\\|\n\\)+?\\)</I>"
+                                       'elim-italicised-text text))
+  text)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; elim daemon calls:
 
@@ -750,6 +860,13 @@ add that user to your buddy list"
           (elim-process-send process (elim-daemon-call 'add-buddy nil arglist)))
       (error "No such account: %s" account)) ))
 
+(defun elim-leave-conversation (process conv-uid)
+  (let (arglist)
+    (when (numberp conv-uid)
+      (setq arglist (list 'alist nil (elim-atom-to-item "conv-uid" conv-uid)))
+      (elim-process-send process 
+                         (elim-daemon-call 'end-conversation nil arglist)) )))
+
 (defun elim-co-disco (process account operation)
   (let ((arglist (elim-account-proto-items process account)))
     (when arglist
@@ -805,3 +922,4 @@ on the parameters required to join a chat/room/channel on that PROTOCOL."
       (if (equal (elim-avalue "status" args) 0)
         (elim-avalue "parameters" (elim-avalue "value" args)) nil) )))
 
+(provide 'elim)

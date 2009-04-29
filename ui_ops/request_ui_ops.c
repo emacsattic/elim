@@ -147,7 +147,7 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
             int status = ALIST_VAL_INT( args, "status" );
             if( status == 0 ) 
             {
-                char *input = ALIST_VAL_STR( args, "input" );
+                char *input = ALIST_VAL_STR( args, "value" );
                 ( input ? 
                   handle->req.input.ok  : 
                   handle->req.input.nok )( data, input );
@@ -221,11 +221,13 @@ static void *_elim_request_input ( const char         *title         ,
 
     resp->req.input.ok   = (PurpleRequestInputCb)ok_cb;
     resp->req.input.nok  = (PurpleRequestInputCb)cancel_cb;
+
     resp->data = user_data;
     resp->type = PURPLE_REQUEST_INPUT;
     resp->id   = ID;
     cbh ->func = _elim_request_input_cb;
     cbh ->data = resp;
+
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-request-input", ID, alist );
     add_outbound_sexp( mcall );
@@ -246,7 +248,7 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
             int status = ALIST_VAL_INT( args, "status" );
             if( status == 0 ) 
             {
-                int choice = ALIST_VAL_INT( args, "choice" );
+                int choice = ALIST_VAL_INT( args, "value" );
                 ( (choice != -1) ? 
                   handle->req.choice.ok  : 
                   handle->req.choice.nok )( data, choice );
@@ -347,7 +349,7 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
             if( status == 0 ) 
             {
                 int x = 0;
-                gpointer     f = (gpointer)ALIST_VAL_INT( args, "choice" );
+                gpointer     f = (gpointer)ALIST_VAL_INT( args, "value" );
                 action_func *F = handle->req.action.func;
                 for( x = 0; x < max; x++ )
                     if( f == *(F++) ) { (*F)( data ); break; }
@@ -697,7 +699,7 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
             int status = ALIST_VAL_INT( args, "status" );
             if( status == 0 ) 
             {
-                char *path = ALIST_VAL_STR( args, "path" );
+                char *path = ALIST_VAL_STR( args, "value" );
                 ( path ? 
                   handle->req.path.ok  : 
                   handle->req.path.nok )( data, path );

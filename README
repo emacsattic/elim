@@ -25,38 +25,76 @@ If you want to test the daemon using the (currently incomplete) elisp
 client suport, you need to do the following:
 
 * fire up emacs
-* load elisp/elim.el
+* load elisp/garak.el
 * customise or set elim-executable to the location of the elim-client binary
+  (this step shuldn't be necessary now, but just in case it doesn't work)
 
-eval the folling expressions:
+M-x garak RET
 
-(setq eproc (elim-start))
-(setq uname (user-login-name))
-(elim-add-account eproc (concat uname "-elim@irc.freenode.net") "prpl-irc" nil)
-(elim-connect     eproc (concat uname "-elim@irc.freenode.net"))
+To add an account:
+
+  /add-account USERNAME PROTOCOL
+
+eg:
+
+  /add-account foo@jabber.org prpl-jabber
+  /add-account blerg@irc.freenode.net prpl-irc
+
+(the protocol names can be tab completed)
+
+To login:
+
+  /connect USERNAME
+
+(USERNAME can be tab-completed once accounts have been added)
+
+To join a channel/room/etc
+
+on IRC:
+
+  /join USERNAME #emacs
+
+OR, if you are already in an account-specific buffer, such as an IRC channel
+buffer, just:
+
+  /join #emacs
+
+The details vary per protocol, but garak should be able to figure out what's 
+required if you just say /join USERNAME (or /join in an account-specific buffer)
+
+To add a buddy
+
+  /add-buddy USERNAME BUDDY-NAME
+
+OR (in an account specific buffer)
+
+  /add-buddy BUDDY-NAME 
+
+I haven't implemented starting a conversation with an individual IM user yet
+(in the UI, elim is capable of this already), but that will follow shortly.
 
 
-This will start the elim daemon, add a freenode IRC account with a 
-suitable name, and connecto to it.
+To leave a conversation:
 
-You should see debugging output appear in a *elim-debug* buffer. ( You may 
-need to switch to this buffer, it might not be displayed automatically )
+  /part
 
-to send a message to a user:
+To disconnect an account:
 
-(elim-process-send eproc
-  (elim-daemon-call 'message nil
-    `(alist nil
-       (string ((name . "account-name")) 
-               ,(concat uname "-elim@irc.freenode.net"))
-       (string ((name . "conv-name"  ))
-               ,(read-string "USER> " "" nil "elim-test-string" t))
-       (string ((name . "text"       ))
-               ,(read-string "IM> "   "" nil "elim-test-string" t)))))
+  /disconnect USER
 
-to join an irc channel:
+OR (in an account specific buffer)
 
-(elim-join-chat eproc 
-  (concat uname "-elim@irc.freenode.net") "#emacs" '("channel" "#emacs"))
+  /disconnect 
 
+New garak buffers should turn up in the tracking block in the mode line:
 
+  [#emacs,#elim,etc]
+
+You can clock on the buffer names in the mode line or switch to them in the 
+usual way.
+
+That's all that's implemented for now, it's all only just been written so 
+hasn't had a lot of testing.
+
+-- 
+fledermaus <vivek@etla.org>
