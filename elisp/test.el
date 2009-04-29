@@ -64,7 +64,7 @@
             (int    ((name . "account-uid"  )) "134679776"  )) ) )
 
 (elim-fetch-process-data eproc :response-by-id)
-(elim-fetch-process-data eproc :accounts      )
+(length (elim-fetch-process-data (get-process "*elim*") :accounts))
 (setq eproc-blist (elim-fetch-process-data (get-process "*elim*") :blist))
 (elim-fetch-process-data eproc :protocols     )
 (elim-fetch-process-data eproc :initialised   )

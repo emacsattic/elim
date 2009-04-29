@@ -1,8 +1,11 @@
-(require 'lui  nil t)
-(require 'elim nil t)
-(require 'widget)
-(require 'wid-edit)
+(require 'lui   nil t)
+(require 'elim  nil t)
+(require 'widget     )
+(require 'wid-edit   )
 (require 'tree-widget)
+(require 'time-date  )
+(require 'image      )
+
 (defvar garak-icon-directory nil)
 
 (let ((load-path (cons (file-name-directory 
@@ -58,47 +61,58 @@
              (let ((label (concat ":" (file-name-sans-extension (car attr))))
                    (path  (concat garak-icon-directory (car attr))))
                (cons label 
-                     (create-image path nil nil
-                                   :pointer 'hand
-                                   :ascent  'center
-                                   :mask '(heuristic t)))) ))
+                     (ignore-errors (create-image path nil nil
+                                                  :pointer 'hand
+                                                  :ascent  'center
+                                                  :mask '(heuristic t)))) )))
          (directory-files-and-attributes garak-icon-directory)) ))
 
-(defvar garak-icon-tags '((":available"   . "[!]" )
-                          (":away"        . "[_]" )
-                          (":busy"        . "(-)" )
-                          (":group"       . "{ }")
-                          (":unavailable" . "(-)" )
-                          (":chat"        . " @ " )
-                          (":offline"     . "[ ]" )))
+(defvar garak-icon-tags '((":available"     . "[!]")
+                          (":away"          . "[_]")
+                          (":busy"          . "(/)")
+                          (":chat"          . "ii ")
+                          (":connecting"    . " * ")
+                          (":extended-away" . " - ")
+                          (":garak"         . " G ")
+                          (":group"         . "iii")
+                          (":invisible"     . "   ")
+                          (":log-in"        . "l/i")
+                          (":log-out"       . "l/o")
+                          (":off"           . "[X]")
+                          (":on"            . "[O]")
+                          (":person"        . " i ")
+                          (":unavailable"   . "(/)")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
 (defvar garak-callbacks 
-  '( ;;(elim-account-notify-added)
-     (elim-account-status-changed . garak-account-status      )
-     (elim-account-request-add    . garak-stranger-added-you  )
-     (elim-account-request-auth   . garak-auth-requested      )
-     ;; blist (buddy list) ops
-     ;;(elim-blist-create-node                                )
-     (elim-blist-update-node      . garak-update-buddy        )
-     (elim-blist-remove-node      . garak-delete-buddy        )
-     ;; connection ops
-     (elim-connection-state       . garak-connection-state    )
-     (elim-connection-progress    . garak-connection-progress )
-     (elim-disconnect-reason      . garak-disconnected        )
-     ;; network status
-     (elim-network-up             . garak-network-up          )
-     (elim-network-down           . garak-network-down        )
-     ;; conversation
-     (elim-conv-create            . garak-new-conversation    )
-     (elim-conv-destroy           . garak-end-conversation    )
-     (elim-chat-add-users         . garak-chat-add-users      )
-     (command                     . garak-command-response    )
-     ;; messages:
-     (elim-conv-write-chat        . garak-chat-message        )
-     (elim-conv-write-im          . garak-user-message        )
-     (elim-conv-write-sys         . garak-misc-message        ) )
+  '(;;(elim-account-notify-added)
+    (elim-account-status-changed . garak-account-update      )
+    (elim-account-request-add    . garak-stranger-added-you  )
+    (elim-account-request-auth   . garak-auth-requested      )
+    ;; blist (buddy list) ops
+    ;;(elim-blist-create-node                                )
+    (elim-blist-update-node      . garak-update-buddy        )
+    (elim-blist-remove-node      . garak-delete-buddy        )
+    ;; connection ops
+    (elim-connection-state       . garak-account-update      )
+    (elim-connection-progress    . garak-connection-progress )
+    (elim-disconnect-reason      . garak-disconnected        )
+    ;; network status
+    (elim-network-up             . garak-network-up          )
+    (elim-network-down           . garak-network-down        )
+    ;; conversation
+    (elim-conv-create            . garak-new-conversation    )
+    (elim-conv-destroy           . garak-end-conversation    )
+    (elim-chat-add-users         . garak-chat-add-users      )
+    (command                     . garak-command-response    )
+    ;; accounts:
+    (add-account                 . garak-account-update      )
+    (remove-account              . garak-account-update      )
+    ;; messages:
+    (elim-conv-write-chat        . garak-chat-message        )
+    (elim-conv-write-im          . garak-user-message        )
+    (elim-conv-write-sys         . garak-misc-message        ))
   "Alist of elim callbacks and their corresponding handlers")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -568,8 +582,8 @@
                     (setq kids (garak-tree-widget-apply widget :expander))
                     (garak-tree-widget-set widget :args kids)
                     (when (garak-tree-widget-get widget :open)
-                      (widget-button-press point)
-                      (widget-button-press point)) )))
+                      (widget-apply widget :action)
+                      (widget-apply widget :action)) )))
             (setq point     (car where-widget)
                   end       (next-single-char-property-change point 'display)
                   widget    (cdr where-widget)
@@ -580,44 +594,41 @@
                 ;;(message "adjust display prop %d -> %d : %S" point end icon)
                 (put-text-property point end 'display icon) )) )) )) ))
 
-(defun garak-account-status (proc name id status args)
-  (let (buffer auid where-widget point wtype end icon-name icon conn dummy)
+(defun garak-account-update (proc name id status args)
+  (let (buffer auid where-widget point end icon-name icon conn status kids node)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq auid         (elim-avalue "account-uid" args)
-              where-widget (garak-ui-find-node auid :account)
-              point        (car where-widget)
-              wtype        (cdr where-widget)
-              end          (next-single-char-property-change point 'display)
-              conn         (elim-account-connection proc auid)
-              icon-name    (garak-account-list-choose-icon conn args)
-              dummy        (message "account %S -> %s" auid icon-name)
-              icon         (tree-widget-find-image icon-name)) 
-        (when icon
-          (let ((inhibit-read-only t))
-            ;;(message "adjust display prop %d -> %d : %S" point end icon)
-            (put-text-property point end 'display icon))) )) ))
-
-(defun garak-connection-state (proc name id status args)
-  (let (buffer auid where-widget point wtype end icon-name icon status dummy)
-    (setq buffer (elim-fetch-process-data proc :blist-buffer))
-    (when (buffer-live-p buffer)
-      (with-current-buffer buffer
-        (setq auid         (elim-avalue "account-uid" args)
-              where-widget (garak-ui-find-node auid :account)
-              point        (car where-widget)
-              wtype        (cdr where-widget)
-              end          (next-single-char-property-change point 'display)
-              status       (elim-account-status proc auid)
-              icon-name    (garak-account-list-choose-icon args status)
-              dummy        (message "account %S -> %s" auid icon-name)
-              icon         (tree-widget-find-image icon-name)) 
-        (when icon
-          (let ((inhibit-read-only t))
-            ;;(message "adjust display prop %d -> %d : %S" point end icon)
-            (put-text-property point end 'display icon))) )) ))
-
+              where-widget (garak-ui-find-node auid :account))
+        ;; fetch the conn or status data (whichever we didn't receive as an arg)
+        (cond ((eq name 'elim-account-status-changed) 
+               (setq status args conn   (elim-account-connection proc auid)))
+              ((eq name 'elim-connection-state)
+               (setq conn   args status (elim-account-status     proc auid)))
+              (t (setq status (elim-account-status     proc auid)
+                       conn   (elim-account-connection proc auid))))
+        ;; pick the most suitable status icon
+        (setq icon-name (garak-account-list-choose-icon conn status))
+        ;; if the widget is invisible, or we are removing an account,
+        ;; refresh the parent node.
+        ;; otherwise update the icon for that node
+        (if (or (eq 'remove-account name) (not where-widget))
+            (when (setq where-widget (garak-ui-find-node :accounts :garak-type)
+                        point        (car where-widget))
+              (setq node (widget-at point)
+                    kids (garak-tree-widget-apply node :expander))
+              (garak-tree-widget-set node :args kids)
+              (when (garak-tree-widget-get node :open)
+                (widget-apply node :action)
+                (widget-apply node :action)))
+          (setq point (car where-widget)
+                end   (next-single-char-property-change point 'display)
+                icon  (tree-widget-find-image icon-name)) 
+          (when icon
+            (let ((inhibit-read-only t))
+              ;;(message "adjust display prop %d -> %d : %S" point end icon)
+              (put-text-property point end 'display icon)) )) )) ))
 
 (defun garak-delete-buddy (proc name id status args)
   (let (buid puid where-widget point widget buffer dummy)
@@ -636,7 +647,7 @@
             (setq puid   (garak-buddy-find-parent proc puid)
                   parent (elim-buddy-data proc puid)))
           ;; ok: by now we should have a live ancestor: find its node:
-          (when (setq where-widget (garak-buddy-list-find-node puid))
+          (when (setq where-widget (garak-ui-find-node puid :bnode))
             (setq point  (car where-widget)
                   widget (widget-at  point))
             (when (and (memq (elim-avalue "bnode-type" parent)
@@ -645,8 +656,8 @@
               (setq kids (garak-tree-widget-apply widget :expander))
               (garak-tree-widget-set widget :args kids)
               (when (garak-tree-widget-get widget :open)
-                (widget-button-press point)
-                (widget-button-press point))) )) )) ))
+                (widget-apply widget :action)
+                (widget-apply widget :action))) )) )) ))
 
 
 (defun garak-buddy-list-choose-icon (widget buddy)
@@ -697,7 +708,7 @@
              (setq status (elim-account-status     process auid)
                    conn   (elim-account-connection process auid))
              (setq icon (garak-account-list-choose-icon conn status)) ))
-          ((eq gtype :accounts) ":account-list"))
+          ((eq gtype :accounts) (setq icon ":garak")))
     ;; set the icon, if we have an image in our set:
     (when (and icon (assoc icon garak-icons))
       (if tree-widget-image-enable
@@ -773,11 +784,14 @@
     ;; options not supported yet:
     ;;(mapcar
     ;; (lambda (O) (setq options (nconc options (split-string "=" O)))) items)
-    (condition-case errval
+    ;;(condition-case errval
         (progn
+          (message "(elim-add-account PROC %S %S %S %S)" user proto pass nil)
           (elim-add-account elim user proto pass options)
           (format "/add-account %s" args))
-        (error (format "%S" errval))) ))
+    ;;    (error (format "%S" errval)) 
+    ;;    ) 
+    ))
 
 (defun garak-cmd-add-buddy (args)
   (let (items account proto buddy errval adata group)

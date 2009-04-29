@@ -18,7 +18,10 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with elim.  If not, see <http://www.gnu.org/licenses/>.
-
+(require 'cl        )
+(require 'browse-url)
+(require 'wid-edit  )
+(require 'warnings  )
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables & global state functions:
 (defcustom elim-executable 
@@ -93,7 +96,7 @@ if the symbol to look for is the same as that of the protocol function.")
     (list-protocols . elim-list-protocols-response)
     (list-accounts  . elim-list-accounts-response )
     (message        . nil)
-    (remove-account . elim-remove-account))
+    (remove-account . elim-remove-account-response))
   "Alist of function response handlers. The car of a given element is the
 elim protocol function symbol. The cdr is the handler function, or nil
 if we do not intend to wait for the response (this is the usual case).")
@@ -433,27 +436,35 @@ and return an s-expression suitable for making a call to an elim daemon."
   (when elim-initialising (elim-init-step proc)) )
 
 (defun elim-response-filter-account-data (proc name id attr args)
-  (let (uid proto name store adata (val (elim-avalue "value" args)))
+  (let (uid proto aname store adata (val (elim-avalue "value" args)) slot)
     (when (setq uid (elim-avalue "account-uid" val))
       (setq store (elim-fetch-process-data proc :accounts))
-      (when (not (assoc uid store))
-        (setq name  (elim-avalue "account-name" val)
-              proto (elim-avalue "im-protocol"  val)
-              adata (cons uid (list (cons :name  name ) 
-                                    (cons :proto proto)))
-              store (cons adata store))
-        (elim-store-process-data proc :accounts store)))
-      (or adata uid)))
+      ;;(message "elim-response-filter-account-data :: %S -> %S" uid store)
+      (setq aname (elim-avalue "account-name" val)
+            proto (elim-avalue "im-protocol"  val)
+            adata (list (cons :name  aname)
+                        (cons :proto proto)))
+      (if (setq slot (assoc uid store))
+          (setcdr slot adata)
+        (setq store (cons (cons uid adata) store)))
+      (elim-store-process-data proc :accounts store)
+      (message "elim-response-filter-account-data :: %S -> %S accounts" 
+               uid (length store))
+      (elim-call-client-handler proc name id 0 val)
+      (or adata uid) )))
 
-(defun elim-remove-account (proc name id attr args)
-  (when (equal (elim-avalue "status" args) 0)
-    (let (uid store slot)
-      (setq store (elim-fetch-process-data proc :accounts)
-            uid   (elim-avalue "account-uid" args)
+(defun elim-remove-account-response (proc name id attr args)
+  (let (uid store slot value)
+    (when (equal (elim-avalue "status" args) 0)
+      (setq value (elim-avalue "value" args)
+            store (elim-fetch-process-data proc :accounts)
+            uid   (elim-avalue "account-uid" value)
             slot  (assoc uid store))
       (when slot 
+        (message "elim-remove-account-response DELETE %S" store)
         (setq store (delq slot store))
-        (elim-store-process-data proc :accounts store)) )))
+        (elim-store-process-data proc :accounts store))
+    (elim-call-client-handler proc name id 0 value)) ))
 
 (defun elim-list-accounts-response (proc name id attr args)
   (when (equal (elim-avalue "status" args) 0)
@@ -1012,12 +1023,13 @@ be initialised to the value of `elim-directory' if you do not supply it."
     (while (and (eq (process-status elim) 'run)
                 (< (elim-fetch-process-data elim :initialised) 1))
       (accept-process-output))
+    (make-directory (or user-dir elim-directory) t)
     (elim-init elim ui-string user-dir)
     (elim-update-protocol-list elim) ;; IM protocols supported
     (elim-update-account-list  elim) ;; User's accounts
     ;; wait for the above three calls to finish:
     (while (and (eq (process-status elim) 'run)
-                (< (elim-fetch-process-data elim :initialised) 3))
+                (<  (elim-fetch-process-data elim :initialised) 3))
       (accept-process-output))
     elim))
 
