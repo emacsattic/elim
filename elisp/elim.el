@@ -393,7 +393,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defun elim-call-client-handler (proc name id status args)
   (let ( (handler (elim-client-handler proc name)) )
     (elim-debug "(elim-call-client-handler %S %S %s ...)" name id status)
-    (message "retrieved client handler : %S" handler)
+    ;;(message "retrieved client handler : %S" handler)
     (when (functionp handler)
       (elim-debug "calling client handler: %S" handler)
       (funcall handler proc name id status args)) ))
@@ -449,8 +449,8 @@ and return an s-expression suitable for making a call to an elim daemon."
           (setcdr slot adata)
         (setq store (cons (cons uid adata) store)))
       (elim-store-process-data proc :accounts store)
-      (message "elim-response-filter-account-data :: %S -> %S accounts" 
-               uid (length store))
+      ;;(message "elim-response-filter-account-data :: %S -> %S accounts" 
+      ;;         uid (length store))
       (elim-call-client-handler proc name id 0 val)
       (or adata uid) )))
 
@@ -462,7 +462,7 @@ and return an s-expression suitable for making a call to an elim daemon."
             uid   (elim-avalue "account-uid" value)
             slot  (assoc uid store))
       (when slot 
-        (message "elim-remove-account-response DELETE %S" store)
+        ;;(message "elim-remove-account-response DELETE %S" store)
         (setq store (delq slot store))
         (elim-store-process-data proc :accounts store))
     (elim-call-client-handler proc name id 0 value)) ))
@@ -1194,6 +1194,29 @@ must also be supplied."
     (setq arglist (list 'alist nil (elim-atom-to-item "account-uid" account)))
     (elim-process-send-with-callback 
      process (elim-daemon-call 'account-options nil arglist) callback)))
+
+(defvar elim-standard-status-types 
+  '(("available"      . :available  )
+    ("away"           . :away       )
+    ("do-not-disturb" . :unavailable)
+    ("unavailable"    . :unavailable)
+    ("invisible"      . :invisible  )
+    ("offline"        . :offline    )))
+
+(defun elim-standard-status-type (id)
+  (let (type)
+    (when (setq type (elim-avalue id elim-standard-status-types))
+      (setq type (elim-pack-enum :status-primitive type)))
+    type))
+
+(defun elim-set-status (process status-id &optional message type) 
+  (let ((args (list "status-id" status-id)) stype)
+    (when message (setq args (cons "status-message" (cons message args))))
+    (when (setq stype (elim-standard-status-type status-id))
+      (setq type stype))
+    (when type    (setq args (cons "status-type"    (cons type    args))))
+    (setq args (elim-simple-list-to-proto-alist args))
+    (elim-process-send process (elim-daemon-call 'status nil args)) ))
 
 (defun elim-chat-parameters (process protocol)
   "Given an elim PROCESS and a PROTOCOL id, return an alist giving details

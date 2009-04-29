@@ -119,20 +119,11 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
       case PURPLE_BLIST_CONTACT_NODE:
         fprintf( stderr, "(_elim_blnode_to_xnode CONTACT\n" );
         contact = (PurpleContact *)b;
-        bname = alias = contact->alias ? contact->alias : NULL;
-        if( !bname )
-        {
-            PurpleBuddy     *buddy = purple_contact_get_priority_buddy(contact);
-            PurpleBlistNode *child = NULL;
-            if ( !buddy ) child = purple_blist_node_get_first_child( b );
-            if( child )
-                if ( PBLN_GET(type,child) == PURPLE_BLIST_BUDDY_NODE )
-                    buddy = (PurpleBuddy *)child;
-            if (  buddy ) bname = alias = purple_buddy_get_alias( buddy );
-            else          bname = alias = "-";
-
-        }
-        fprintf( stderr, "   name %s)\n", bname );
+        if( purple_contact_get_priority_buddy(contact) )
+            bname = alias = purple_contact_get_alias( contact );
+        else
+            bname = alias = "";
+        fprintf( stderr, "   name \"%s\")\n", bname );
         break;
       case PURPLE_BLIST_GROUP_NODE  :
         fprintf( stderr, "(_elim_blnode_to_xnode GROUP)\n" );
