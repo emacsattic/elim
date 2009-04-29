@@ -387,18 +387,19 @@
                        (nconc menu (list remove))))
     (if kids
         (apply 'widget-convert 'tree-widget
-               :open      t
-               :buddy     uid
-               :value     uid
-               :expander 'garak-buddy-list-node-children
-               :node      (apply 'widget-convert 'menu-choice
-                                 :format    "%[%t%]\n"
-                                 :tag        name
-                                 :value      '(noop)
-                                 :value-get 'widget-value-value-get
-                                 :inline     t
-                                 :notify    'garak-buddy-list-node-command 
-                                 menu)
+               :open       t
+               :buddy      uid
+               :value      uid
+               :garak-type :bnode
+               :expander   'garak-buddy-list-node-children
+               :node        (apply 'widget-convert 'menu-choice
+                                   :format    "%[%t%]\n"
+                                   :tag        name
+                                   :value      '(noop)
+                                   :value-get 'widget-value-value-get
+                                   :inline     t
+                                   :notify    'garak-buddy-list-node-command 
+                                   menu)
                kids)
       (apply 'widget-convert
              'menu-choice
@@ -406,6 +407,7 @@
              :tag        name
              :value      '(noop)
              :buddy      uid
+             :garak-type :bnode
              :value-get 'widget-value-value-get
              :inline     t
              :notify    'garak-buddy-list-node-command 
@@ -422,12 +424,45 @@
         )
     bnode))
 
+(defun garak-account-list-node-widget (process account)
+  (let (adata uid)
+    (setq uid (car account) adata (cdr account))
+    (message "garak-account-list-node-widget: %S" account)
+    (widget-convert 'menu-choice
+                    :format      "%[%t%]\n"
+                    :garak-type  :account
+                    :tag         (elim-avalue :name  adata)
+                    :im-protocol (elim-avalue :proto adata)
+                    :value       '(noop)
+                    :account     (car account)
+                    :value-get   'widget-value-value-get
+                    :inline       t
+                    :notify      'ignore
+                    (garak-choice-item "Log In"  (cons 'login  uid))
+                    (garak-choice-item "Log Out" (cons 'logout uid))) ))
+
+(defun garak-account-list-node-children (&optional widget)
+  (let (process)
+    (setq process (cadr (memq :process elim-form-ui-args)))
+    (mapcar 
+     (lambda (N) 
+       (garak-account-list-node-widget process N)) 
+     (elim-account-alist process)) ))
+
+(defun garak-insert-account-list ()
+  (apply 'widget-create 'tree-widget
+         :open        t
+         :expander   'garak-account-list-node-children
+         :garak-type :accounts
+         :tag        "Accounts"
+         (garak-account-list-node-children)))
+
 (defun garak-buddy-list-node-children (widget)
   (let ((uid (widget-get widget :buddy)) children process dummy)
     ;;(message "Updating children for node %S" uid)
     (setq process  (cadr (memq :process elim-form-ui-args))
           children (elim-buddy-children process uid))
-    (elim-debug "(garak-buddy-list-node-children %S) -> %S" (car widget) uid)
+    ;;(elim-debug "(garak-buddy-list-node-children %S) -> %S" (car widget) uid)
     (mapcar 
      (lambda (N) 
        (garak-buddy-list-node-widget process 
@@ -440,11 +475,12 @@
           name   (elim-avalue "bnode-name" bnode))
     (apply 'widget-create
            'tree-widget
-           :open      t
-           :tag       name
-           :buddy     uid
-           :value     uid
-           :expander 'garak-buddy-list-node-children
+           :open       t
+           :tag        name
+           :garak-type :bnode
+           :buddy      uid
+           :value      uid
+           :expander  'garak-buddy-list-node-children
            (mapcar
             (lambda (N)
               (garak-buddy-list-node-widget proc
@@ -487,19 +523,19 @@
 
 (defun garak-tree-widget-apply (widget prop &rest args)
   (when (and widget prop)
-    (elim-debug "GARAK-TREE-WIDGET-APPLY %S->%S %S" 
-                (car (garak-tree-widget-real-target widget)) 
-                (garak-tree-widget-get widget prop)
-                args)
+    ;;(elim-debug "GARAK-TREE-WIDGET-APPLY %S->%S %S" 
+    ;;            (car (garak-tree-widget-real-target widget)) 
+    ;;            (garak-tree-widget-get widget prop)
+    ;;            args)
     (apply 'widget-apply (garak-tree-widget-real-target widget) prop args)))
 
-(defun garak-buddy-list-find-node (uid)
+(defun garak-ui-find-node (uid type)
   (let ((last-point -1) (found nil) (widget nil) (inhibit-point-motion-hooks t))
     (save-excursion
       (beginning-of-buffer)
       (while (and (not found) (< last-point (point)))
         (when (and (setq widget (widget-at))
-                   (eql (garak-tree-widget-get (widget-at) :buddy) uid))
+                   (eql (garak-tree-widget-get (widget-at) type) uid))
           (setq found (cons (point) (car widget))))
         (setq last-point (point))
         (ignore-errors (widget-forward 1))) )
@@ -516,13 +552,13 @@
               other (garak-buddy-list-skip proc buddy))
         ;; if the bnode is not in the "ignored" class, buddy will eq other:
         (when (eq buddy other)
-          (setq buid         (elim-avalue "bnode-uid"    args)
-                where-widget (garak-buddy-list-find-node buid))
+          (setq buid         (elim-avalue "bnode-uid"   args)
+                where-widget (garak-ui-find-node buid :buddy))
           ;; if where-widget is nil, the bnode is not displayed: find the 
           ;; parent node and clear its cache, and refresh it if it's open:
           (if (not where-widget)
               (let ((puid (garak-buddy-find-parent proc buid)) parent kfun kids)
-                (when (setq where-widget (garak-buddy-list-find-node puid))
+                (when (setq where-widget (garak-ui-find-node puid :buddy))
                   (setq parent (elim-buddy-data proc puid)
                         point  (car where-widget)
                         widget (widget-at  point))
@@ -534,16 +570,55 @@
                     (when (garak-tree-widget-get widget :open)
                       (widget-button-press point)
                       (widget-button-press point)) )))
-            (setq point        (car where-widget)
-                  end          (next-single-char-property-change point 'display)
-                  widget       (cdr where-widget)
-                  icon-name    (garak-buddy-list-choose-icon widget buddy)
-                  icon         (tree-widget-find-image icon-name))
+            (setq point     (car where-widget)
+                  end       (next-single-char-property-change point 'display)
+                  widget    (cdr where-widget)
+                  icon-name (garak-buddy-list-choose-icon widget buddy)
+                  icon      (tree-widget-find-image icon-name))
             (when icon 
               (let ((inhibit-read-only t))
                 ;;(message "adjust display prop %d -> %d : %S" point end icon)
                 (put-text-property point end 'display icon) )) )) )) ))
- 
+
+(defun garak-account-status (proc name id status args)
+  (let (buffer auid where-widget point wtype end icon-name icon conn dummy)
+    (setq buffer (elim-fetch-process-data proc :blist-buffer))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (setq auid         (elim-avalue "account-uid" args)
+              where-widget (garak-ui-find-node auid :account)
+              point        (car where-widget)
+              wtype        (cdr where-widget)
+              end          (next-single-char-property-change point 'display)
+              conn         (elim-account-connection proc auid)
+              icon-name    (garak-account-list-choose-icon conn args)
+              dummy        (message "account %S -> %s" auid icon-name)
+              icon         (tree-widget-find-image icon-name)) 
+        (when icon
+          (let ((inhibit-read-only t))
+            ;;(message "adjust display prop %d -> %d : %S" point end icon)
+            (put-text-property point end 'display icon))) )) ))
+
+(defun garak-connection-state (proc name id status args)
+  (let (buffer auid where-widget point wtype end icon-name icon status dummy)
+    (setq buffer (elim-fetch-process-data proc :blist-buffer))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (setq auid         (elim-avalue "account-uid" args)
+              where-widget (garak-ui-find-node auid :account)
+              point        (car where-widget)
+              wtype        (cdr where-widget)
+              end          (next-single-char-property-change point 'display)
+              status       (elim-account-status proc auid)
+              icon-name    (garak-account-list-choose-icon args status)
+              dummy        (message "account %S -> %s" auid icon-name)
+              icon         (tree-widget-find-image icon-name)) 
+        (when icon
+          (let ((inhibit-read-only t))
+            ;;(message "adjust display prop %d -> %d : %S" point end icon)
+            (put-text-property point end 'display icon))) )) ))
+
+
 (defun garak-delete-buddy (proc name id status args)
   (let (buid puid where-widget point widget buffer dummy)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
@@ -586,35 +661,69 @@
           ((eq type :buddy-node             )
            (symbol-name (elim-avalue "status-type" buddy)))) ))
 
-(defun garak-buddy-list-node-setup-icon (wicon)
+(defun garak-account-list-choose-icon (conn-data status-data)
+  (let ((status (elim-avalue "status-type" status-data))
+        (conn   (elim-avalue "state"       conn-data  ))
+        (online (elim-avalue "connected"   status-data)) icon)
+    (setq icon (cond ((eq   conn :connecting   ) ":connecting"   )
+                     ((eq   conn :disconnected ) ":off"          )
+                     ((null conn               ) ":off"          )
+                     ((eq status :offline      ) ":off"          )
+                     ((eq status :available    ) ":on"           )
+                     ((eq status :unavailable  ) ":unavailable"  )
+                     ((eq status :invisible    ) ":invisible"    )
+                     ((eq status :away         ) ":away"         )
+                     ((eq status :extended-away) ":extended-away")
+                     ((eq status :mobile       ) ":away"         )
+                     ((eq status :tune         ) ":away"         )
+                     ((eq conn   :connected    ) ":on"           )
+                     (online                     ":on"           )      
+                     (t                          ":off"          )))
+    (message "%s -> %s" (elim-avalue "account-name" status-data) icon)
+    icon))
+
+(defun garak-ui-node-setup-icon (wicon)
   (let ((class   (car wicon))
         (process (cadr (memq :process elim-form-ui-args)))
-        buddy buid status icon tag online)
-    (when (and (setq buid  (garak-tree-widget-get wicon :buddy))
-               (setq buddy (elim-buddy-data process buid )))
-      (setq icon (garak-buddy-list-choose-icon wicon buddy))
-      (when (and icon (assoc icon garak-icons))
-        (if tree-widget-image-enable
-            (widget-put wicon :glyph-name icon)
-          (when (setq tag (elim-avalue icon garak-icon-tags))
-            (widget-put wicon :tag tag)) )) )))
+        buddy buid account auid status icon tag online gtype conn)
+    (setq gtype (garak-tree-widget-get wicon :garak-type))
+    ;; choose an appropriate icon, depending on the node type:
+    (cond ((eq gtype :bnode)
+           (when (and (setq buid  (garak-tree-widget-get wicon :buddy))
+                      (setq buddy (elim-buddy-data process buid )))
+             (setq icon (garak-buddy-list-choose-icon wicon buddy)) ))
+          ((eq gtype :account)
+           (when (setq auid (garak-tree-widget-get wicon :account))
+             (setq status (elim-account-status     process auid)
+                   conn   (elim-account-connection process auid))
+             (setq icon (garak-account-list-choose-icon conn status)) ))
+          ((eq gtype :accounts) ":account-list"))
+    ;; set the icon, if we have an image in our set:
+    (when (and icon (assoc icon garak-icons))
+      (if tree-widget-image-enable
+          (widget-put wicon :glyph-name icon)
+        (when (setq tag (elim-avalue icon garak-icon-tags))
+          (widget-put wicon :tag tag)) )) ))
 
 (defun garak-create-ui-widget-buffer (proc) 
   (let ((blist   (elim-buddy-list proc))
         (icons   (copy-sequence garak-icons))
         (bbuffer (elim-fetch-process-data proc :blist-buffer)))
     (when (or (not bbuffer) (not (buffer-live-p bbuffer)))
-      (setq bbuffer (generate-new-buffer "*buddy-list*")) 
+      (setq bbuffer (generate-new-buffer "*Garak*")) 
       (elim-store-process-data proc :blist-buffer bbuffer))
     (with-current-buffer bbuffer
       (elim-init-ui-buffer)
+      ;; initialise tree-widget support in this buffer
       (tree-widget-set-theme)
+      ;; add our icons into the whatever tree-widget theme
+      ;; the user wanted as the default:
       (setq icons (nconc icons (aref tree-widget--theme 3)))
-      ;;(message "icons: %S" icons)
       (aset tree-widget--theme 3 icons)
       (add-hook 'tree-widget-before-create-icon-functions 
-                'garak-buddy-list-node-setup-icon nil t)
+                'garak-ui-node-setup-icon nil t)
       (setq elim-form-ui-args (list :process proc))
+      (garak-insert-account-list)
       (mapc
        (lambda (N)
          (garak-insert-buddy-list-toplevel proc N)) blist)

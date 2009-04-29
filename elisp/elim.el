@@ -47,14 +47,14 @@ flags rather than simple enumerations.")
 
 (defvar elim-call-handler-alist
   '(;; account ops
-    (elim-account-notify-added  )
+    (elim-account-notify-added  ) ;; noop
     (elim-account-status-changed)
-    (elim-account-request-add   )
-    (elim-account-request-auth  )
+    (elim-account-request-add   ) ;; noop
+    (elim-account-request-auth  ) ;; done
     ;; blist (buddy list) ops
-    (elim-blist-create-node     )
-    (elim-blist-remove-node     )
-    (elim-blist-update-node     )
+    (elim-blist-create-node     ) ;; done
+    (elim-blist-remove-node     ) ;; done
+    (elim-blist-update-node     ) ;; done
     ;; connection ops
     (elim-connection-state      )
     (elim-connection-progress   )
@@ -63,11 +63,11 @@ flags rather than simple enumerations.")
     (elim-network-up            )
     (elim-network-down          )
     ;; requests
-    (elim-request-fields        )
+    (elim-request-fields        ) ;; done
     (elim-request-input         . elim-request-item)
     (elim-request-file          . elim-request-item)
     (elim-request-directory     . elim-request-item)
-    (elim-request-action        )
+    (elim-request-action        ) ;; done
     ;; conversation
     (elim-conv-create           )
     (elim-conv-destroy          )
@@ -494,12 +494,29 @@ into any clients."
         (bnode-uid (elim-avalue "bnode-uid" args))
         (bnode      nil))
     (when (setq bnode (assoc bnode-uid store))
-      (message "store: %S; slot: %S" (and store t) bnode)
+      ;;(message "store: %S; slot: %S" (and store t) bnode)
       (setq store (assq-delete-all (car bnode) store))
       (elim-store-process-data proc :blist store)) )
   ;; remember the data store for this buddy will be _gone_ now
   ;; so the client must rely on args for all buddy related data:
   (elim-call-client-handler proc name id status args))
+
+(defun elim-account-info-cache (proc name id status args type)
+  (when (memq type '(:account-status :account-connection))
+    (let ((store       (elim-fetch-process-data proc type))
+          (account-uid (elim-avalue "account-uid" args))
+          (slot  nil))
+      (if (setq slot (assoc account-uid store))
+          (setcdr slot args)
+        (setq store (cons (cons account-uid args) store))
+        (elim-store-process-data proc type store)))
+    (elim-call-client-handler proc name id status args)))
+
+(defun elim-account-status-changed (proc name id status args)
+  (elim-account-info-cache proc name id status args :account-status))
+
+(defun elim-connection-state (proc name id status args)
+  (elim-account-info-cache proc name id status args :account-connection))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon to client request handlers (requests are calls that require a
@@ -853,6 +870,26 @@ ACCOUNT need not be supplied if BUDDY is a uid"
                     (setq s (cdr C))
                     (and (eql   auid (elim-avalue "account-uid" s))
                          (equal K    (elim-avalue "bnode-name"  s)))) t) )) ))
+
+(defun elim-account-info (process account type)
+  "Given an ACCOUNT (an account uid number or name string), return the last 
+status or connection update for it (the arg passed to 
+`elim-account-status-changed' or `elim-connection-state' respectively)
+TYPE should be :account-status or :account-connection"
+  (when (memq type '(:account-status :account-connection))
+    (let ((accounts (elim-fetch-process-data process type)))
+      (cond ((numberp account) (elim-assoc account accounts '=))
+            ((stringp account)
+             (elim-assoc account accounts
+                         (lambda (K C)
+                           (equal K (cdr (assoc "account-name" (cdr C))))) t))
+            (t (elim-debug "account %S not found" account) nil)) )))
+
+(defun elim-account-status (process account)
+  (elim-account-info process account :account-status))
+
+(defun elim-account-connection (process account)
+  (elim-account-info process account :account-connection))
 
 (defun elim-account-data (process account)
   "Given an ACCOUNT (an account name string or account uid number), return

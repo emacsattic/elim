@@ -59,7 +59,7 @@ They are:
    The status (Available, Away etc) of an account changed
  
    (function-call nil
-     (elim-account-notify-added ((id . "002")))
+     (elim-account-status-changed ((id . "002")))
      (alist nil
        (int    ((name . "account-uid" )) "268435456")
        (string ((name . "account-name")) "fsbot@irc.freenode.net")
@@ -75,7 +75,7 @@ They are:
    you to their buddy list.
 
    (function-call nil
-     (elim-account-notify-added ((id . "003")))
+     (elim-account-request-add ((id . "003")))
      (alist nil
        (string ((name . "user"        )) "rudybot"  )
        (string ((name . "alias"       )) "rudebot"  )
@@ -89,7 +89,7 @@ They are:
    Someone has performed an operation that requires authorisation from you.
 
    (function-call nil
-     (elim-account-notify-added ((id . "004")))
+     (elim-account-request-auth ((id . "004")))
      (alist nil
        (string ((name . "user"        )) "rudybot"      )
        (string ((name . "id"          )) "er, something")
@@ -119,10 +119,16 @@ These are concerned with changes to your buddy list:
 Some terminology:
 
 A "buddy"   is a contact, typically another IM user.
+
 A "contact" is slightly different: a contact is a logical grouping of 
             buddies. For example, if you have two different sets of 
             IM details for one person (eg on different IM networks)
             You might place them in a contact together.
+
+            Note that libpurple automatically places _all_ new buddies
+            in a contact with the same name as the buddy if no other
+            contact is specified.
+
 A "group"   Is a logical group into which you can place a buddy
             or contact. Some protocols support groups on the server,
             others leave it entirely up to clients.

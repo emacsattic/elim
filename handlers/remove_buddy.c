@@ -83,6 +83,10 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
         }
         type = purple_blist_node_get_type( node );
         fprintf( stderr, "(elim-remove-buddy:04a1)\n" );
+        // ===========================================================
+        // groups, contacts and chats can safely be removed here:
+        // buddies should instead be noted for removal in the next
+        // block of code as they require client<->server interaction:
         switch( type )
         {
           case PURPLE_BLIST_GROUP_NODE  :
@@ -169,8 +173,10 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
         // this way round, as noted above: account buddy removal won't 
         // happen if the buddy is not in the blist when we try:
         if( !group ) group = purple_buddy_get_group( buddy );
+        // is this correct? what if we have more than one copy pf said buddy?
+        // potentially confusing. dunno what the right thing to do is here.
         purple_account_remove_buddy( acct, buddy, group );
-        purple_blist_remove_buddy  ( buddy );
+        purple_blist_remove_buddy( buddy );
         fprintf( stderr, "(elim-remove-buddy:07a0)\n" );
     }
     else 
