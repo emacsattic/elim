@@ -103,7 +103,7 @@ They are:
 on-list: whether the other user is on your buddy list already
 
    (function-response 
-     (elim-account-notify-added ((id . "004")))
+     (elim-account-request-auth ((id . "004")))
      (alist nil
        (int  ((name . "status")) "0") 
        (bool ((name . "value" )) "1")))

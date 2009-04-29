@@ -1,5 +1,5 @@
 #!/bin/sh
-
+# Copyright © 2009 Vivek Dasmohapatra 
 echo    "#include \"elim-func-handlers.h\"";
 echo    "func_handler handlers[] = ";
 echo -n "  {";

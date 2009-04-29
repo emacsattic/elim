@@ -101,7 +101,7 @@ static gboolean _elim_strippable ( PurpleConversation   *conv  ,
         feat = feat|PURPLE_CONNECTION_HTML;
 
     return ( (feat & PURPLE_CONNECTION_HTML) &&
-             (flag & PURPLE_MESSAGE_RECV   ) && 
+           //(flag & PURPLE_MESSAGE_RECV   ) &&
             !(flag & PURPLE_MESSAGE_RAW    )  ) ? TRUE : FALSE;
 }
 
@@ -161,6 +161,7 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
     xmlnode *args  = xnode_new( "alist" );
     xmlnode *mcall = func_call( "elim-conv-write-chat", ID, args );
     g_free( ID );
+
     fprintf( stderr, "(_elim_write_chat)\n" );
     if( _elim_strippable( conv, flags ) )
         msg = purple_markup_strip_html( message );
@@ -172,6 +173,7 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
     AL_INT ( args, "time" , mtime );
 
     if( msg ) g_free( msg );
+
     fprintf( stderr, "(_elim_write_chat:DONE)\n" );
     add_outbound_sexp( mcall );
 }

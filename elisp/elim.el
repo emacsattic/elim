@@ -172,11 +172,12 @@ a straightforward elisp s-expression."
           (list 'int attr (match-string 1 val))
         (list 'float attr val))) ))
 
+(defun elim-unprop (s) (set-text-properties 0 (length s) nil s) s)
 (defun elim-atom-to-proto (x &optional n)
   "Return an elim protocol sexp representing X (a number, string or t or nil)."
   (let ((attr (if n (list (cons 'name n)) 'nil)))
-    (message "(elim-atom-to-proto %S)" x)
-    (cond ((stringp  x) (list               'string attr x))
+    ;;(message "(elim-atom-to-proto %S)" x)
+    (cond ((stringp  x) (list 'string attr (elim-unprop x)))
           ((numberp  x) (elim-number-to-proto       x attr))
           ((booleanp x) (list  'bool  attr  (if x "1" "0")))
           ((symbolp  x) (list 'string attr (symbol-name x))) )))
@@ -219,7 +220,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (setq type        (car  value)
           payload     (cddr value)
           named-value (nconc (list type (list (cons 'name "value"))) payload))
-    (message "PAYLOAD:\n%S" payload)
+    ;;(message "PAYLOAD:\n%S" payload)
     (list 'function-response nil (list name (list (cons 'id id))) 
           (list 'alist nil
                 (list 'int (list (cons 'name "status")) 
@@ -295,7 +296,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 
 (defun elim-input-filter (process data)
   (let ((pt nil) (sexp nil) (read-error nil) (sexp-list nil))
-    (with-current-buffer (elim-fetch-process-data process :protocol-buffer)
+    (with-current-buffer (process-buffer process)
       (setq pt    (point))
       (goto-char  (point-max))
       (insert      data)
@@ -310,7 +311,9 @@ and return an s-expression suitable for making a call to an elim daemon."
        (goto-char pt)))
       (when sexp-list 
         ;;(setq sexp-list (nreverse sexp-list))
-        (mapc (lambda (S) (elim-handle-sexp process S)) sexp-list)) )))
+        (mapc 
+         (lambda (S) (elim-handle-sexp process S)) 
+         (nreverse sexp-list))) )))
 
 (defun elim-process-send (process sexp-value)
   (let ((print-level  nil) 
@@ -471,20 +474,12 @@ and return an s-expression suitable for making a call to an elim daemon."
       (setq store (cons (cons bnode-uid args) store))
       (elim-store-process-data proc :blist store))))
 
-(defun elim-blist-create-node (proc name id status args)
-  (let ((store      (elim-fetch-process-data proc :blist))
-        (bnode-uid  (elim-avalue "bnode-uid" args))
-        (bnode-cons  nil))
-    ;; create-node calls can happen very early, when the bnode is 
-    ;; incomplete, or even for ephemeral bnodes that we should really
-    ;; ignore, so don't touch orphan nodes or apparent orphans
-    ;; unless they are groups (groups are always top level)
-    (when (or (eq (elim-avalue "bnode-type" args) :group-node)
-              (elim-avalue "bnode-parent" args))
-      (if (setq bnode-cons (assoc bnode-uid store))
-          nil ;; noop, we already have an entry so don't touch it.
-        (setq store (cons (cons bnode-uid args) store))
-        (elim-store-process-data proc :blist store)) )))
+(defun elim-blist-create-node (proc name id status args) 
+  "Create node calls are unreliable, since they are made before 
+the node is inserted into the buddy list, so this stubroutine ensures
+that this information does not propagate further, either into elim or 
+into any clients."
+  nil)
 
 (defun elim-blist-remove-node (proc name id status args)
   (let ((store      (elim-fetch-process-data proc :blist))
@@ -747,6 +742,40 @@ and return an s-expression suitable for making a call to an elim daemon."
       (widget-forward 1))
     (display-buffer action-buf)))
 
+(defun elim-account-request-auth (proc name id status args)
+  (let (auth-buf buf-name question)
+    (setq question  (concat "Authorise: " 
+                            (or (elim-avalue "message" args)
+                                (elim-avalue "user"    args)
+                                (elim-avalue "id"      args)
+                                (elim-avalue "alias"   args)))
+          buf-name  (format "* %s *" question)
+          auth-buf  (generate-new-buffer buf-name))
+    (with-current-buffer auth-buf
+      (elim-init-ui-buffer)
+      (setq elim-form-ui-args (list :process proc 
+                                    :name    name 
+                                    :call-id id  ))
+      (elim-form-widget-create 'boolean
+                               "value"
+                               :notify 'elim-form-ui-handle-event
+                               :tag     question
+                               nil)
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Cancel")
+                               :notify 'elim-form-ui-nok-cb)
+      (widget-insert " ")
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Ok")
+                               :notify 'elim-form-ui-ok-cb)
+      (use-local-map widget-keymap)
+      (widget-setup)
+      (beginning-of-buffer)
+      (widget-forward 1))
+    (display-buffer auth-buf)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon calls not intended for direct client use:
 (defun elim-init (process &optional ui-string user-dir) 
@@ -804,7 +833,7 @@ ACCOUNT need not be supplied if BUDDY is a uid"
      ((stringp buddy)
       (setq adata (elim-account-data process account)
             auid  (car adata))
-      (message "searching for %s in %S" buddy adata)
+      ;;(message "searching for %s in %S" buddy adata)
       (elim-assoc buddy blist
                   (lambda (K C)
                     (setq s (cdr C))
@@ -816,7 +845,7 @@ ACCOUNT need not be supplied if BUDDY is a uid"
 its data in the form (uid (:key . value) ...). :key items should include
 :name and :proto, but others may also be present."
   (let ((accounts (elim-fetch-process-data process :accounts)))
-    (message "account uids: %S" (mapcar 'car accounts))
+    ;;(message "account uids: %S" (mapcar 'car accounts))
     (cond ((numberp account) (elim-assoc account accounts '=))
           ((stringp account)
            (elim-assoc account accounts 
@@ -918,9 +947,8 @@ be initialised to the value of `elim-directory' if you do not supply it."
          (elim-initialising         t)
          (elim                    nil) )
     (setq elim (start-process-shell-command
-                (buffer-name buf) nil (elim-command)))
+                (buffer-name buf) buf (elim-command)))
     (elim-store-process-data elim :client-ops      client-ops)
-    (elim-store-process-data elim :protocol-buffer buf)
     (elim-store-process-data elim :initialised     0)
     (set-process-filter elim 'elim-input-filter) 
     (elim-init elim ui-string user-dir)
@@ -961,12 +989,13 @@ OPTIONS (\"key\" \"value\" ...)."
     (error "Unsupported IM protocol: %s" protocol)))
 
 (defun elim-remove-buddy (process account buddy) 
-  (let (bdata arglist bname dummy)
+  (let (bdata arglist bname dummy buid)
     (setq bdata   (elim-buddy-data process buddy account)
+          buid    (car bdata)
           account (or account (elim-avalue "account-uid" (cdr bdata)))
           arglist (elim-account-proto-items process account)
-          arglist (nconc (list 'alist nil)
-                         (list (elim-atom-to-item "bnode-uid" (car bdata)))
+          arglist (nconc (list 'alist nil 
+                               (elim-atom-to-item "bnode-uid" buid))
                          arglist))
     (elim-process-send process 
     ;;(elim-debug "%S"
@@ -978,13 +1007,14 @@ OPTIONS (\"key\" \"value\" ...)."
   "Given an elim PROCESS an ACCOUNT name or uid and a BUDDY (im screen name),
 add that user to your buddy list"
   (let ((arglist (elim-account-proto-items process account)))
+    (elim-debug "ELIM-ADD-BUDDY( PROC %S %S %S )" account buddy group)
     (if arglist
         (progn
-          (setq arglist 
-                (nconc (list 'alist nil)
-                       (list (elim-atom-to-item "buddy-name" buddy)
-                             (elim-atom-to-item "group" (or group "Buddies")))
-                       arglist))
+          (setq group   (or group "Buddies")
+                arglist (nconc (list 'alist nil
+                                     (elim-atom-to-item "buddy-name" buddy)
+                                     (elim-atom-to-item "group"      group))
+                               arglist))
           (elim-process-send process (elim-daemon-call 'add-buddy nil arglist)))
       (error "No such account: %s" account)) ))
 
@@ -1044,7 +1074,9 @@ libpurple unregister support is too flaky right now." user-login-name)
       (error "No such account: %S" account)) ))
 
 (defun elim-message (process account conversation text)
-  "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid) via elim PROCESS"
+  "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid or name) 
+via elim PROCESS. If CONVERSATION is a name then a new conversation
+may be started if none by that name exists."
   (let (acct-args arglist conv-arg)
     (setq acct-args (elim-account-proto-items  process account)
           conv-arg  (cond ((numberp conversation) 
@@ -1070,15 +1102,26 @@ libpurple unregister support is too flaky right now." user-login-name)
 ;;                            (elim-daemon-call 'message nil arglist))
 ;;         (error "No such account: %S" account)) ))
 
-(defun elim-join-chat (process account alias options)
-  ""
-  (let (alias-arg optitems acct-args arglist)
-    (setq optitems  (elim-simple-list-to-proto-alist  options )
-          optitems  (elim-sexp-to-item "chat-options" optitems)
-          acct-args (elim-account-proto-items process account )
-          alias-arg (elim-atom-to-item "chat-alias"   alias   )
-          arglist   (nconc (list 'alist nil alias-arg optitems) acct-args))
-    (elim-process-send process (elim-daemon-call 'join-chat nil arglist)) ))
+(defun elim-join-chat-parse-chat-parameter (thing)
+  (let (name)
+    (when (setq name (cond ((numberp thing) "bnode-uid" )
+                           ((stringp thing) "chat-alias"))) 
+      (elim-atom-to-item name thing)) ))
+
+(defun elim-join-chat (process account chat &optional options)
+  "Join CHAT (a name or buddy uid) on ACCOUNT (uid or name) via elim PROCESS,
+if ACCOUNT is a name, then OPTIONS (a flat list of \"key\" \"value\" pairs)
+must also be supplied."
+  (let (chat-arg optitems acct-args arglist)
+    (when options
+      (setq optitems  (elim-simple-list-to-proto-alist  options )
+            optitems  (elim-sexp-to-item "chat-options" optitems)))
+    (setq acct-args (elim-account-proto-items process account )
+          chat-arg  (elim-join-chat-parse-chat-parameter  chat)
+          arglist   (nconc (list 'alist nil chat-arg) acct-args optitems))
+    (elim-process-send process
+    ;;(elim-debug        "%S"
+                       (elim-daemon-call 'join-chat nil arglist)) ))
 
 (defun elim-account-options (process account callback)
   (let ((account-data (elim-account-data process account)) arglist)

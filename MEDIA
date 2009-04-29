@@ -1,0 +1,9 @@
+The media files included ( so far only a few icons ) are all from the pidgin 
+(version 2.4.3) source package from debian woody, which is under the GPL v2.
+The source files (.c, .h etc) are specifically stated as being GPLv2 or later.
+The image files are not specifically or individually licenced as "or later",
+so I guess they must be strictly GPL v2 licenced.
+
+-- 
+vivek@etla.org 2009-04-20
+

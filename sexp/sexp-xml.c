@@ -328,6 +328,7 @@ char * sexp_escape_string( const char *symbol, int len, gboolean significant )
     {
         switch( *c )
         {
+          case '\\':
           case '"' :
           case '\n':
             g_string_append_c( escaped, '\\' );

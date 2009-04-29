@@ -55,6 +55,7 @@ xmlnode * _h_elim_add_buddy ( const char *name ,
     PurpleGroup *group = purple_group_new( gname );
     PurpleBuddy *buddy = purple_buddy_new( acct, bname, b_arg );
     
+    fprintf( stderr, "add-buddy( b: %p, g: %p )\n", buddy, group );
     purple_blist_add_buddy  ( buddy, NULL, group, NULL );
     purple_account_add_buddy( acct , buddy );
 

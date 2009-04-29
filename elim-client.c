@@ -67,7 +67,7 @@ guint add_outbound_sexp ( xmlnode *resp )
         return g_queue_get_length( &out_queue );
     }
 
-    g_queue_push_tail ( &out_queue, sexp );
+    g_queue_push_head ( &out_queue, sexp );
 
     // start up the outbound sexp pump if this is the only thing
     // in the queue (ie it was empty but now it's not):
@@ -79,7 +79,7 @@ guint add_outbound_sexp ( xmlnode *resp )
 
 static gboolean sexp_xmitter(GIOChannel *io, GIOCondition cond, gpointer data)
 {
-    GString *sexp = g_queue_peek_head( &out_queue );
+    GString *sexp = g_queue_peek_tail( &out_queue );
     int      fd   = g_io_channel_unix_get_fd( io );
 
     if( sexp )
@@ -106,7 +106,7 @@ static gboolean sexp_xmitter(GIOChannel *io, GIOCondition cond, gpointer data)
         if( sent == sexp->len )
         {
             g_string_free   ( sexp, TRUE );
-            g_queue_pop_head( &out_queue );
+            g_queue_pop_tail( &out_queue );
         }
         else if( sent )
         {

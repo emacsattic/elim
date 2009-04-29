@@ -43,11 +43,11 @@ static void _elim_bl_request_add_chat ( PurpleAccount *account  ,
 #define PBLN_GET(thing,node) purple_blist_node_get_##thing( node )
 
 #define UPDATE_RELATIVE( x, r_type, node, test )                              \
-    {                                                                         \
+    ({                                                                        \
         x = PBLN_GET( r_type, node );                                         \
         if( x && (test) )                                                     \
-            add_outbound_sexp( __elim_bl_xnode(x, "elim-blist-update-node") );\
-    }
+            add_outbound_sexp(__elim_bl_xnode(x,"elim-blist-update-node",0)); \
+     })
 // ==========================================================================
 
 PurpleBlistUiOps elim_blist_ui_ops =
@@ -63,20 +63,26 @@ PurpleBlistUiOps elim_blist_ui_ops =
     _elim_bl_request_add_chat
 };
 
-// ==========================================================================
-static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b );
-static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name );
+static gboolean secondary_update = FALSE;
 
-static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )
+// ==========================================================================
+static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete );
+static xmlnode * __elim_bl_xnode( PurpleBlistNode *node   , 
+                                  const char      *name   ,
+                                  gboolean         delete );
+
+static xmlnode * __elim_bl_xnode( PurpleBlistNode *node   , 
+                                  const char      *name   ,
+                                  gboolean         delete )
 {
-    xmlnode *blnode = _elim_blnode_to_xnode( node );
-    char    *ID     = new_elim_id   ();
+    xmlnode *blnode = _elim_blnode_to_xnode( node, delete );
+    char    *ID     = new_elim_id();
     xmlnode *rval   = func_call( name, ID, blnode );
     g_free( ID );
     return rval;
 }
 
-static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
+static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
 {
     const char *bname   = NULL;
     const char *aname   = NULL;
@@ -196,9 +202,20 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
         AL_STR ( alist, "status-msg" , msg );
     }
 
-    PurpleBlistNode *r = NULL;
-    UPDATE_RELATIVE( r, sibling_prev, b, TRUE );
-    UPDATE_RELATIVE( r, parent      , b, PBLN_GET( first_child, r ) == b );
+    if( !secondary_update )
+    {
+        PurpleBlistNode *r = NULL;
+        secondary_update   = TRUE;
+
+        UPDATE_RELATIVE( r, sibling_next, b, TRUE );
+        UPDATE_RELATIVE( r, sibling_prev, b, TRUE );
+        if( delete )
+            UPDATE_RELATIVE( r, parent , b, TRUE );
+        else
+            UPDATE_RELATIVE( r, parent , b, PBLN_GET( first_child, r ) == b );
+
+        secondary_update = FALSE;
+    }
 
     return alist;
 }
@@ -211,21 +228,20 @@ static void _elim_bl_new_node( PurpleBlistNode *node )
 {
     fprintf( stderr, "(_elim_bl_new_node)\n" );
     if( !PURPLE_BLIST_NODE_IS_CONTACT(node) )
-        add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-create-node" ) );
+        add_outbound_sexp( __elim_bl_xnode(node, "elim-blist-create-node", 0) );
 }
 
 static void _elim_bl_update ( PurpleBuddyList *list , PurpleBlistNode *node )
 {
     fprintf( stderr, "(_elim_bl_update)\n" );
-    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-update-node" ) );
+    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-update-node", 0 ) );
 }
 
 static void _elim_bl_remove ( PurpleBuddyList *list , PurpleBlistNode *node )
 {
     fprintf( stderr, "(_elim_bl_remove)\n" );
-    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-remove-node" ) );
+    add_outbound_sexp( __elim_bl_xnode( node, "elim-blist-remove-node", 1 ) );
 }
-
 
 static void _elim_bl_show         ( PurpleBuddyList *list ) {}
 static void _elim_bl_destroy      ( PurpleBuddyList *list ) {}

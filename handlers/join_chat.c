@@ -67,7 +67,7 @@ static void __ghash_copy_sexp_str( gpointer key, gpointer value, gpointer data )
     
     if( v ) 
     {
-        fprintf( stderr, "(elim-debug chat component: (%s . %s) )\n", k, v );
+        fprintf( stderr, "(elim chat-component: (%s . %s) )\n", k, v );
         g_hash_table_insert( dst, k, v );
     }
 }
@@ -93,13 +93,16 @@ xmlnode * _h_elim_join_chat( const char *name ,
 
     elim_ping();
 
-    const char *aname   = ALIST_VAL_STR  ( args, "account-name" );
-    const char *proto   = ALIST_VAL_STR  ( args, "im-protocol"  );
-    const char *alias   = ALIST_VAL_STR  ( args, "chat-alias"   );
-    gpointer    auid    = ALIST_VAL_PTR  ( args, "account-uid"  );
-    GHashTable *opts    = ALIST_VAL_ALIST( args, "chat-options" );
-    GHashTable *options = __ghash_str_sexp__str_str( opts );
-    PurpleAccount *acct = 
+    PurpleChat *chat  = NULL;
+    const char *cname = NULL;
+    const char *aname = ALIST_VAL_STR( args, "account-name" );
+    const char *proto = ALIST_VAL_STR( args, "im-protocol"  );
+    const char *alias = ALIST_VAL_STR( args, "chat-alias"   );
+    gpointer    auid  = ALIST_VAL_PTR( args, "account-uid"  );
+    gpointer    cuid  = ALIST_VAL_PTR( args, "bnode-uid"    );
+    GHashTable *opts  = NULL;
+
+    PurpleAccount *acct =
       auid ? find_acct_by_uid( auid ) : purple_accounts_find( aname, proto );
 
     if( !acct )
@@ -108,47 +111,77 @@ xmlnode * _h_elim_join_chat( const char *name ,
         return response_error( ENXIO, id, name, "unknown account" );
     }
 
-    // cook up a chat node. if it's already on our buddy list, uncook it
-    // and use the old one instead (name should be unique per account
-    // so the operation is reasonable - we cannot supply a name as this
-    // parameter can be delegated to the plugin to generate automatically):
-    // this will trigger a new_node call, and possibly a remove call 
-    PurpleChat *chat = purple_chat_new( acct, alias, options );
-    const char *chn  = purple_chat_get_name( chat );
-    PurpleChat *ch_2 = purple_blist_find_chat( acct, chn );
-    if( ch_2 )
+    // when we have a UID fetch it and sanity check it:
+    if( cuid )
     {
-        fprintf( stderr, "(elim-debug chat already exists)\n" );
-        purple_blist_remove_chat( chat );
-        chat = ch_2;
-        chn  = purple_chat_get_name( chat );
-        purple_blist_alias_chat( chat, alias );
+        PurpleBlistNode *blnode = find_blist_node_by_uid( cuid, TRUE );
+        if( !blnode )
+        {
+            sexp_val_free( args );
+            return response_error( ENXIO, id, name, "rogue chat pointer" );
+        }
+
+        if( purple_blist_node_get_type(blnode) != PURPLE_BLIST_CHAT_NODE )
+        {
+            sexp_val_free( args );
+            return response_error( EINVAL, id, name, "buddy is not chat" );
+        }
+
+        chat  = (PurpleChat *)blnode;
+        cname = purple_chat_get_name      ( chat );
+        opts  = purple_chat_get_components( chat );
+    }
+    else if( alias && *alias )
+    {
+        PurpleChat *ch_2  = NULL;
+        GHashTable *_opts = ALIST_VAL_ALIST( args, "chat-options" );
+
+        // create a purplechat so we can figure out its canonical name:
+        // (this is the only way I can see to do this since chat naming
+        // is delegated to the prpl protocol plugin chat code):
+        opts  = __ghash_str_sexp__str_str( _opts );
+        chat  = purple_chat_new( acct, alias, opts );
+        cname = purple_chat_get_name  ( chat );
+        // now see if we already have a matching chat in this account:
+        ch_2  = purple_blist_find_chat( acct , cname );
+
+        // we had a match: destroy the duplicate we just created:
+        if( ch_2 )
+        {
+            purple_blist_remove_chat( chat ); // frees opts by side effect
+            purple_blist_alias_chat ( ch_2, alias );
+            chat = ch_2;
+            opts = purple_chat_get_components( ch_2 );
+        }
+        else if( chat ) { purple_blist_add_chat( chat, NULL, NULL ); }
+        else            { g_hash_table_destroy( opts );              }
     }
 
-    fprintf( stderr, "(elim-debug adding chat to blist)\n" );
-    purple_blist_add_chat( chat, NULL, NULL );
+    if( !chat || !opts )
+    {
+        sexp_val_free( args );
+        return response_error( EINVAL, id, name, "unable to initialise chat" );
+    }
 
     // if we have a conversation already, prod the client to show it
-    fprintf( stderr, "(elim-debug looking for conversation)\n" );
+    fprintf( stderr, "(elim-join-chat looking for conversation)\n" );
     PurpleConversation *conv =
-      purple_find_conversation_with_account( PURPLE_CONV_TYPE_CHAT, chn, acct );
+      purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, cname, acct);
     if( conv )
         purple_conversation_present( conv );
 
-    fprintf( stderr, "(elim-debug conversation %p)\n", conv );
+    fprintf( stderr, "(elim-join-chat conversation %p)\n", conv );
     // actually join the chat in question:
     // this should result in a conversation being created asynchronously if
     // we weren't in one already:
-    serv_join_chat( purple_account_get_connection(acct) ,
-                    purple_chat_get_components   (chat) );
-    fprintf( stderr, "(elim-debug called serv_join_chat)\n" );
+    serv_join_chat( purple_account_get_connection(acct), opts );
+    fprintf( stderr, "(elim-join-chat called serv_join_chat)\n" );
 
     xmlnode *rval = xnode_new( "alist" );
-
-    AL_STR( rval, "account-name" , purple_account_get_username   (acct) );
-    AL_STR( rval, "im-protocol"  , purple_account_get_protocol_id(acct) );
-    AL_INT( rval, "account-uid"  , (int)acct );
-    AL_STR( rval, "chat-name"    , chn );
+    AL_INT( rval, "account-uid" , (int)acct );
+    AL_STR( rval, "account-name", purple_account_get_username   (acct) );
+    AL_STR( rval, "im-protocol" , purple_account_get_protocol_id(acct) );
+    AL_STR( rval, "chat-name"   , cname );
 
     if( conv )
     {
@@ -162,7 +195,6 @@ xmlnode * _h_elim_join_chat( const char *name ,
         AL_ENUM( rval, "conv-features", pcf, ":connection-flags"  );
     }
 
-    
     sexp_val_free( args );
     return response_value( 0, id, name, rval );
 }

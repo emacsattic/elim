@@ -1,8 +1,15 @@
 (require 'lui  nil t)
 (require 'elim nil t)
+(require 'widget)
+(require 'wid-edit)
+(require 'tree-widget)
+(defvar garak-icon-directory nil)
 
 (let ((load-path (cons (file-name-directory 
                         (or load-file-name buffer-file-name)) load-path)))
+  (setq garak-icon-directory 
+        (concat (file-name-directory 
+                 (or load-file-name buffer-file-name)) "../icons/"))
   (when (not (featurep 'lui )) (require 'lui ))
   (when (not (featurep 'elim)) (require 'elim)))
 
@@ -36,6 +43,31 @@
 (defvar garak-account-uid  nil)
 (defvar garak-conv-uid     nil)
 (defvar garak-conv-name    nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; icons
+(defvar garak-icons 
+  (delq nil
+        (mapcar
+         (lambda (attr)
+           (when (or (stringp (cadr attr))
+                     (null    (cadr attr)))
+             (let ((label (concat ":" (file-name-sans-extension (car attr))))
+                   (path  (concat garak-icon-directory "/" (car attr))))
+               (cons label 
+                     (create-image path nil nil
+                                   :pointer 'hand
+                                   :ascent  'center
+                                   :mask '(heuristic t)))) ))
+         (directory-files-and-attributes garak-icon-directory)) ))
+
+(defvar garak-icon-tags '((":available"   . "[!]" )
+                          (":away"        . "[_]" )
+                          (":busy"        . "(-)" )
+                          (":group"       . "{ }")
+                          (":unavailable" . "(-)" )
+                          (":chat"        . " @ " )
+                          (":offline"     . "[ ]" )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
@@ -90,34 +122,6 @@
               (cons (cons uid buffer) garak-conversation-buffers)))) 
     buffer))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; buddy management:
-;; (defvar garak-inserted-buddies nil)
-;; (defun garak-insert-buddy-list-old (process)
-;;   (let ((blist (elim-buddy-list process)) (top-level-uids nil))
-;;     (mapc 
-;;      (lambda (N)
-;;        (when (eq (cdr (assoc "bnode-type" (cdr N))) :group-node)
-;;          (garak-insert-buddy-item process N 0)
-;;          ;;(message "insert top level buddy: %S" N) 
-;;          )) blist) ))
-
-;; (defun garak-insert-buddy-spacer (level)
-;;   (when (and level (< 0 level))
-;;     (insert (make-string (1- level) ?\ ) "+-" )))
-
-;; (defun garak-insert-buddy-item (proc buddy &optional level)
-;;   (let ((uid (car buddy)) (data (cdr buddy)) name children next)
-;;     (setq level (or level 0)
-;;           name  (cdr (assoc "bnode-name"  data))
-;;           next  (cdr (assoc "bnode-prev"  data)))
-;;     (garak-insert-buddy-spacer level)
-;;     (setq children (elim-buddy-children proc uid))
-;;     ;;(insert (format "%S\n" data))
-;;     (insert (propertize (format "[%s]\n" (or name "+")):garak-bnode-uid uid))
-;;     (mapc 
-;;      (lambda (C) 
-;;        (garak-insert-buddy-item proc C (1+ level))) children) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message callbacks
 (defun garak-abbreviate-nick (nick &optional protocol)
@@ -212,7 +216,7 @@
               cname   (elim-avalue "conv-name"    args)
               people  (elim-avalue "participants" args)
               people  (mapcar (lambda (P) (elim-avalue "name" P)) people))
-        (message "CHAT ADD: %S" new)
+        ;;(message "CHAT ADD: %S" new)
         (if (not new)
             (setq message (mapconcat 'identity people " ")
                   message (concat "* Users in " cname ": " message)
@@ -222,7 +226,7 @@
                  (lambda (N) 
                    (elim-add-face (format "* %s has entered %s" N cname) 
                                   'garak-system-message-face)) people)))
-        (message "CHAT ADD: %S" message)
+        ;;(message "CHAT ADD: %S" message)
         (if (listp message)
             (mapc 'lui-insert message)
           (lui-insert message)) )) ))
@@ -307,47 +311,71 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list
 (defun garak-buddy-list-node-command (&optional widget child event &rest stuff)
-  (let (value op buid proc buddy account)
+  (let (value op buid proc buddy auid bname)
     (setq proc  (cadr (memq :process elim-form-ui-args))
           value (widget-value widget)
           op    (car value)
           buid  (cdr value)
-          buddy (elim-buddy-data proc buid))
-    (cond ((eq op 'del) (elim-remove-buddy proc nil buid))
+          buddy (elim-buddy-data proc buid)
+          bname (elim-avalue "bnode-name"  buddy)
+          auid  (elim-avalue "account-uid" buddy))
+    (cond ((eq op 'del ) (elim-remove-buddy proc nil  buid))
+          ((eq op 'join) (elim-join-chat    proc auid buid))
+          ((eq op 'msg ) (elim-message proc auid bname 
+                                       (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid)
-    (setq kids 
-          (mapcar 
-           (lambda (N) (garak-buddy-list-node-widget proc N)) 
-           (elim-buddy-children proc (elim-avalue "bnode-uid" bnode))))
+  (let (kids uid menu type name remove plabel)
+    (setq uid    (elim-avalue "bnode-uid"  bnode)
+          name   (elim-avalue "bnode-name" bnode)
+          type   (elim-avalue "bnode-type" bnode)
+          remove (list 'choice-item :tag "Remove" :value (cons 'del uid))
+          kids   (mapcar 
+                  (lambda (N) (garak-buddy-list-node-widget proc N)) 
+                  (elim-buddy-children proc (elim-avalue "bnode-uid" bnode)))
+          menu   (cond 
+                  ((eq type :chat-node )
+                   (list 
+                    (list 'choice-item :tag "Join" :value (cons 'join uid))))
+                  ((eq type :buddy-node)
+                   (setq plabel 
+                         (if (elim-avalue "allowed" bnode) "Block" "Unblock"))
+                   (list
+                    (list 'choice-item :tag "Send IM" :value (cons 'msg  uid))
+                    (list 'choice-item :tag plabel    :value (cons 'priv uid))))
+                  (t nil))
+          menu   (nconc menu (list remove)))
     (if kids
-        (apply 'widget-convert 
-               'tree-widget
-               :open        t
-               :tag         (elim-avalue "bnode-name" bnode)
-               :value       (elim-avalue "bnode-uid"  bnode)
-               :expander    'garak-buddy-list-node-children 
-               kids))
-    (setq uid (elim-avalue "bnode-uid" bnode))
-    (widget-convert 
-     'menu-choice
-     :format    "%[%t%]\n"
-     :tag       (elim-avalue "bnode-name" bnode)
-     :value     nil
-     :value-get 'widget-value-value-get
-     :inline    t
-     :notify    'garak-buddy-list-node-command 
-     `(choice-item :tag "Send IM" :value (msg  . ,uid) )
-     `(choice-item :tag "Block"   :value (priv . ,uid) )
-     `(choice-item :tag "Remove"  :value (del  . ,uid) ))
-    ))
+        (apply 'widget-convert 'tree-widget
+               :open      t
+               :buddy     uid
+               :value     uid
+               :expander 'garak-buddy-list-node-children
+               :node      (apply 'widget-convert 'menu-choice
+                                 :format    "%[%t%]\n"
+                                 :tag        name
+                                 :value      nil
+                                 :value-get 'widget-value-value-get
+                                 :inline     t
+                                 :notify    'garak-buddy-list-node-command 
+                                 menu)
+               kids)
+      (apply 'widget-convert
+             'menu-choice
+             :format     "%[%t%]\n"
+             :tag        name
+             :value      uid
+             :buddy      uid
+             :value-get 'widget-value-value-get
+             :inline     t
+             :notify    'garak-buddy-list-node-command 
+             menu)) ))
 
 (defun garak-buddy-list-skip (proc bnode)
   (if (equal (elim-avalue "contact-size" bnode) 1)
       (progn
-        (message "degenerate bnode %s" (elim-avalue "bnode-name" bnode))
+        ;;(message "degenerate bnode %s" (elim-avalue "bnode-name" bnode))
         (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode))
     bnode))
 
@@ -359,32 +387,90 @@
     (mapcar (lambda (N) (garak-buddy-list-node-widget process N)) children)))
 
 (defun garak-insert-buddy-list-top (proc bnode)
-  (let ((uid (elim-avalue "bnode-uid" bnode)))
-    (apply 'widget-create 
+  (let ((uid (elim-avalue "bnode-uid" bnode)) menu name)
+    (setq remove (list 'choice-item :tag "Delete All" :value (cons 'del uid))
+          name   (elim-avalue "bnode-name" bnode))
+    (apply 'widget-create
            'tree-widget
-           :open       t
-           :tag        (elim-avalue "bnode-name" bnode)
-           :expander   'garak-buddy-list-node-children
-           :value      (elim-avalue "bnode-uid"  bnode)
+           :open      t
+           :tag       name
+           :buddy     uid
+           :value     uid
+           :expander 'garak-buddy-list-node-children
            (mapcar
-            (lambda (N) 
+            (lambda (N)
               (garak-buddy-list-node-widget proc
                                             (garak-buddy-list-skip proc N) ))
             (elim-buddy-children proc (elim-avalue "bnode-uid" bnode))) )))
 
 (defun garak-insert-buddy-list-toplevel (proc bnode)
   (when (not (assoc "bnode-parent" bnode))
-    (message "toplevel node: %s" (elim-avalue "bnode-name" bnode))
+    ;;(message "toplevel node: %s" (elim-avalue "bnode-name" bnode))
     (garak-insert-buddy-list-top proc bnode)))
 
+(defun garak-buddy-find-parent (proc uid)
+  (let ((buddy (elim-buddy-data proc uid)) parent)
+    (setq parent (elim-buddy-data proc (elim-avalue "bnode-parent" buddy)))
+    (if (equal (elim-avalue "contact-size" parent) 1)
+        (garak-buddy-find-parent proc (car parent))
+      (car parent)) ))
+
+(defun garak-buddy-list-find-node (uid)
+  (let ((wrap -1))
+    (save-excursion
+      (beginning-of-buffer)
+      (while (< wrap 1)
+        (when (bobp) (setq wrap (1+ wrap)))
+        
+        (widget-forward))
+      )
+    )
+  )
+
+(defconst garak-tree-container-classes '(tree-widget-open-icon 
+                                         tree-widget-empty-icon
+                                         tree-widget-close-icon))
+(defun garak-buddy-list-node-setup-icon (wicon)
+  (let ((class   (car wicon))
+        (parent  (widget-get wicon :parent)) 
+        (process (cadr (memq :process elim-form-ui-args)))
+        buddy buid status icon type dummy tag)
+    (when (and (cond 
+                ((eq class 'tree-widget-leaf-icon)
+                 (setq buid (widget-get (widget-get wicon :node  ) :buddy)))
+                ((memq class garak-tree-container-classes)
+                 (setq buid (widget-get (widget-get wicon :parent) :buddy))))
+               (setq buddy (elim-buddy-data process buid)))
+      (setq type (elim-avalue "bnode-type" buddy))
+      (setq icon
+            (cond ((eq class 'tree-widget-empty-icon) ":invisible")
+                  ((eq type :contact-node) ":person")
+                  ((eq type :chat-node   ) ":chat"  )
+                  ((eq type :group-node  ) ":group" )
+                  ((eq type :buddy-node  )
+                   (symbol-name (elim-avalue "status-type" buddy)))))
+      (when (and icon (assoc icon garak-icons))
+        ;;(message "ICON: %S" icon)
+        (if tree-widget-image-enable
+            (widget-put wicon :glyph-name icon)
+          (when (setq tag (elim-avalue icon garak-icon-tags))
+            (widget-put wicon :tag tag)) )) )))
+
 (defun garak-insert-buddy-list (proc) 
-  (let ((blist   (elim-buddy-list proc)) 
+  (let ((blist   (elim-buddy-list proc))
+        (icons   (copy-sequence garak-icons))
         (bbuffer (elim-fetch-process-data proc :blist-buffer)))
     (when (or (not bbuffer) (not (buffer-live-p bbuffer)))
       (setq bbuffer (generate-new-buffer "*buddy-list*")) 
       (elim-store-process-data proc :blist-buffer bbuffer))
     (with-current-buffer bbuffer
       (elim-init-ui-buffer)
+      (tree-widget-set-theme)
+      (setq icons (nconc icons (aref tree-widget--theme 3)))
+      (message "icons: %S" icons)
+      (aset tree-widget--theme 3 icons)
+      (add-hook 'tree-widget-before-create-icon-functions 
+                'garak-buddy-list-node-setup-icon nil t)
       (setq elim-form-ui-args (list :process proc))
       (mapc 
        (lambda (N)
@@ -442,14 +528,15 @@
         (error (format "%S" errval))) ))
 
 (defun garak-cmd-add-buddy (args)
-  (let (items account proto buddy errval adata)
-    (setq account
-          (garak-cmd-strip-account-arg garak-elim-process items args adata))
-    (setq buddy (car items))
+  (let (items account proto buddy errval adata group)
+    (setq account 
+          (garak-cmd-strip-account-arg garak-elim-process items args adata)
+          buddy (car  items)
+          group (cadr items))
     (condition-case errval
         (progn
-          (elim-add-buddy garak-elim-process account buddy)
-          (format "/add-buddy %s" args))
+          (elim-add-buddy garak-elim-process account buddy group)
+          (format "/add-buddy %s %s %S" buddy group items))
         (error "Could not add buddy: %S" errval)) ))
 
 (defun garak-cmd-remove-buddy (args)
@@ -501,11 +588,11 @@
         (progn
           (setq proto (cdr (assq :proto (cdr account-data)))
                 spec  (elim-chat-parameters garak-elim-process proto))
-          (message "arg-spec: %S" spec)
+          ;;(message "arg-spec: %S" spec)
           (if spec 
               (if (setq options (garak-read-join-parameters spec items))
                   (progn 
-                    (message "e-j-c: process %S %S %S" account "" options)
+                    ;;(message "e-j-c: process %S %S %S" account "" options)
                     (elim-join-chat garak-elim-process account "" options) 
                     (format "/join %s" args))
                 (format "/join %s: args not valid" args))
