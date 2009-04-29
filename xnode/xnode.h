@@ -35,6 +35,7 @@ xmlnode * xnode_alist_item_string ( const char *name, const char *value );
 xmlnode * xnode_alist_item_integer( const char *name, int         value );
 xmlnode * xnode_alist_item_boolean( const char *name, gboolean    value );
 xmlnode * xnode_alist_item_xnode  ( const char *name, xmlnode    *value );
+xmlnode * xnode_alist_item_enum   ( const char *name, int val, const char *t );
 
 /**
  * Gets the next tag at the same level as this one.

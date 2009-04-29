@@ -89,16 +89,20 @@ static void _elim_notify_added ( PurpleAccount *account    ,
 static void _elim_status_changed ( PurpleAccount *account ,
                                    PurpleStatus  *status  )
 {
-    xmlnode          *alist = xnode_new( "alist" );
-    char             *ID    = new_elim_id();
-    PurpleStatusType *type  = purple_status_get_type( status );
+    xmlnode              *alist = xnode_new( "alist" );
+    char                 *ID    = new_elim_id();
+    PurpleStatusType     *type  = purple_status_get_type( status );
+    PurpleStatusPrimitive statp = purple_status_type_get_primitive( type ); 
+
     AL_INT ( alist, "account-uid" , (int)account );
     AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
     AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
     AL_STR ( alist, "status-name" , purple_status_get_name        ( status  ) );
-    AL_INT ( alist, "status-type" , purple_status_type_get_primitive( type  ) );
+    AL_ENUM( alist, "status-type" , statp, ":status-primitive" );
     AL_BOOL( alist, "connected"   , purple_account_is_connected   ( account ) );
+
     xmlnode *mcall = func_call( "elim-account-status-changed", ID, alist );
+
     g_free( ID );
     add_outbound_sexp( mcall );
 }

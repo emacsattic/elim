@@ -32,6 +32,9 @@ Buddy lists etc will be stored here"
   :group 'elim
   :type '(directory))
 
+(defvar elim-enum-alist nil)
+(defvar elim-enum-flag-types nil)
+
 (defvar elim-call-handler-alist
   '(;; account ops
     (elim-account-notify-added  )
@@ -64,6 +67,7 @@ if the symbol to look for is the same as that of the protocol function.")
     (add-buddy      . nil)
     (connect        . nil)
     (debug          . nil)
+    (enumerations   . elim-enumerations-response)
     (disconnect     . nil)
     (init           . elim-init-response)
     (list-protocols . elim-list-protocols-response)
@@ -89,6 +93,22 @@ if we do not intend to wait for the response (this is the usual case).")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; protocol parsing and formatting:
+(defun elim-unpack-enum (etype value)
+  (let ((enum-vals (cdr (assq etype elim-enum-alist))) (rval nil))
+    (if (memq etype elim-enum-flag-types)
+        (mapc
+         (lambda (v)
+           (when (/= (logand (cdr v) value) 0) 
+             (setq rval (cons (car v) rval)))) enum-vals)
+      (setq rval (or (car (rassq value enum-vals)) value)))
+    rval))
+
+(defun elim-string-to-number (attr thing)
+  (let (etype)
+    (if (setq etype (intern-soft (cdr (assq 'type attr)))) 
+        (elim-unpack-enum etype (string-to-number thing))
+      (string-to-number thing))))
+
 (defun elim-parse-proto-args (arg)
   "Take an elim protocol argument s-expression ARG and convert it into 
 a straightforward elisp s-expression."
@@ -99,13 +119,13 @@ a straightforward elisp s-expression."
          (value (cddr arg)) )
     (when attr (setq name (cdr (assq 'name attr))))
     (setq parsed
-          (cond ((eq type 'string) (elim-html-to-text       (car value)))
-                ((eq type 'int   ) (string-to-number        (car value)))
-                ((eq type 'float ) (string-to-number        (car value)))
-                ((eq type 'bool  ) (/= 0 (string-to-number (car value))))
-                ((eq type 'data  ) (base64-decode-string    (car value)))
-                ((eq type 'list  ) (mapcar 'elim-parse-proto-args value))
-                ((eq type 'alist ) (mapcar 'elim-parse-proto-args value))
+          (cond ((eq type 'string) (elim-html-to-text          (car value)))
+                ((eq type 'int   ) (elim-string-to-number attr (car value)))
+                ((eq type 'float ) (string-to-number           (car value)))
+                ((eq type 'bool  ) (/= 0 (string-to-number    (car value))))
+                ((eq type 'data  ) (base64-decode-string       (car value)))
+                ((eq type 'list  ) (mapcar  'elim-parse-proto-args   value))
+                ((eq type 'alist ) (mapcar  'elim-parse-proto-args   value))
                 ;; this type was an old form of the protocol, no longer used:
                 ((eq type 'item  ) (cons 
                                     (cdr (assq 'name attr)) 
@@ -141,9 +161,10 @@ entities converted into characters."
 (defun elim-atom-to-proto (x &optional n)
   "Return an elim protocol sexp representing X (a number, string or t or nil)."
   (let ((attr (if n (list (cons 'name n)) 'nil)))
-    (cond ((stringp  x) (list            'string attr x))
-          ((numberp  x) (elim-number-to-proto    x attr))
-          ((booleanp x) (list 'bool attr (if x "1" "0"))) )))
+    (cond ((symbolp  x) (list 'string attr (symbol-name x)))
+          ((stringp  x) (list               'string attr x))
+          ((numberp  x) (elim-number-to-proto       x attr))
+          ((booleanp x) (list  'bool  attr  (if x "1" "0"))) )))
 
 (defun elim-atom-to-item (k v)
   "Take a number, t, nil or string V and prepare an elim protocol alist
@@ -189,7 +210,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;
 (defun elim-handle-sexp (proc sexp)
   (progn
-    (elim-debug "received: %S" sexp)
+    ;;(elim-debug "received: %S" sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))
           (attr (car  (cdar (cddr sexp))))
@@ -197,6 +218,7 @@ and return an s-expression suitable for making a call to an elim daemon."
       ;;(elim-debug "» %S %S %S" type name attr)
       ;;(elim-debug "»» %S" args)
       (setq args (elim-parse-proto-args args))
+      (elim-debug "received: %S.%S %S" type name args)
       ;;(elim-debug "« %S: (%S %S %S)" type name attr args)
       (cond
        ((eq type 'function-call    ) (elim-handle-call proc name attr args))
@@ -289,6 +311,25 @@ and return an s-expression suitable for making a call to an elim daemon."
       (elim-default-fail-handler proc name id attr args)
     (elim-store-process-data proc 'protocols (cdr (assoc "value" args))) ))
 
+(defun elim-enumerations-response (proc name id attr args)
+  (when (equal (cdr (assoc "status" args)) 0)
+    (message "parsing enums")
+    (let ((enum-alist (cdr (assoc "value" args))) key entry) 
+      (mapc 
+       (lambda (E) 
+         (setq key   (intern (car E))
+               entry (mapcar 
+                      (lambda (F)
+                        (cons (intern (concat ":" (downcase (car F)))) 
+                              (cdr F))) (cdr E)))
+         (setcdr (or (assq key elim-enum-alist)
+                     (car (setq elim-enum-alist 
+                                (cons (cons key nil) elim-enum-alist)))) entry))
+       enum-alist)) 
+    (mapc (lambda (E) 
+            (when (string-match "-flags$" (symbol-name (car E))) 
+              (add-to-list 'elim-enum-flag-types (car E)))) elim-enum-alist)))
+
 (defun elim-response-filter-account-data (proc name id attr args)
   (let (uid proto name store adata (val (cdr (assoc "value" args))))
     (when (setq uid (cdr (assoc "account-uid" val)))
@@ -317,6 +358,7 @@ and return an s-expression suitable for making a call to an elim daemon."
          (message "uid : %S" acl)) accts)
       (elim-store-process-data proc 'accounts acl))))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon calls not intended for direct client use:
 (defun elim-init (process &optional ui-string user-dir) 
@@ -335,6 +377,10 @@ as it relies on initialisation done by `elim-start'."
           ;;dummy      (message "ELIM INIT DCALL   1")
           )
     (elim-process-send process proto-call) ))
+
+(defun elim-load-enum-values (process)
+  (elim-process-send process
+    (elim-daemon-call 'enumerations nil '(alist nil)) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; non-daemon functions intended for the user, and general utilities
@@ -408,6 +454,7 @@ be initialised to the value of `elim-directory' if you do not supply it."
     ;;(message "CALLED INIT")
     (elim-update-protocol-list elim)
     (elim-update-account-list  elim)
+    (elim-load-enum-values     elim)
     ;;(message "CALLED PROTO UPDATE")
     (sit-for 1)
     elim))

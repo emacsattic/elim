@@ -202,11 +202,12 @@ static void *_elim_request_input ( const char         *title         ,
         const char            *cname = purple_conversation_get_name    ( conv );
         PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
         PurpleConversationType ctype = purple_conversation_get_type    ( conv );
-        AL_INT( alist, "conv-uid"     , (int)conv );
-        AL_STR( alist, "conv-name"    , cname );
-        AL_STR( alist, "conv-title"   , title );
-        AL_INT( alist, "conv-type"    , ctype );
-        AL_INT( alist, "conv-features", cflag );
+
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
     }
 
     resp->req.input.ok   = (PurpleRequestInputCb)ok_cb;
@@ -296,11 +297,12 @@ static void *_elim_request_choice( const char         *title         ,
         const char            *cname = purple_conversation_get_name    ( conv );
         PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
         PurpleConversationType ctype = purple_conversation_get_type    ( conv );
-        AL_INT( alist, "conv-uid"     , (int)conv );
-        AL_STR( alist, "conv-name"    , cname );
-        AL_STR( alist, "conv-title"   , title );
-        AL_INT( alist, "conv-type"    , ctype );
-        AL_INT( alist, "conv-features", cflag );
+
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
     }
 
     resp->req.choice.ok   = (PurpleRequestChoiceCb)ok_cb;
@@ -374,7 +376,7 @@ static void *_elim_request_action( const char          *title        ,
         while( (label = va_arg( actions, const char *)) )
         {
             action_func func = va_arg( actions, action_func );
-            AL_INT( acts, label, (int)func );
+            AL_PTR( acts, label, func );
             if( offs < action_count )
                 *(resp->req.action.func + offs++) = func;
         }
@@ -402,11 +404,12 @@ static void *_elim_request_action( const char          *title        ,
         const char            *cname = purple_conversation_get_name    ( conv );
         PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
         PurpleConversationType ctype = purple_conversation_get_type    ( conv );
-        AL_INT( alist, "conv-uid"     , (int)conv );
-        AL_STR( alist, "conv-name"    , cname );
-        AL_STR( alist, "conv-title"   , title );
-        AL_INT( alist, "conv-type"    , ctype );
-        AL_INT( alist, "conv-features", cflag );
+
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
     }
 
     resp->data = user_data;
@@ -488,9 +491,9 @@ static void *_elim_request_file  ( const char            *title      ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
@@ -499,11 +502,12 @@ static void *_elim_request_file  ( const char            *title      ,
         const char            *cname = purple_conversation_get_name    ( conv );
         PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
         PurpleConversationType ctype = purple_conversation_get_type    ( conv );
-        AL_INT( alist, "conv-uid"     , (int)conv );
-        AL_STR( alist, "conv-name"    , cname );
-        AL_STR( alist, "conv-title"   , title );
-        AL_INT( alist, "conv-type"    , ctype );
-        AL_INT( alist, "conv-features", cflag );
+
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
     }
 
     resp->req.path.ok  = (PurpleRequestFileCb)ok_cb;
@@ -554,9 +558,9 @@ static void *_elim_request_folder( const char            *title      ,
     {
         const char *aname = purple_account_get_username   ( account );
         const char *proto = purple_account_get_protocol_id( account );
-        AL_INT ( alist, "account-uid" , (int)account );
-        AL_STR ( alist, "account-name", aname        );
-        AL_STR ( alist, "im-protocol" , proto        );
+        AL_PTR ( alist, "account-uid" , account );
+        AL_STR ( alist, "account-name", aname   );
+        AL_STR ( alist, "im-protocol" , proto   );
     }
 
     if( conv )
@@ -565,11 +569,11 @@ static void *_elim_request_folder( const char            *title      ,
         const char            *cname = purple_conversation_get_name    ( conv );
         PurpleConnectionFlags  cflag = purple_conversation_get_features( conv );
         PurpleConversationType ctype = purple_conversation_get_type    ( conv );
-        AL_INT( alist, "conv-uid"     , (int)conv );
-        AL_STR( alist, "conv-name"    , cname );
-        AL_STR( alist, "conv-title"   , title );
-        AL_INT( alist, "conv-type"    , ctype );
-        AL_INT( alist, "conv-features", cflag );
+        AL_PTR ( alist, "conv-uid"     , conv  );
+        AL_STR ( alist, "conv-name"    , cname );
+        AL_STR ( alist, "conv-title"   , title );
+        AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+        AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
     }
 
     resp->req.path.ok  = (PurpleRequestFileCb)ok_cb;

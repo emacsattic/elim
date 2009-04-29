@@ -16,7 +16,6 @@ complex types.
 
 Some examples:
 
-   (item ((name . "key")) (string nil "value"))
    (string nil "møøse")
    (list   nil 
            (string nil "zero")
@@ -31,6 +30,9 @@ string   a string: may contain any character expect \0
          no special \ sequences are recognised, any character 
          preceded by \ will be treated literaly. (ie \n => n, not LF)
 int      an integer. not limited to any bit width: unpack as a float if need be
+         if the integer has a 'type attribute, this indicates it is part of
+         an enumeration. This is supplied as a hint to the receiving 
+         system, it need not change the unpacking mechanism.
 float    a floating point number
 bool     true or false (represented as 1 or 0).
 data     a base64 encoded string
@@ -43,6 +45,7 @@ list     a list of values of any valid type, including lists and alists
 Examples:
 
   (int    nil "2147483647")
+  (int    ((type . ":conversation-type") "2")
   (string nil "hamburgers")
   (float  nil "3.14159265")
   (bool   nil "1")

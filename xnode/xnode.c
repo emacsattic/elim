@@ -929,6 +929,10 @@ xnode_get_next_twin( xmlnode *node )
     thing = xnode_new( type );             \
     xnode_set_attrib ( thing, "name", name );
 
+#define _ALIST_ENUM(thing,type,name,class)  \
+    _ALIST_ITEM( thing, type, name );       \
+    xnode_set_attrib ( thing, "type", class );
+
 xmlnode * xnode_alist_item_string( const char *name, const char *value )
 {
     xmlnode *item;
@@ -953,6 +957,22 @@ xmlnode * xnode_alist_item_integer( const char *name, int value )
 
     return item;
 }
+
+xmlnode * xnode_alist_item_enum( const char *name, int value, const char *type )
+{
+    xmlnode *item;
+    GString *i = g_string_new( "" );
+
+
+    _ALIST_ENUM( item, "int", name, type ); 
+
+    g_string_printf  ( i, "%d", value );
+    xnode_insert_data( item, i->str, i->len );
+    g_string_free    ( i, TRUE );
+
+    return item;
+}
+
 
 xmlnode * xnode_alist_item_boolean( const char *name, gboolean value )
 {

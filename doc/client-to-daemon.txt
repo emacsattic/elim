@@ -233,12 +233,14 @@ If we already have aconversation:
         (string ((name . "im-protocol"  )) "prpl-irc" )
         (string ((name . "chat-name"    )) "#emacs"   )
         (int    ((name . "conv-uid"     )) "268433200")
-        (int    ((name . "conv-type"    )) "2"        ) ;; enum
-        (int    ((name . "conv-features")) "16"       ) ;; &ed flags
+        (int    ((name . "conv-type"    )
+                 (type . ":conversation-type"))    "2") ;; enum
+        (int    ((name . "conv-features")
+                 (type . ":connection-flags" ))   "16") ;; |ed flags enum
         (string ((name . "conv-name"    )) "#emacs"   )
         (string ((name . "conv-alias"   )) "#emacs"   ))))
 
-NOTE: enumerations will be covered later.
+NOTE: enumerations are covered in enumerations.txt
 
 ############################################################################
 

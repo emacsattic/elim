@@ -106,8 +106,8 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
 
     xmlnode *alist = xnode_new( "alist" );
 
-    AL_INT( alist, "bnode-uid" , (int)b );
-    AL_INT( alist, "bnode-type", type   );
+    AL_INT ( alist, "bnode-uid" , (int)b );
+    AL_ENUM( alist, "bnode-type", type, ":blist-node-type"   );
 
     if( bname   ) AL_STR ( alist, "bnode-name"   , bname     );
     if( acct    ) AL_INT ( alist, "account-uid"  , (int)acct );
@@ -124,7 +124,7 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
     if((x = PBLN_GET(parent      , b))) AL_INT( alist, "bnode-parent", (int)x );
     if((x = PBLN_GET(first_child , b))) AL_INT( alist, "bnode-child" , (int)x );
 
-    AL_INT( alist, "bnode-flags" , PBLN_GET( flags, b ) );
+    AL_ENUM( alist, "bnode-flags" , PBLN_GET( flags, b ), ":blist-node-flags" );
 
     if( acct && bname )
     {
@@ -146,7 +146,7 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
 
         AL_STR ( alist, "status-name", purple_status_get_name ( stat ) );
         AL_STR ( alist, "status-id"  , purple_status_get_id   ( stat ) );
-        AL_INT ( alist, "status-type", s_type  );
+        AL_ENUM( alist, "status-type", s_type, ":status-primitive"     );
         AL_STR ( alist, "status-msg" , message );
     }
 

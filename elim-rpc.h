@@ -41,17 +41,23 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
         return response_error( EINVAL, (i), (n), "arg value is not an alist" );\
     }
 
-#define AL_STR(a,n,v)   \
-    xnode_insert_child( (a), xnode_alist_item_string ( (n), (v) ) );
+#define AL_STR(a,n,v)    \
+     xnode_insert_child( (a), xnode_alist_item_string ( (n), (v) ) )
 
-#define AL_INT(a,n,v)   \
-    xnode_insert_child( (a), xnode_alist_item_integer( (n), (v) ) );
+#define AL_PTR(a,n,v)    \
+     xnode_insert_child( (a), xnode_alist_item_integer( (n), (int)(v) ) )
 
-#define AL_BOOL(a,n,v)  \
-    xnode_insert_child( (a), xnode_alist_item_boolean( (n), (v) ) );
+#define AL_INT(a,n,v)    \
+     xnode_insert_child( (a), xnode_alist_item_integer( (n), (v) ) )
 
-#define AL_NODE(a,n,v)  \
-    xnode_insert_child( (a), xnode_alist_item_xnode( (n), (v) ) );
+#define AL_BOOL(a,n,v)   \
+     xnode_insert_child( (a), xnode_alist_item_boolean( (n), (v) ) )
+
+#define AL_NODE(a,n,v)   \
+     xnode_insert_child( (a), xnode_alist_item_xnode  ( (n), (v) ) )
+
+#define AL_ENUM(a,n,v,t) \
+     xnode_insert_child( (a), xnode_alist_item_enum   ( (n), (v), (t) ) )
 
 // ==========================================================================
 

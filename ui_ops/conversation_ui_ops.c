@@ -117,14 +117,14 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
 
     fprintf( stderr, "(_elim_conv_args)\n" );
     
-    AL_STR( alist, "account-name" , aname );
-    AL_STR( alist, "im-protocol"  , proto );
-    AL_INT( alist, "account-uid"  , (int)acct );
-    AL_INT( alist, "conv-uid"     , (int)conv );
-    AL_STR( alist, "conv-name"    , cname );
-    AL_STR( alist, "conv-title"   , title ? title : cname );
-    AL_INT( alist, "conv-type"    , ctype );
-    AL_INT( alist, "conv-features", cflag );    
+    AL_STR ( alist, "account-name" , aname     );
+    AL_STR ( alist, "im-protocol"  , proto     );
+    AL_INT ( alist, "account-uid"  , (int)acct );
+    AL_INT ( alist, "conv-uid"     , (int)conv );
+    AL_STR ( alist, "conv-name"    , cname     );
+    AL_STR ( alist, "conv-title"   , title ? title : cname );
+    AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
+    AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );    
 }
 
 static void _elim_create_conversation  ( PurpleConversation *conv )
@@ -165,10 +165,10 @@ static void _elim_write_chat ( PurpleConversation *conv    ,
         msg = purple_markup_strip_html( message );
 
     _elim_conv_args( args, conv );
-    AL_STR( args, "who"  , who ? who : ""      );
-    AL_STR( args, "text" , msg ? msg : message );
-    AL_INT( args, "flags", flags   );
-    AL_INT( args, "time" , mtime   );
+    AL_STR ( args, "who"  , who ? who : ""      );
+    AL_STR ( args, "text" , msg ? msg : message );
+    AL_ENUM( args, "flags", flags , ":message-flags" );
+    AL_INT ( args, "time" , mtime );
 
     if( msg ) g_free( msg );
     fprintf( stderr, "(_elim_write_chat:DONE)\n" );
@@ -195,10 +195,10 @@ static void _elim_write_im ( PurpleConversation *conv    ,
 
     _elim_conv_args( args, conv );
 
-    AL_STR( args, "who"  , who ? who : ""      );
-    AL_STR( args, "text" , msg ? msg : message );
-    AL_INT( args, "flags", flags   );
-    AL_INT( args, "time" , mtime   );
+    AL_STR ( args, "who"  , who ? who : ""      );
+    AL_STR ( args, "text" , msg ? msg : message );
+    AL_ENUM( args, "flags", flags , ":message-flags" );
+    AL_INT ( args, "time" , mtime );
 
     if( msg ) g_free( msg );
 
@@ -225,11 +225,11 @@ static void _elim_write_conv ( PurpleConversation *conv    ,
         msg = purple_markup_strip_html( message );
 
     _elim_conv_args( args, conv );
-    AL_STR( args, "who"  , (name  ? name  : (alias ? alias : "")) );
-    AL_STR( args, "alias", (alias ? alias : (name  ? name  : "")) );
-    AL_STR( args, "text" , msg ? msg : message );
-    AL_INT( args, "flags", flags   );
-    AL_INT( args, "time" , mtime   );
+    AL_STR ( args, "who"  , (name  ? name  : (alias ? alias : "")) );
+    AL_STR ( args, "alias", (alias ? alias : (name  ? name  : "")) );
+    AL_STR ( args, "text" , msg ? msg : message );
+    AL_ENUM( args, "flags", flags , ":message-flags" );
+    AL_INT ( args, "time" , mtime );
 
     if( msg ) g_free( msg );
     fprintf( stderr, "(elim-debug _elim_write_conv:DONE)\n" );
@@ -256,11 +256,13 @@ static void _elim_chat_add_users       ( PurpleConversation *conv         ,
     {
         xmlnode             *cbuddy = xnode_new( "alist" );
         PurpleConvChatBuddy *pccb   = cbuddies->data;
+
         AL_STR ( cbuddy, "name"     , pccb->name      ? pccb->name      : "" );
         AL_STR ( cbuddy, "alias"    , pccb->alias     ? pccb->alias     : "" );
         AL_STR ( cbuddy, "alias-key", pccb->alias_key ? pccb->alias_key : "" );
+        AL_ENUM( cbuddy, "flags"    , pccb->flags , ":conv-chat-buddy-flags" );
         AL_BOOL( cbuddy, "on-blist" , pccb->buddy );
-        AL_INT ( cbuddy, "flags"    , pccb->flags );
+
         xnode_insert_child( list, cbuddy );
     }
 

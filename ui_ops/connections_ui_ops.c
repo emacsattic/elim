@@ -63,11 +63,13 @@ static void _elim_notice ( PurpleConnection *conn, const char *msg )
         const char *proto = purple_account_get_protocol_id( acct );
         int         state = purple_connection_get_state   ( conn );
         g_free( ID );
-        AL_INT( alist, "account-uid" , (int)acct );
-        AL_STR( alist, "account-name", aname     );
-        AL_STR( alist, "im-protocol" , proto     );
-        AL_INT( alist, "state"       , state     );
-        AL_STR( alist, "message"     , msg       );
+
+        AL_INT ( alist, "account-uid" , (int)acct );
+        AL_STR ( alist, "account-name", aname     );
+        AL_STR ( alist, "im-protocol" , proto     );
+        AL_STR ( alist, "message"     , msg       );
+        AL_ENUM( alist, "state"       , state , ":connection-state" );
+
         add_outbound_sexp( mcall );
     }
 }
@@ -87,13 +89,15 @@ static void _elim_connect_progress        ( PurpleConnection *gc ,
         const char *proto = purple_account_get_protocol_id( acct );
         int         state = purple_connection_get_state   ( gc   );
         g_free( ID );
-        AL_INT( alist, "account-uid" , (int)acct  );
-        AL_STR( alist, "account-name", aname      );
-        AL_STR( alist, "im-protocol" , proto      );
-        AL_INT( alist, "state"       , state      );
-        AL_INT( alist, "step"        , state      );
-        AL_INT( alist, "step-count"  , step_count );        
-        AL_STR( alist, "message"     , text       );
+
+        AL_INT ( alist, "account-uid" , (int)acct  );
+        AL_STR ( alist, "account-name", aname      );
+        AL_STR ( alist, "im-protocol" , proto      );
+        AL_INT ( alist, "step"        , step       );
+        AL_INT ( alist, "step-count"  , step_count );        
+        AL_STR ( alist, "message"     , text       );
+        AL_ENUM( alist, "state"       , state      , ":connection-state" );
+
         add_outbound_sexp( mcall );
     }
 
@@ -134,12 +138,14 @@ static void _elim_report_disconnect_reason( PurpleConnection     *conn   ,
         const char *proto = purple_account_get_protocol_id( acct );
         int         state = purple_connection_get_state   ( conn );
         g_free( ID );
-        AL_INT( alist, "account-uid" , (int)acct );
-        AL_STR( alist, "account-name", aname     );
-        AL_STR( alist, "im-protocol" , proto     );
-        AL_INT( alist, "state"       , state     );
-        AL_INT( alist, "reason-code" , reason    );
-        AL_STR( alist, "message"     , text      );
+
+        AL_INT ( alist, "account-uid" , (int)acct );
+        AL_STR ( alist, "account-name", aname     );
+        AL_STR ( alist, "im-protocol" , proto     );
+        AL_STR ( alist, "message"     , text      );
+        AL_ENUM( alist, "reason-code" , reason    , ":connection-error" );
+        AL_ENUM( alist, "state"       , state     , ":connection-state" );
+
         add_outbound_sexp( mcall );
     }
 }

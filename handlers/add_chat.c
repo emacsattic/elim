@@ -144,11 +144,14 @@ xmlnode * _h_elim_add_chat( const char *name ,
 
     if( conv )
     {
-        AL_INT( rval, "conv-uid"     , (int)conv );
-        AL_STR( rval, "conv-name"    , purple_conversation_get_name    (conv));
-        AL_STR( rval, "conv-title"   , purple_conversation_get_title   (conv));
-        AL_INT( rval, "conv-type"    , purple_conversation_get_type    (conv));
-        AL_INT( rval, "conv-features", purple_conversation_get_features(conv));
+        PurpleConversationType pct = purple_conversation_get_type    ( conv );
+        PurpleConnectionFlags  pcf = purple_conversation_get_features( conv );
+
+        AL_INT ( rval, "conv-uid"     , (int)conv );
+        AL_STR ( rval, "conv-name"    , purple_conversation_get_name (conv) );
+        AL_STR ( rval, "conv-title"   , purple_conversation_get_title(conv) );
+        AL_ENUM( rval, "conv-type"    , pct, ":conversation-type" );
+        AL_ENUM( rval, "conv-features", pcf, ":connection-flags"  );
     }
 
     sexp_val_free( args );
