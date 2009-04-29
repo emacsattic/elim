@@ -42,6 +42,13 @@ eg:
 
 (the protocol names can be tab completed)
 
+To configue extra account details:
+
+  /configure-account foo@jabber.org
+
+This will trigger an emacs widget based (defcustom style) UI being set up
+for you to fill out the details in.
+
 To login:
 
   /connect USERNAME
