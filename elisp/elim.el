@@ -64,7 +64,9 @@ flags rather than simple enumerations.")
     (elim-network-down          )
     ;; requests
     (elim-request-fields        )
-    (elim-request-input         )
+    (elim-request-input         . elim-request-item)
+    (elim-request-file          . elim-request-item)
+    (elim-request-directory     . elim-request-item)
     ;; conversation
     (elim-conv-create           )
     (elim-conv-destroy          )
@@ -276,6 +278,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     ;; if told to use a handler but it hasn't been defined/loaded/implemented:
     (when (and handler (not (functionp handler)))
       (setq handler 'elim-default-response-handler))
+    (elim-debug "handler for %s.%s: %S" name id handler)
     ;; finally, we must have a valid handler symbol to proceed:
     (when handler (funcall handler proc name id attr args)) ))
 
@@ -314,6 +317,19 @@ and return an s-expression suitable for making a call to an elim daemon."
     (setq sexp-string (prin1-to-string sexp-value))
     (process-send-string process sexp-string)
     (elim-debug "sent: %s" sexp-string)
+    (accept-process-output)))
+
+(defun elim-process-send-with-callback (process sexp-value callback)
+  (let ((print-level  nil) 
+        (print-length nil)
+        (sexp-string  nil)
+        (attr (car  (cdar (cddr sexp-value))))
+        (call-id      nil))
+    (setq call-id (cdr (assq 'id attr)))
+    (setq sexp-string (prin1-to-string sexp-value))
+    (elim-set-resp-handler-by-id process call-id callback)
+    (process-send-string process sexp-string)
+    (elim-debug "sent-cb: %s" sexp-string)
     (accept-process-output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -463,29 +479,47 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defvar elim-form-ui-data nil)
 (defvar elim-form-ui-args nil)
 
-(defun elim-form-ui-ok-cb (&optional parent child event &rest stuff) 
+(defun elim-form-proto-values (widgets)
+  (let (value slot alist-cache)
+    (mapc
+     (lambda (W) 
+       (setq iname  (widget-get W 'ident) 
+             ivalue (widget-value W))
+       (when iname
+         (if (consp iname)
+             (if (setq slot (assoc (car iname) alist-cache)) 
+                 (setcdr slot (cons (elim-atom-to-item (cdr iname) ivalue) 
+                                    (cdr slot)))
+               (setq alist-cache
+                     (cons (cons (car iname) 
+                                 (list (elim-atom-to-item (cdr iname) ivalue))) 
+                           alist-cache)) )
+           (setq value (cons (elim-atom-to-item iname ivalue) value))) ))
+     widgets)
+    (mapc 
+     (lambda (A) 
+       (setq value 
+             (cons 
+              (nconc (list 'alist (list (cons 'name (car A)))) (cdr A)) value)))
+     alist-cache)
+    value))
+
+(defun elim-form-ui-ok-cb (&optional parent child event &rest stuff)
   (when elim-form-ui-args
     (let (value iname ivalue proc name id args response)
       (setq proc (cadr (memq :process elim-form-ui-args))
             name (cadr (memq :name    elim-form-ui-args))
             id   (cadr (memq :call-id elim-form-ui-args)))
-      (cond 
+      (cond
        ((eq 'elim-request-fields name)
-        (mapc
-         (lambda (W) 
-           (setq iname  (widget-get W 'ident) 
-                 ivalue (widget-value W))
-           (when iname
-             (message "widget %s == %S" iname ivalue)
-             (setq value (cons (elim-atom-to-item iname ivalue) value))))
-         elim-form-ui-data)
-        (setq response 
-              (elim-daemon-response name id 0 (nconc (list 'alist nil) value))))
-       (t 
+        (setq value    (elim-form-proto-values elim-form-ui-args)
+              response (elim-daemon-response name id 0 
+                                             (nconc (list 'alist nil) value))))
+       (t
         (setq value (elim-atom-to-item "value"
                                        (widget-value (car elim-form-ui-data)))
               response (elim-daemon-response name id 0 ))))
-      (elim-process-send proc response)) 
+      (elim-process-send proc response))
     (kill-buffer nil) ))
 
 (defun elim-form-ui-nok-cb (&optional parent child event &rest stuff) 
@@ -557,6 +591,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (cond ((eq type :string ) (elim-request-field-string id data))
           ((eq type :boolean) (elim-request-field-toggle id data))
           ((eq type :integer) (elim-request-field-number id data))
+          ((eq type :int    ) (elim-request-field-number id data))
           ((eq type :choice ) (elim-request-field-choice id data))
           (t (widget-insert (format "Unsupported type: %S %s" id type)))) 
     (widget-insert "\n")))
@@ -568,6 +603,13 @@ and return an s-expression suitable for making a call to an elim daemon."
     (mapc 'elim-request-field fields)
     (widget-insert "====================================================\n")))
 
+(defun elim-init-ui-buffer ()
+  (kill-all-local-variables)
+  (let ((inhibit-read-only t)) (erase-buffer))
+  (remove-overlays)
+  (make-local-variable 'elim-form-ui-data)
+  (make-local-variable 'elim-form-ui-args))
+
 (defun elim-request-item (proc name id status args)
   (let (field-buf buf-name ok-label nok-label prompt secret default)
     (setq prompt    (concat (or (elim-avalue "title"        args)
@@ -578,12 +620,8 @@ and return an s-expression suitable for making a call to an elim daemon."
           secret    (elim-avalue "secret"  args)
           buf-name  (concat "* " prompt " *")
           field-buf (generate-new-buffer buf-name))
-    (with-current-buffer field-buf 
-      (kill-all-local-variables)
-      (let ((inhibit-read-only t)) (erase-buffer))
-      (remove-overlays)
-      (make-local-variable 'elim-form-ui-data)
-      (make-local-variable 'elim-form-ui-args)
+    (with-current-buffer field-buf
+      (elim-init-ui-buffer)
       (setq elim-form-ui-args (list :process proc 
                                     :name    name 
                                     :call-id id  ))
@@ -627,8 +665,6 @@ and return an s-expression suitable for making a call to an elim daemon."
           field-buf (generate-new-buffer buf-name))
     (with-current-buffer field-buf 
       (kill-all-local-variables)
-      (let ((inhibit-read-only t)) (erase-buffer))
-      (remove-overlays)
       (make-local-variable 'elim-form-ui-data)
       (make-local-variable 'elim-form-ui-args)
       (setq elim-form-ui-args (list :process proc 
@@ -881,6 +917,22 @@ add that user to your buddy list"
   "Connect to ACCOUNT (a uid (number) or string (account name))."
   (elim-co-disco process account 'connect))
 
+(defun elim-do-cmd  (process account conversation cmd)
+  "Execute a CONVERSATION (name or uid) command CMD (a string, excluding the 
+/ prefix) as implemented by libpurple, on ACCOUNT (name or uid)."
+  (let (acct-args arglist conv-arg)
+    (setq acct-args (elim-account-proto-items process account)
+          conv-arg  (cond ((numberp conversation) 
+                           (elim-atom-to-item "conv-uid"  conversation))
+                          ((stringp conversation)
+                           (elim-atom-to-item "conv-name" conversation)))
+          text-arg  (elim-atom-to-item "command" cmd)
+          arglist   (nconc (list 'alist nil conv-arg text-arg) acct-args))
+    (if acct-args
+        (elim-process-send process
+                           (elim-daemon-call 'command nil arglist))
+      (error "No such account: %S" account)) ))
+
 (defun elim-message (process account conversation text)
   "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid) via elim PROCESS"
   (let (acct-args arglist conv-arg)
@@ -917,6 +969,15 @@ add that user to your buddy list"
           alias-arg (elim-atom-to-item "chat-alias"   alias   )
           arglist   (nconc (list 'alist nil alias-arg optitems) acct-args))
     (elim-process-send process (elim-daemon-call 'join-chat nil arglist)) ))
+
+(defun elim-account-options (process account callback)
+  (let ((account-data (elim-account-data process account)) arglist)
+    (if account-data 
+        (setq account (car account-data)) 
+      (error "No such account: %S" account))
+    (setq arglist (list 'alist nil (elim-atom-to-item "account-uid" account)))
+    (elim-process-send-with-callback 
+     process (elim-daemon-call 'account-options nil arglist) callback)))
 
 (defun elim-chat-parameters (process protocol)
   "Given an elim PROCESS and a PROTOCOL id, return an alist giving details

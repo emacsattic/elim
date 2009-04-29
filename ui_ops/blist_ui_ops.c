@@ -66,6 +66,9 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
     const char *alias   = NULL;
     const char *s_alias = NULL;
     const char *c_alias = NULL;
+
+    fprintf( stderr, "(_elim_blnode_to_xnode)\n" );
+
     gboolean    contact = FALSE;
     int         type    = PBLN_GET( type, b );
 
@@ -76,6 +79,7 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
     switch( type )
     {
       case PURPLE_BLIST_BUDDY_NODE  :
+        fprintf( stderr, "(_elim_blnode_to_xnode BUDDY)\n" );
         bname   = purple_buddy_get_name         ( (PurpleBuddy *)b );
         acct    = purple_buddy_get_account      ( (PurpleBuddy *)b );
         pres    = purple_buddy_get_presence     ( (PurpleBuddy *)b );
@@ -84,15 +88,18 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )
         c_alias = purple_buddy_get_contact_alias( (PurpleBuddy *)b );
         break;
       case PURPLE_BLIST_CHAT_NODE   :
+        fprintf( stderr, "(_elim_blnode_to_xnode CHAT)\n" );
         bname = purple_chat_get_name   ( (PurpleChat *)b );
         acct  = purple_chat_get_account( (PurpleChat *)b );
         break;
       case PURPLE_BLIST_CONTACT_NODE:
+        fprintf( stderr, "(_elim_blnode_to_xnode CONTACT)\n" );
         bname   = purple_contact_get_alias( (PurpleContact *)b );
         contact = TRUE;
         alias   = bname;
         break;
       case PURPLE_BLIST_GROUP_NODE  :
+        fprintf( stderr, "(_elim_blnode_to_xnode GROUP)\n" );
         bname = purple_group_get_name( (PurpleGroup *)b );
         break;
       default:

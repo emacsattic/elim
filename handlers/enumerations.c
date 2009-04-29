@@ -314,6 +314,14 @@ static void _h_elim_cache_enums (void)
     IV( STATUS_ , MOBILE            );
     IV( STATUS_ , TUNE              );
     IV( STATUS_ , NUM_PRIMITIVES    );
+// =============================================
+    EG( cmd-status );
+    IV( CMD_STATUS_ , OK         );
+    IV( CMD_STATUS_ , FAILED     );
+    IV( CMD_STATUS_ , NOT_FOUND  );
+    IV( CMD_STATUS_ , WRONG_ARGS );
+    IV( CMD_STATUS_ , WRONG_PRPL );
+    IV( CMD_STATUS_ , WRONG_TYPE );
 }
 
 xmlnode * _h_elim_enumerations ( const char *name ,
