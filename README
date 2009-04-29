@@ -62,6 +62,14 @@ buffer, just:
 The details vary per protocol, but garak should be able to figure out what's 
 required if you just say /join USERNAME (or /join in an account-specific buffer)
 
+To start a one-to-one conversation:
+
+  /msg ACCOUNT BUDDY MESSAGE-TEXT
+
+OR (in an account specific buffer)
+
+  /msg BUDDY MESSAGE-TEXT
+
 To add a buddy
 
   /add-buddy USERNAME BUDDY-NAME
@@ -72,7 +80,6 @@ OR (in an account specific buffer)
 
 I haven't implemented starting a conversation with an individual IM user yet
 (in the UI, elim is capable of this already), but that will follow shortly.
-
 
 To leave a conversation:
 

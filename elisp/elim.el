@@ -885,13 +885,28 @@ add that user to your buddy list"
   "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid) via elim PROCESS"
   (let (acct-args arglist conv-arg)
     (setq acct-args (elim-account-proto-items  process account)
-          conv-arg  (elim-atom-to-item "conv-uid" conversation)
-          text-arg  (elim-atom-to-item "text"     text        )
+          conv-arg  (cond ((numberp conversation) 
+                           (elim-atom-to-item "conv-uid"  conversation))
+                          ((stringp conversation)
+                           (elim-atom-to-item "conv-name" conversation)))
+          text-arg  (elim-atom-to-item "text" text)
           arglist   (nconc (list 'alist nil conv-arg text-arg) acct-args))
     (if acct-args
         (elim-process-send process
                            (elim-daemon-call 'message nil arglist))
         (error "No such account: %S" account)) ))
+
+;; (defun elim-new-message (process account target text)
+;;   "Send a TEXT to ACCOUNT (name or uid) TARGET (name) via elim PROCESS"
+;;   (let (acct-args arglist conv-arg)
+;;     (setq acct-args (elim-account-proto-items  process  account)
+;;           conv-arg  (elim-atom-to-item "conv-name" target      )
+;;           text-arg  (elim-atom-to-item "text"      text        )
+;;           arglist   (nconc (list 'alist nil conv-arg text-arg) acct-args))
+;;     (if acct-args
+;;         (elim-process-send process
+;;                            (elim-daemon-call 'message nil arglist))
+;;         (error "No such account: %S" account)) ))
 
 (defun elim-join-chat (process account alias options)
   ""

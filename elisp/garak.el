@@ -113,6 +113,9 @@
        (garak-insert-buddy-item proc C (1+ level))) children) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message callbacks
+(defun garak-abbreviate-nick (nick &optional protocol)
+  (if (string-match "^\\(.*?\\)@" nick) (match-string 1 nick) nick))
+
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer (garak-conversation-buffer args t)) 
          (flags  (cdr (assoc "flags" args))) 
@@ -122,18 +125,17 @@
     (with-current-buffer buffer
       (setq text (cdr (assoc "text" args))
             who  (or (cdr (assoc "alias" args)) 
-                     (cdr (assoc "who"   args))))
+                     (cdr (assoc "who"   args))
+                     garak-account-name       ))
       (if (memq :system flags)
           (lui-insert 
            (elim-add-face (format "* %s *" (elim-interpret-markup text))
                           'garak-system-message-face))
-        (setq nick-face (if (memq :send flags)
-                            'garak-own-nick-face
-                          'garak-nick-face))
-        (lui-insert 
-         (format "<%s> %s" 
-                 (elim-add-face (or who garak-account-name) nick-face) 
-                 text)) )) ))
+        (if (memq :send flags)
+            (setq nick-face 'garak-own-nick-face
+                  who       (garak-abbreviate-nick who))
+          (setq nick-face 'garak-nick-face))
+        (lui-insert (format "<%s> %s" (elim-add-face who nick-face) text)) )) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
@@ -235,6 +237,25 @@
           (format "/add-buddy %s" args))
         (error "Could not add buddy: %S" errval)) ))
 
+(defun garak-cmd-msg (args)
+  (let (items account account-data proto buddy a-end message rval)
+    (setq rval (format "INVALID: /msg %s" args))
+    (when (string-match "^\\(\\S-+\\)\\s-" args)
+      (setq account      (match-string 1 args)
+            a-end        (match-end 1)
+            account-data (elim-account-data garak-elim-process account))
+      (if account-data 
+          (setq message (substring args a-end)
+                account (car account-data))
+        (setq account garak-account-uid
+              message args))
+      (when (string-match "\\s-*\\(\\S-+\\)\\s-+" message)
+        (setq buddy   (match-string 1 message)
+              message (substring message (match-end 0)))
+        (elim-message garak-elim-process account buddy message)
+        (setq rval (format "SENT: /msg %s" args)) )) 
+    rval))
+
 (defun garak-read-join-parameters (spec items)
   (let (options secret value key required)
     (while spec 
@@ -310,6 +331,7 @@
     (add-buddy   . garak-cmd-add-buddy  )
     (connect     . garak-cmd-connect    )
     (disconnect  . garak-cmd-disconnect )
+    (msg         . garak-cmd-msg        )
     (help        . garak-cmd-help       )
     (join        . garak-cmd-join       )
     (leave       . garak-cmd-leave      )
@@ -326,6 +348,7 @@
    ((string-match "\\(?:^\\|/\\)logoff\\>"              cmd) 'disconnect )
    ((string-match "\\(?:^\\|/\\)part\\>"                cmd) 'leave      )
    ((string-match "\\(?:^\\|/\\)leave\\>"               cmd) 'leave      )
+   ((string-match "\\(?:^\\|/\\)\\(?:priv\\)?msg\\>"    cmd) 'msg        )
    ((string-match "\\(?:^\\|/\\)\\(?:help\\>\\|\\?\\)"  cmd) 'help       )
    ((string-match "\\(?:^\\|/\\)join\\(?:.\\S-+\\)?\\>" cmd) 'join       )
    ((string-match "\\(?:^\\|/\\)quit\\>"                cmd) 'quit       )))
@@ -354,12 +377,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; completion:
 (defvar garak-commands 
-  '("/add-account" "/add-buddy" "/connect" "/login"
-    "/disconnect"  "/logout"    "/logoff"  "/quit" ))
+  '("/add-account" "/add-buddy" "/connect" "/login" "/msg" "/privmsg"
+    "/disconnect"  "/logout"    "/logoff"  "/quit"  "/remove-buddy"))
 
 (defvar garak-command-completers 
   '((add-account . garak-comp-add-account)
     (add-buddy   . garak-comp-add-buddy  )
+    (msg         . garak-comp-msg        )
     (connect     . garak-comp-connect    )
     (disconnect  . garak-comp-disconnect )
     (help        . garak-comp-help       )
@@ -385,7 +409,11 @@
 
 (defun garak-comp-connect     (prefix &optional protocol)
   (garak-comp-add-buddy prefix))
+
 (defun garak-comp-disconnect  (prefix &optional protocol)
+  (garak-comp-add-buddy prefix))
+
+(defun garak-comp-msg         (prefix &optional protocol) 
   (garak-comp-add-buddy prefix))
 
 (defun garak-comp-help (prefix &optional protocol)
