@@ -61,7 +61,7 @@ xmlnode * _h_elim_chat_params( const char *name ,
     if( !pinfo || !pinfo->chat_info )
     {
         sexp_val_free( args );
-        return response_error( ELIBBAD, id, name, "incomplete plugin" );
+        return response_error( EINVAL, id, name, "incomplete plugin" );
     }
 
     xmlnode *rval = xnode_new( "alist" );

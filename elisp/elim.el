@@ -1074,8 +1074,7 @@ OPTIONS (\"key\" \"value\" ...)."
                          arglist))
     (elim-process-send process 
     ;;(elim-debug "%S"
-                       (elim-daemon-call 'remove-buddy nil arglist)) 
-    ))
+                       (elim-daemon-call 'remove-buddy nil arglist)) ))
 
 (defun elim-add-buddy (process account buddy &optional group)
   "Given an elim PROCESS an ACCOUNT name or uid and a BUDDY (im screen name),

@@ -136,12 +136,13 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
     {
         fprintf( stderr, "(elim-remove-buddy:04b)\n" );
         b_arg = ALIST_VAL_STRING( args, "buddy-name" );
+        FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
         fprintf( stderr, "(elim-remove-buddy:04b0 %s)\n", b_arg );
         if( b_arg )
         {
-            bname = purple_normalize( acct, b_arg        );
             fprintf( stderr, "(elim-remove-buddy:04b1 %s)\n", bname );
-            gname = ALIST_VAL_STRING( args, "group"      );
+            bname = purple_normalize( acct, b_arg   );
+            gname = ALIST_VAL_STRING( args, "group" );
             fprintf( stderr, "(elim-remove-buddy:04b2)\n" );
             group = ( gname && *gname ) ? purple_find_group( gname ) : NULL;
             buddy = ( group ?

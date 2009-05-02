@@ -51,21 +51,29 @@ xmlnode * _h_elim_status ( const char *name ,
     PurpleSavedStatus   *status = purple_savedstatus_find( sid );
     PurpleStatusPrimitive stype = PURPLE_STATUS_UNSET;
 
+    // create a new status:
     if( !status )
     {
         CHECK_STATUS ( args, id, name, stype, _stype );
         status = purple_savedstatus_new( sid, stype );
-        if( status && mesg )
-            purple_savedstatus_set_message( status, mesg );
+        if( status )
+        {
+            if     ( mesg ) purple_savedstatus_set_message( status, mesg );
+            else if( sid  ) purple_savedstatus_set_message( status, sid  );
+        }
+    }
+    else
+    {
+        if( mesg ) purple_savedstatus_set_message( status, mesg );
     }
 
-    if( status )
-        purple_savedstatus_activate( status );
-    else
+    if( !status )
     {
         sexp_val_free( args );
         return response_error( EINVAL, id, name, "Could not create status" );
     }
+
+    purple_savedstatus_activate( status );
 
     xmlnode *rval = xnode_new( "alist" );
     AL_STR ( rval, "status-id"     , purple_savedstatus_get_title  (status) );
