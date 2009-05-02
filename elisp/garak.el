@@ -6,26 +6,26 @@
 (require 'time-date  )
 (require 'image      )
 
-(let ((load-path (cons (file-name-directory 
+(let ((load-path (cons (file-name-directory
                         (or load-file-name buffer-file-name)) load-path)))
   (when (not (featurep 'lui )) (require 'lui ))
   (when (not (featurep 'elim)) (require 'elim)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; faces
-(defface garak-nick-face '((default (:foreground "salmon"))) 
+(defface garak-nick-face '((default (:foreground "salmon")))
   "Default face for IM user names")
 
-(defface garak-marker-face '((default (:foreground "palegreen"))) 
+(defface garak-marker-face '((default (:foreground "palegreen")))
   "Default face for markers etc inserted into garak buffers")
 
-(defface garak-warning-face '((default (:foreground "red"))) 
+(defface garak-warning-face '((default (:foreground "red")))
   "Default face for IM warnings")
 
-(defface garak-own-nick-face '((default (:foreground "aquamarine"))) 
+(defface garak-own-nick-face '((default (:foreground "aquamarine")))
   "Default face your IM user name(s)")
 
-(defface garak-system-message-face '((default (:foreground "grey"))) 
+(defface garak-system-message-face '((default (:foreground "grey")))
   "Default face for system (non user generated) messages")
 
 (defface garak-emote-face '((default (:foreground "palevioletred")))
@@ -33,15 +33,19 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user customisation
-(defconst  garak-icon-directory-internal
-  (expand-file-name 
+(defconst garak-icon-directory-internal
+  (expand-file-name
    (concat (file-name-directory
             (or load-file-name buffer-file-name)) "../icons/")))
 
-(defcustom garak-icon-directory 
-  garak-icon-directory-internal  
+(defcustom garak-icon-directory garak-icon-directory-internal
   "Directory where garak may find icons."
   :type  '(directory)
+  :group 'garak)
+
+(defcustom garak-hide-offline-buddies nil
+  "Whether or not to conceal offline buddies"
+  :type  '(boolean)
   :group 'garak)
 
 (defun garak-tag-widget-value (w)
@@ -49,22 +53,22 @@
     (cond ((eq (length raw) 2)         (concat     raw " "))
           ((eq (length raw) 1)         (concat " " raw " "))
           (t raw)) ))
-(defcustom garak-icon-tags '((":available"      . "[i]") ;; ♗
-                             (":away"           . "[_]") ;; ∠
-                             (":busy"           . "(/)") ;; ⊘
-                             (":chat"           . "ii ") ;; ♗♝ 
-                             (":connecting"     . " * ") ;; ≔
-                             (":extended-away"  . " - ") ;; ≣
-                             (":garak"          . "Gª ") ;;
-                          ;; (":group"          . "iii") ;; 
-                             (":invisible"      . "   ") ;; .
-                             (":log-in"         . "...") ;; …
-                             (":log-out"        . " - ") ;; ⋮
-                             (":offline"        . " x ") ;; ·
-                             (":off"            . " x ") ;; ×
-                             (":on"             . " ! ") ;; 
-                             (":person"         . " i ") ;; ♙
-                             (":unavailable"    . "(/)") ;; ⊘
+(defcustom garak-icon-tags '((":available"      . "[i]")
+                             (":away"           . "[_]")
+                             (":busy"           . "(/)")
+                             (":chat"           . "ii ")
+                             (":connecting"     . " * ")
+                             (":extended-away"  . " - ")
+                             (":garak"          . "Gª ")
+                          ;; (":group"          . "iii")
+                             (":invisible"      . "   ")
+                             (":log-in"         . "...")
+                             (":log-out"        . " - ")
+                             (":offline"        . " x ")
+                             (":off"            . " x ")
+                             (":on"             . " ! ")
+                             (":person"         . " i ")
+                             (":unavailable"    . "(/)")
                              ;; protocol icon tags:
                              (":prpl-aim"       . "AIM ")
                              (":prpl-bonjour"   . "Bon ")
@@ -81,12 +85,12 @@
                              (":prpl-yahoo"     . " Y! ")
                              (":prpl-zephyr"    . "Zeph"))
   "An alist of icon names and the alternate text used to represent them when
-images are unavailable. When in a unicode-capable text environment, I like to 
+images are unavailable. When in a unicode-capable text environment, I like to
 substitute these characters for the basic ascii ones:\n
   :available       ♝
   :away            ∠
   :busy            ⊘
-  :chat            ♗♝ 
+  :chat            ♗♝
   :connecting      ≔
   :extended-away   ≣
   :garak           Gª
@@ -100,19 +104,19 @@ substitute these characters for the basic ascii ones:\n
   :unavailable     ⊘\n"
   :group   'garak
   :tag     "icon tags"
-  :options (mapcar 
-            (lambda (k) 
-              (list (list 'string :value k :size 20 :format "Icon: %v ") 
-                    (list 'string :size  6 :format "Tag: %v\n" 
+  :options (mapcar
+            (lambda (k)
+              (list (list 'string :value k :size 20 :format "Icon: %v ")
+                    (list 'string :size  6 :format "Tag: %v\n"
                           :value-get 'garak-tag-widget-value)))
             '(":available"      ":away" ":busy"       ":chat"    ":connecting"
               ":extended-away"  ":garak" ":invisible" ":log-in"  ":log-out"
               ":offline"        ":off"   ":on"        ":person"  ":unavailable"
-              ":prpl-aim"       ":prpl-bonjour"       ":prpl-gg" ":prpl-icq"    
-              ":prpl-irc"       ":prpl-jabber" ":prpl-meanwhile" ":prpl-msn" 
+              ":prpl-aim"       ":prpl-bonjour"       ":prpl-gg" ":prpl-icq"
+              ":prpl-irc"       ":prpl-jabber" ":prpl-meanwhile" ":prpl-msn"
               ":prpl-novell"    ":prpl-qq"     ":prpl-silc"      ":prpl-simple"
               ":prpl-yahoo"     ":prpl-zephyr"))
-  :type     '(alist :key-type   (string :format "Icon: %v " :size 20) 
+  :type     '(alist :key-type   (string :format "Icon: %v " :size 20)
                     :value-type (string :format "Tag: %v\n" :size  6)))
 
 
@@ -137,7 +141,7 @@ substitute these characters for the basic ascii ones:\n
             (null    (cadr attr)))
     (let ((label (concat ":" (file-name-sans-extension (car attr))))
           (path  (concat garak-icon-directory (car attr))))
-      (cons label 
+      (cons label
             (ignore-errors (create-image path nil nil
                                          :pointer 'hand
                                          :ascent  'center
@@ -145,17 +149,17 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-load-icons ()
   (when (and (not garak-icons) (file-directory-p garak-icon-directory))
     (setq garak-icons
-          (delq nil 
+          (delq nil
                 (mapcar 'garak-file-attr-to-icon
                         (directory-files-and-attributes garak-icon-directory))))
     (length garak-icons)))
- 
-(defvar garak-icons nil 
+
+(defvar garak-icons nil
   "Alist of names and icons \(images, see `create-image'\) to use in the gui")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
-(defvar garak-callbacks 
+(defvar garak-callbacks
   '(;;(elim-account-notify-added)
     (elim-account-status-changed . garak-account-update      )
     (elim-account-request-add    . garak-stranger-added-you  )
@@ -192,8 +196,8 @@ substitute these characters for the basic ascii ones:\n
         '(garak-elim-process
           garak-account-name
           garak-im-protocol
-          garak-account-uid 
-          garak-conv-uid    
+          garak-account-uid
+          garak-conv-uid
           garak-conv-name   )))
 
 (defun garak-conversation-buffer (args &optional do-not-create)
@@ -205,8 +209,8 @@ substitute these characters for the basic ascii ones:\n
     (when (and (not buffer) (not do-not-create))
       (progn
         (setq buffer (generate-new-buffer (cdr (assoc "conv-name" args)))
-              garak-conversation-buffers 
-              (cons (cons uid buffer) garak-conversation-buffers)))) 
+              garak-conversation-buffers
+              (cons (cons uid buffer) garak-conversation-buffers))))
     buffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -226,9 +230,9 @@ substitute these characters for the basic ascii ones:\n
                 err     (or (elim-avalue "command-error"  args)
                             (elim-avalue "command-status" args)))
           (if (not (eq :ok cstatus))
-              (lui-insert (elim-add-face (format "/%s: %s" cmd err) 
+              (lui-insert (elim-add-face (format "/%s: %s" cmd err)
                                          'garak-warning-face))
-            (lui-insert (elim-add-face (format "/%s" cmd) 
+            (lui-insert (elim-add-face (format "/%s" cmd)
                                        'garak-system-message-face))) ))
       (warn "%S response %s %S: no target buffer" call call-id args)) ))
 
@@ -237,8 +241,8 @@ substitute these characters for the basic ascii ones:\n
         (dlabel   nil)
         (ilabel   "")
         (handled   0)
-        (absolute (format-time-string "%Y-%m-%d %T %Z" 
-                                      (seconds-to-time time-t)))) 
+        (absolute (format-time-string "%Y-%m-%d %T %Z"
+                                      (seconds-to-time time-t))))
     (when (< 86400 delay)
       (setq handled (round delay 86400.0)
             delay   (mod delay 86400)
@@ -263,7 +267,7 @@ substitute these characters for the basic ascii ones:\n
     (format "%s (%s ago)" absolute dlabel)))
 
 (defun garak-chat-message (process call call-id status args)
-  (let ( (buffer  (garak-conversation-buffer args t)) 
+  (let ( (buffer  (garak-conversation-buffer args t))
          (flags   (cdr (assoc "flags" args)))
          (mformat "<%s> %s")
          text who nick-face title when stamp)
@@ -271,11 +275,11 @@ substitute these characters for the basic ascii ones:\n
       (setq buffer (garak-new-conversation process call call-id status args)))
     (with-current-buffer buffer
       (setq text (cdr (assoc "text" args))
-            who  (or (cdr (assoc "alias" args)) 
+            who  (or (cdr (assoc "alias" args))
                      (cdr (assoc "who"   args))
                      (garak-abbreviate-nick garak-account-name) ))
       (if (memq :system  flags)
-          (lui-insert 
+          (lui-insert
            (elim-add-face (format "* %s *" (elim-interpret-markup text))
                           'garak-system-message-face))
         (if (memq :send flags)
@@ -289,12 +293,12 @@ substitute these characters for the basic ascii ones:\n
           (setq text   (replace-regexp-in-string "^/me " "" text)
                 mformat "* %s %s")
           (elim-add-face text 'garak-emote-face))
-        ;; ok we're all set up. if this is a delayed message, insert 
+        ;; ok we're all set up. if this is a delayed message, insert
         ;; the delay marker
         (when (memq :delayed flags)
           (setq when  (elim-avalue "time" args)
                 stamp (garak-time-since when))
-          (lui-insert 
+          (lui-insert
            (elim-add-face (format "[%s]" stamp) 'garak-marker-face)))
         (lui-insert (format mformat (elim-add-face who nick-face) text)) )) ))
 
@@ -315,7 +319,7 @@ substitute these characters for the basic ascii ones:\n
               garak-account-uid  (cdr (assoc "account-uid"  args))
               garak-conv-name    (cdr (assoc "conv-name"    args))
               garak-conv-uid     (cdr (assoc "conv-uid"     args))
-              garak-im-protocol  (cdr (assoc "im-protocol"  args))) 
+              garak-im-protocol  (cdr (assoc "im-protocol"  args)))
         (lui-insert (format "*%s / %s*" garak-account-name garak-conv-name)) ))
       buffer))
 
@@ -329,10 +333,10 @@ substitute these characters for the basic ascii ones:\n
               (rassq-delete-all buffer garak-conversation-buffers))
         (lui-insert "*conversation ended*") )) ))
 
-(defun garak-chat-add-users (process call call-id status args) 
-  (let ((buffer (garak-conversation-buffer args t)) 
+(defun garak-chat-add-users (process call call-id status args)
+  (let ((buffer (garak-conversation-buffer args t))
         people name new message cname)
-    (when (not buffer) 
+    (when (not buffer)
       (setq buffer (garak-new-conversation process call call-id status args)))
     (when buffer
       (with-current-buffer buffer
@@ -346,9 +350,9 @@ substitute these characters for the basic ascii ones:\n
                 message (concat "* Users in " cname ": " message)
                 message (elim-add-face message 'garak-system-message-face)))
           ;;(setq message
-          ;;      (mapcar 
-          ;;       (lambda (N) 
-          ;;         (elim-add-face (format "* %s has entered %s" N cname) 
+          ;;      (mapcar
+          ;;       (lambda (N)
+          ;;         (elim-add-face (format "* %s has entered %s" N cname)
           ;;                        'garak-system-message-face)) people)))
         ;;(message "CHAT ADD: %S" message)
         (if (listp message)
@@ -357,7 +361,7 @@ substitute these characters for the basic ascii ones:\n
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UI functions (forms etc)
 (defun garak-account-param-widget (field)
-  (let ((id   (cons "fields" (car field))) 
+  (let ((id   (cons "fields" (car field)))
         (data (cdr field)))
     (elim-request-field (cons id data)) ))
 
@@ -365,7 +369,7 @@ substitute these characters for the basic ascii ones:\n
   (when elim-form-ui-args (kill-buffer nil)))
 
 (defun garak-ui-account-options-ok-cb (&optional parent child event &rest stuff)
-  (when elim-form-ui-args 
+  (when elim-form-ui-args
     (let (proc account arglist account-arg)
       (setq proc        (cadr (memq :process elim-form-ui-args))
             account     (cadr (memq :account elim-form-ui-args))
@@ -373,12 +377,12 @@ substitute these characters for the basic ascii ones:\n
             arglist     (elim-form-proto-values elim-form-ui-data)
             arglist     (cons account-arg arglist)
             arglist     (nconc (list 'alist nil) arglist))
-      (elim-process-send proc 
+      (elim-process-send proc
                          (elim-daemon-call 'set-account-options nil arglist)))
     (kill-buffer (current-buffer)) ))
 
 (defun garak-account-options-ui-cb (proc name id attr args)
-  (let ((status (elim-avalue "status" args)) 
+  (let ((status (elim-avalue "status" args))
         (value  (elim-avalue "value"  args)))
     (when (and (numberp status) (zerop status))
       (let ((password      (elim-avalue "password"      value))
@@ -399,12 +403,12 @@ substitute these characters for the basic ascii ones:\n
           ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           ;; fixed items
           (widget-insert "\n")
-          (elim-request-field-string "password"      
+          (elim-request-field-string "password"
                                      (list (cons "label" "Password     ")
                                            (cons "masked" t             )
                                            (cons "value"  password      )))
           (widget-insert "\n\n")
-          (elim-request-field-string "account-alias" 
+          (elim-request-field-string "account-alias"
                                      (list (cons "label" "Local Alias  ")
                                            (cons "value"  account-alias )))
           (widget-insert "\n\n")
@@ -445,7 +449,7 @@ substitute these characters for the basic ascii ones:\n
           auid  (elim-avalue "account-uid" buddy))
     (cond ((eq op 'del ) (elim-remove-buddy proc nil  buid))
           ((eq op 'join) (elim-join-chat    proc auid buid))
-          ((eq op 'msg ) (elim-message proc auid bname 
+          ((eq op 'msg ) (elim-message proc auid bname
                                        (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
@@ -470,17 +474,17 @@ substitute these characters for the basic ascii ones:\n
           type   (elim-avalue "bnode-type"  bnode)
           auid   (elim-avalue "account-uid" bnode)
           remove (list 'choice-item :tag "Remove" :value (cons 'del uid))
-          kids   (mapcar 
-                  (lambda (N) (garak-buddy-list-node-widget proc N)) 
+          kids   (mapcar
+                  (lambda (N) (garak-buddy-list-node-widget proc N))
                   (delq nil (elim-buddy-children proc uid)))
           menu   (cond ((eq type :chat-node )
                         (list (garak-choice-item "Join" (cons 'join uid))))
                        ((eq type :buddy-node)
-                        (setq plabel (if (elim-avalue "allowed" bnode) 
+                        (setq plabel (if (elim-avalue "allowed" bnode)
                                          "Block" "Unblock"))
                         (list (garak-choice-item "Send IM" (cons 'msg  uid))
                               (garak-choice-item plabel    (cons 'priv uid)))) )
-          menu   (cons (garak-choice-item "---------" '(noop)) 
+          menu   (cons (garak-choice-item "---------" '(noop))
                        (nconc menu (list remove))))
     ;; pick an account icon if this bnode has an account and we want icons
     (when (and auid (tree-widget-use-image-p))
@@ -505,7 +509,7 @@ substitute these characters for the basic ascii ones:\n
                                    :value      '(noop)
                                    :value-get 'widget-value-value-get
                                    :inline     t
-                                   :notify    'garak-buddy-list-node-command 
+                                   :notify    'garak-buddy-list-node-command
                                    menu)
                kids)
       (apply 'widget-convert
@@ -517,16 +521,16 @@ substitute these characters for the basic ascii ones:\n
              :garak-type :bnode
              :value-get 'widget-value-value-get
              :inline     t
-             :notify    'garak-buddy-list-node-command 
+             :notify    'garak-buddy-list-node-command
              menu)) ))
 
 (defun garak-buddy-list-skip (proc bnode)
   (if (equal (elim-avalue "contact-size" bnode) 1)
       (progn
-        ;;(message "degenerate bnode %s %s -> %s" 
-        ;;         (elim-avalue "bnode-name" bnode) 
+        ;;(message "degenerate bnode %s %s -> %s"
+        ;;         (elim-avalue "bnode-name" bnode)
         ;;         (elim-avalue "bnode-uid"  bnode))
-        (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) 
+        (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode))
             bnode)
         )
     bnode))
@@ -558,9 +562,9 @@ substitute these characters for the basic ascii ones:\n
                     (garak-choice-item "Log Out" (cons 'logout uid))) ))
 
 (defun garak-account-list-node-children (&optional widget)
-  (mapcar 
-   (lambda (N) 
-     (garak-account-list-node-widget garak-elim-process N)) 
+  (mapcar
+   (lambda (N)
+     (garak-account-list-node-widget garak-elim-process N))
    (elim-account-alist garak-elim-process)))
 
 (defun garak-insert-account-list ()
@@ -577,23 +581,23 @@ substitute these characters for the basic ascii ones:\n
     (setq process  garak-elim-process
           children (elim-buddy-children process uid))
     ;;(elim-debug "(garak-buddy-list-node-children %S) -> %S" (car widget) uid)
-    (mapcar 
-     (lambda (N) 
-       (garak-buddy-list-node-widget process 
-                                     (garak-buddy-list-skip process N))) 
-     children)))
+    (mapcar
+     (lambda (N)
+       (garak-buddy-list-node-widget process
+                                     (garak-buddy-list-skip process N)))
+     children) ))
 
 (defun garak-insert-buddy-list-top (proc bnode)
   (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids)
     (setq remove (list 'choice-item :tag "Delete All" :value (cons 'del uid))
           name   (elim-avalue "bnode-name" bnode)
-          kids   
+          kids
           (mapcar
            (lambda (N)
              (garak-buddy-list-node-widget proc
                                            (garak-buddy-list-skip proc N) ))
            (elim-buddy-children proc (elim-avalue "bnode-uid" bnode))))
-    (if kids 
+    (if kids
         (apply 'widget-create
                'tree-widget
                :open       t
@@ -606,8 +610,8 @@ substitute these characters for the basic ascii ones:\n
                kids )
       (setq menu (list (garak-choice-item ""       (cons 'noop uid))
                        (garak-choice-item "Remove" (cons 'del  uid))))
-      (apply 'widget-create 
-             'tree-widget  
+      (apply 'widget-create
+             'tree-widget
              :open       t
              :tag        name
              :garak-type :bnode
@@ -621,7 +625,7 @@ substitute these characters for the basic ascii ones:\n
                                :value      (cons 'noop uid)
                                :value-get 'widget-value-value-get
                                :inline     t
-                               :notify    'garak-buddy-list-node-command 
+                               :notify    'garak-buddy-list-node-command
                                menu) nil)) ))
 
 (defun garak-insert-buddy-list-toplevel (proc bnode)
@@ -636,7 +640,7 @@ substitute these characters for the basic ascii ones:\n
         (garak-buddy-find-parent proc (car parent))
       (car parent)) ))
 
-(defconst garak-tree-container-classes '(tree-widget-open-icon 
+(defconst garak-tree-container-classes '(tree-widget-open-icon
                                          tree-widget-empty-icon
                                          tree-widget-close-icon))
 
@@ -647,12 +651,12 @@ substitute these characters for the basic ascii ones:\n
             ((memq c garak-tree-container-classes) (widget-get widget :parent))
             (t widget))) ))
 
-(defun garak-tree-widget-get (widget &optional prop) 
+(defun garak-tree-widget-get (widget &optional prop)
   (when (not prop) (setq prop :value))
   (when widget
     (widget-get (garak-tree-widget-real-target widget) prop)))
 
-(defun garak-tree-widget-set (widget &optional prop value) 
+(defun garak-tree-widget-set (widget &optional prop value)
   (when (not prop) (setq prop :value))
   (when widget
     (widget-put
@@ -660,14 +664,14 @@ substitute these characters for the basic ascii ones:\n
 
 (defun garak-tree-widget-apply (widget prop &rest args)
   (when (and widget prop)
-    ;;(elim-debug "GARAK-TREE-WIDGET-APPLY %S->%S %S" 
-    ;;            (car (garak-tree-widget-real-target widget)) 
+    ;;(elim-debug "GARAK-TREE-WIDGET-APPLY %S->%S %S"
+    ;;            (car (garak-tree-widget-real-target widget))
     ;;            (garak-tree-widget-get widget prop)
     ;;            args)
     (apply 'widget-apply (garak-tree-widget-real-target widget) prop args)))
 
 (defun garak-ui-find-node (uid type)
-  (let ((last-point -1) (found nil) (widget nil) 
+  (let ((last-point -1) (found nil) (widget nil)
         (inhibit-point-motion-hooks t)
         (inhibit-redisplay          t))
     (save-excursion
@@ -693,22 +697,29 @@ substitute these characters for the basic ascii ones:\n
         (when (eq buddy other)
           (setq buid         (elim-avalue "bnode-uid"   args)
                 where-widget (garak-ui-find-node buid :buddy))
-          ;; if where-widget is nil, the bnode is not displayed: find the 
+          ;; if where-widget is nil, the bnode is not displayed: find the
           ;; parent node and clear its cache, and refresh it if it's open:
           (if (not where-widget)
               (let ((puid (garak-buddy-find-parent proc buid)) parent kfun kids)
-                (when (setq where-widget (garak-ui-find-node puid :buddy))
-                  (setq parent (elim-buddy-data proc puid)
-                        point  (car where-widget)
-                        widget (widget-at  point))
-                  (when (and (memq (elim-avalue "bnode-type" parent) 
-                                   '(:group-node :contact-node))
-                             (garak-tree-widget-get widget :node))
-                    (setq kids (garak-tree-widget-apply widget :expander))
-                    (garak-tree-widget-set widget :args kids)
-                    (when (garak-tree-widget-get widget :open)
-                      (widget-apply widget :action)
-                      (widget-apply widget :action)) )))
+                (if (setq where-widget (garak-ui-find-node puid :buddy))
+                    (progn
+                      (setq parent (elim-buddy-data proc puid)
+                            point  (car where-widget)
+                            widget (widget-at  point))
+                      (when (and (memq (elim-avalue "bnode-type" parent)
+                                       '(:group-node :contact-node))
+                                 (garak-tree-widget-get widget :node))
+                        (setq kids (garak-tree-widget-apply widget :expander))
+                        (garak-tree-widget-set widget :args kids)
+                        (when (garak-tree-widget-get widget :open)
+                          (widget-apply widget :action)
+                          (widget-apply widget :action)) ))
+                  (save-excursion
+                    (end-of-buffer)
+                    (garak-insert-buddy-list-top proc
+                                                 (elim-buddy-data proc puid)))))
+            ;; the widget is currently visible. tweak it by hand
+            ;; as this seems to be the only reliable way to refresh it:
             (setq point     (car where-widget)
                   end       (next-single-char-property-change point 'display)
                   widget    (cdr where-widget)
@@ -723,7 +734,7 @@ substitute these characters for the basic ascii ones:\n
                   (put-text-property point end 'display icon)
                 (when tag
                   (setq end (+ point (length old)))
-                  ;;(message "REPLACE %S with %S in %S - %S" 
+                  ;;(message "REPLACE %S with %S in %S - %S"
                   ;;         old tag point end)
                   (save-excursion
                     (goto-char point)
@@ -733,6 +744,9 @@ substitute these characters for the basic ascii ones:\n
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
+  "This function handles updating the garak ui when the state of one of your
+accounts changes. Typically this is as a result of elim-account-status-changed
+elim-connection-state or elim-connection-progress, but any call can be handled as long as an \"account-uid\" entry is present in the ARGS alist."
   (let (buffer auid where-widget point end icon-name icon conn kids node tag)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
           status nil)
@@ -755,7 +769,7 @@ substitute these characters for the basic ascii ones:\n
         (setq icon-name (garak-account-list-choose-icon conn status))
 
         ;; widget not found or removing an account => refresh the parent node.
-        ;; otherwise                               => update node icon 
+        ;; otherwise                               => update node icon
         (if (or (eq 'remove-account name) (not where-widget))
             ;; refreshing parent node:
             (when (setq where-widget (garak-ui-find-node :accounts :garak-type)
@@ -770,7 +784,7 @@ substitute these characters for the basic ascii ones:\n
           (setq point (car where-widget)
                 end   (next-single-char-property-change point 'display)
                 tag   (elim-avalue icon-name garak-icon-tags)
-                icon  (tree-widget-find-image icon-name)) 
+                icon  (tree-widget-find-image icon-name))
           (let ((inhibit-read-only t) old)
             (setq widget (widget-at point)
                   old    (widget-get widget :tag))
@@ -779,7 +793,7 @@ substitute these characters for the basic ascii ones:\n
                 (put-text-property point end 'display icon)
               (when tag
                 (setq end (+ (length old) point))
-                (save-excursion 
+                (save-excursion
                   (goto-char point)
                   (setq old (make-string (length old) ?.))
                   (when (search-forward-regexp old end t)
@@ -796,11 +810,11 @@ substitute these characters for the basic ascii ones:\n
         (if puid
             (let (parent kfun kids)
               ;; if the parent is skippable, find a non-skippable ancestor:
-              ;; we can't use normal buddy methods because it has already 
+              ;; we can't use normal buddy methods because it has already
               ;; been deleted from elim's cache by now: the parent should still
               ;; be alive though as children are reaped before ancestors:
               (setq parent (elim-buddy-data proc puid))
-              (when (equal (elim-avalue "contact-size" parent) 1) 
+              (when (equal (elim-avalue "contact-size" parent) 1)
                 (setq puid   (garak-buddy-find-parent proc puid)
                       parent (elim-buddy-data proc puid)))
               ;; ok: by now we should have a live ancestor: find its node:
@@ -853,7 +867,7 @@ substitute these characters for the basic ascii ones:\n
                      ((eq status :mobile       ) ":away"         )
                      ((eq status :tune         ) ":away"         )
                      ((eq conn   :connected    ) ":on"           )
-                     (online                     ":on"           )      
+                     (online                     ":on"           )
                      (t                          ":off"          )))
     ;;(message "%s -> %s" (elim-avalue "account-name" status-data) icon)
     icon))
@@ -881,13 +895,13 @@ substitute these characters for the basic ascii ones:\n
       (when (setq tag (elim-avalue icon garak-icon-tags))
         (widget-put wicon :tag tag)) ) ))
 
-(defun garak-create-ui-widget-buffer (proc) 
+(defun garak-create-ui-widget-buffer (proc)
   (when (tree-widget-use-image-p) (garak-load-icons))
   (let ((blist   (elim-buddy-list proc))
         (icons   (copy-sequence garak-icons))
         (bbuffer (elim-fetch-process-data proc :blist-buffer)))
     (when (or (not bbuffer) (not (buffer-live-p bbuffer)))
-      (setq bbuffer (generate-new-buffer "*Garak*")) 
+      (setq bbuffer (generate-new-buffer "*Garak*"))
       (elim-store-process-data proc :blist-buffer bbuffer))
     (with-current-buffer bbuffer
       (elim-init-ui-buffer)
@@ -899,7 +913,7 @@ substitute these characters for the basic ascii ones:\n
       ;; the user wanted as the default:
       (setq icons (nconc icons (aref tree-widget--theme 3)))
       (aset tree-widget--theme 3 icons)
-      (add-hook 'tree-widget-before-create-icon-functions 
+      (add-hook 'tree-widget-before-create-icon-functions
                 'garak-ui-node-setup-icon nil t)
       (setq elim-form-ui-args (list :process proc))
       (garak-insert-account-list)
@@ -933,7 +947,7 @@ substitute these characters for the basic ascii ones:\n
           (garak-cmd-strip-account-arg garak-elim-process items args adata))
     (if (not account)
         (format "/configure-account %s: no account found" args)
-      (elim-account-options garak-elim-process account 
+      (elim-account-options garak-elim-process account
                             'garak-account-options-ui-cb)
       (format "/configure-account %s" args)) ))
 
@@ -972,34 +986,34 @@ substitute these characters for the basic ascii ones:\n
   (let (items account account-uid)
     (setq account-uid
           (garak-cmd-strip-account-arg garak-elim-process items args account))
-    (format "/remove-buddy %s %s" 
-            (elim-avalue "account-name" (cdr account)) 
+    (format "/remove-buddy %s %s"
+            (elim-avalue "account-name" (cdr account))
             (car items)) ))
 
 (defun garak-cmd-msg (args)
   (let (items account account-data proto buddy a-end message rval)
     (setq rval (format "INVALID: /msg %s" args))
     (setq account
-          (garak-cmd-strip-account-arg garak-elim-process 
+          (garak-cmd-strip-account-arg garak-elim-process
                                        items args account-data))
     (when (string-match "\\s-*\\(\\S-+\\)\\s-+" args)
       (setq buddy   (match-string 1 args)
             message (substring args (match-end 0)))
         (elim-message garak-elim-process account buddy message)
-        (setq rval (format "/msg %s" args)) ) 
+        (setq rval (format "/msg %s" args)) )
     rval))
 
 (defun garak-read-join-parameters (spec items)
   (let (options secret value key required)
-    (while spec 
+    (while spec
       (setq value    (car items)
             key      (caar spec)
             secret   (cdr (assoc "secret"   (cdar spec)))
             required (cdr (assoc "required" (cdar spec))))
       (when (or (and (or (not value) (equal value "-")) required)
                 (and (equal value "-") secret))
-        (setq value 
-              (if secret 
+        (setq value
+              (if secret
                   (read-passwd (concat key ": "))
                 (read-string (concat key ": ") nil nil nil t))))
       (when value (setq options (cons value (cons key options))))
@@ -1010,18 +1024,18 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-cmd-join (args)
   (let (items account account-data proto spec options rval)
     (setq rval    (format "/join %s (failed)" args)
-          account (garak-cmd-strip-account-arg garak-elim-process 
+          account (garak-cmd-strip-account-arg garak-elim-process
                                                items args account-data))
     (if account-data
         (progn
           (setq proto (cdr (assq :proto (cdr account-data)))
                 spec  (elim-chat-parameters garak-elim-process proto))
           ;;(message "arg-spec: %S" spec)
-          (if spec 
+          (if spec
               (if (setq options (garak-read-join-parameters spec items))
-                  (progn 
+                  (progn
                     ;;(message "e-j-c: process %S %S %S" account "" options)
-                    (elim-join-chat garak-elim-process account "" options) 
+                    (elim-join-chat garak-elim-process account "" options)
                     (format "/join %s" args))
                 (format "/join %s: args not valid" args))
             (format "/join %s: protocol plugin does not support command")))
@@ -1032,7 +1046,7 @@ substitute these characters for the basic ascii ones:\n
     (setq items   (split-string args)
           type    (car  items))
     (if type
-        (progn 
+        (progn
           (if (and (eq (aref type 0) ?:) (setq tsym (intern-soft type)))
               (setq type   (elim-pack-enum :status-primitive tsym)
                     id     (cadr items)
@@ -1040,7 +1054,7 @@ substitute these characters for the basic ascii ones:\n
             (setq id     type
                   type   (elim-standard-status-type id)
                   mregex "^\\s-*\\S-+\\s-+\\(.*?\\)\\s-*$"))
-          (when (string-match mregex args) 
+          (when (string-match mregex args)
             (setq message (match-string 1 args)))
           (elim-set-status garak-elim-process id message type)
           (format "/status %s" args))
@@ -1053,7 +1067,7 @@ substitute these characters for the basic ascii ones:\n
     "/part"))
 
 (defun garak-cmd-account-generic (cmd elim-op args)
-  (let ( (account-data 
+  (let ( (account-data
           (or (elim-account-data garak-elim-process args)
               (elim-account-data garak-elim-process garak-account-uid))) )
     (if (not account-data)
@@ -1123,7 +1137,7 @@ substitute these characters for the basic ascii ones:\n
     (if (fboundp handler)
         (funcall handler (or args ""))
       (when (and raw (not handler)) ;; native / command?
-        (elim-do-cmd garak-elim-process garak-account-uid 
+        (elim-do-cmd garak-elim-process garak-account-uid
                      garak-conv-uid (concat cmd " " args)) nil)) ))
 
 (defun garak-input-handler (input)
@@ -1140,13 +1154,13 @@ substitute these characters for the basic ascii ones:\n
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; completion:
-(defvar garak-commands 
+(defvar garak-commands
   '( "/add-account"    "/add-buddy"    "/configure-account" "/connect"
-     "/disconnect"     "/login"        "/logoff"            "/logout"  
+     "/disconnect"     "/login"        "/logoff"            "/logout"
      "/msg"            "/quit"         "/register"          "/status"
      "/remove-account" "/remove-buddy" ))
 
-(defvar garak-command-completers 
+(defvar garak-command-completers
   '((add-account . garak-comp-add-account)
     (add-buddy   . garak-comp-add-buddy  )
     (msg         . garak-comp-msg        )
@@ -1180,7 +1194,7 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-comp-account (prefix &optional protocol)
   (garak-comp-add-buddy prefix))
 
-(defun garak-comp-msg (prefix &optional protocol) 
+(defun garak-comp-msg (prefix &optional protocol)
   (garak-comp-add-buddy prefix))
 
 (defun garak-comp-help (prefix &optional protocol)
@@ -1193,10 +1207,10 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-comp-join (prefix &optional protocol))
 
 (defvar garak-standard-status-names (mapcar 'car elim-standard-status-types))
-(defvar garak-standard-status-types 
+(defvar garak-standard-status-types
   (mapcar (lambda (x) (symbol-name (cdr x))) elim-standard-status-types))
-(defvar garak-standard-status-things 
-  (nconc (copy-sequence garak-standard-status-names) 
+(defvar garak-standard-status-things
+  (nconc (copy-sequence garak-standard-status-names)
          garak-standard-status-types))
 
 (defun garak-comp-status (prefix &rest ignore)
@@ -1208,19 +1222,19 @@ substitute these characters for the basic ascii ones:\n
           type (or (nth 1 args) "")
           name (or (nth 2 args) ""))
     (message "ARGS: %S" args)
-    (cond ((and (eq  (length args) 3) 
+    (cond ((and (eq  (length args) 3)
                 (not (member name garak-standard-status-names))
                 (not (member type garak-standard-status-names)))
            (all-completions name garak-standard-status-names))
-          ((and (eq  (length args) 2) 
+          ((and (eq  (length args) 2)
                 (not (member type garak-standard-status-things)))
            (message "type: %S" type)
            (all-completions type garak-standard-status-things))) ))
 
-(defun garak-complete-commands (&optional prefix protocol) 
+(defun garak-complete-commands (&optional prefix protocol)
   (if (zerop (length prefix))
       garak-commands
-    (cons (try-completion  prefix garak-commands) 
+    (cons (try-completion  prefix garak-commands)
           (all-completions prefix garak-commands)) ))
 
 (defun garak-complete (&optional at-start prefix)
@@ -1237,7 +1251,7 @@ substitute these characters for the basic ascii ones:\n
 (define-derived-mode garak-mode lui-mode "Garak"
   "An IM mode based on elim"
   (setq lui-input-function 'garak-input-handler)
-  (set (make-local-variable 'lui-possible-completions-function) 
+  (set (make-local-variable 'lui-possible-completions-function)
        'garak-complete)
   (lui-set-prompt (concat (propertize "garak>" 'face 'mode-line) " ")))
 
@@ -1254,7 +1268,7 @@ substitute these characters for the basic ascii ones:\n
   (garak-mode)
   (setq lui-input-function 'garak-input-handler)
   (lui-insert "starting elim" t)
-  (set (make-local-variable 'garak-elim-process) 
+  (set (make-local-variable 'garak-elim-process)
        (elim-start "garak" nil garak-callbacks))
   (let ((display-buffer-reuse-frames t))
     (display-buffer (garak-create-ui-widget-buffer garak-elim-process)))
