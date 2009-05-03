@@ -493,7 +493,8 @@ substitute these characters for the basic ascii ones:\n
                 proto (elim-avalue :proto adata)
                 iname (format ":%s" proto)
                 aicon (tree-widget-find-image iname))
-          (message "bnode account icon: %s" iname)))
+          ;;(message "bnode account icon: %s" iname)
+          ))
     ;; set up the label, with icon if we got one above:
     (setq blabel (if aicon (concat (propertize " " 'display aicon) name) name))
     (if kids
@@ -525,15 +526,21 @@ substitute these characters for the basic ascii ones:\n
              menu)) ))
 
 (defun garak-buddy-list-skip (proc bnode)
-  (if (equal (elim-avalue "contact-size" bnode) 1)
-      (progn
-        ;;(message "degenerate bnode %s %s -> %s"
-        ;;         (elim-avalue "bnode-name" bnode)
-        ;;         (elim-avalue "bnode-uid"  bnode))
-        (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode))
-            bnode)
-        )
-    bnode))
+  (cond
+   ((and garak-hide-offline-buddies
+         (eq (elim-avalue "contact-online-buddies" bnode) 0)) 
+    ;;(message "discarding node %S %S" 
+    ;;         (assoc "bnode-type" bnode)
+    ;;         (assoc "bnode-name" bnode)) 
+    nil)
+   ((eq (elim-avalue "contact-size" bnode) 1)
+    (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode))
+   (t bnode)) )
+
+;(defun garak-buddy-list-skip (proc bnode)
+;  (if (equal (elim-avalue "contact-size" bnode) 1)
+;      (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode)
+;    bnode))
 
 (defun garak-account-list-node-widget (process account)
   (let (adata uid proto iname icon label aname)
@@ -576,27 +583,29 @@ substitute these characters for the basic ascii ones:\n
          (garak-account-list-node-children)))
 
 (defun garak-buddy-list-node-children (widget)
-  (let ((uid (widget-get widget :buddy)) children process dummy)
+  (let ((uid (widget-get widget :buddy)) children process dummy kids)
     ;;(message "Updating children for node %S" uid)
     (setq process  garak-elim-process
           children (elim-buddy-children process uid))
     ;;(elim-debug "(garak-buddy-list-node-children %S) -> %S" (car widget) uid)
-    (mapcar
-     (lambda (N)
-       (garak-buddy-list-node-widget process
-                                     (garak-buddy-list-skip process N)))
-     children) ))
+    (setq kids (mapcar
+                (lambda (N)
+                  (let ((bnode (garak-buddy-list-skip process N)))
+                    (when bnode
+                      (garak-buddy-list-node-widget process bnode))))
+                children))
+    (delq nil kids)))
 
 (defun garak-insert-buddy-list-top (proc bnode)
   (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids)
     (setq remove (list 'choice-item :tag "Delete All" :value (cons 'del uid))
           name   (elim-avalue "bnode-name" bnode)
-          kids
-          (mapcar
-           (lambda (N)
-             (garak-buddy-list-node-widget proc
-                                           (garak-buddy-list-skip proc N) ))
-           (elim-buddy-children proc (elim-avalue "bnode-uid" bnode))))
+          kids   (mapcar
+                  (lambda (N)
+                    (let ((node (garak-buddy-list-skip proc N)))
+                      (when node (garak-buddy-list-node-widget proc node))))
+                  (elim-buddy-children proc (elim-avalue "bnode-uid" bnode)))
+          kids   (delq nil kids))
     (if kids
         (apply 'widget-create
                'tree-widget
