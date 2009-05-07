@@ -1,0 +1,28 @@
+# -*- mode:org -*-
+* importers
+** TODO account importer
+** TODO buddy importer
+* proces control
+** TODO make buffer selection code re-use buffers from dead elim processes
+** DONE make process sentinel warn the user when elim dies
+* account list
+** DONE update account status in ascii mode
+** DONE update account status in gui mode
+** DONE add protocol icon/tag to account entry
+** DONE log in/out menu items from account entry
+** TODO remove account (CLI and GUI)
+** TODO roomlist
+* buddy list
+** DONE display groups created after intial ui setup
+** DONE update buddy status in ascii as well as gui mode
+** DONE add protocol icon to buddy entries
+** DONE extended buddy list menu actions
+** TODO make blocking/unblocking work
+** TODO remove buddy from CLI as well as GUI
+** TODO distinguish homonymous entries by account
+** TODO rename buddy
+** TODO move buddy to a new group
+** TODO fix buddy add so only one entry per buddy in blist (no clones)
+** TODO offline buddies (when option set)
+*** DONE hide when offline at login-time
+*** TODO hide when they go offline after you log in

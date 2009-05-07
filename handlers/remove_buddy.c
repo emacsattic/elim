@@ -135,7 +135,7 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
     else
     {
         fprintf( stderr, "(elim-remove-buddy:04b)\n" );
-        b_arg = ALIST_VAL_STRING( args, "buddy-name" );
+        b_arg = ALIST_VAL_STRING( args, "bnode-name" );
         FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
         fprintf( stderr, "(elim-remove-buddy:04b0 %s)\n", b_arg );
         if( b_arg )
@@ -192,7 +192,7 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
     AL_STR ( rval, "account-name", purple_account_get_username   ( acct ) );
     AL_STR ( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
     AL_PTR ( rval, "account-uid" , acct  );
-    AL_PTR ( rval, "buddy-uid"   , buddy );
+    AL_PTR ( rval, "bnode-uid"   , buddy );
     AL_ENUM( rval, "bnode-type", PURPLE_BLIST_BUDDY_NODE, ":blist-node-type" );
     fprintf( stderr, "(elim-remove-buddy:09)\n" );
     sexp_val_free( args );

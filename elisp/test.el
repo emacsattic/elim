@@ -66,7 +66,7 @@
 (elim-fetch-process-data eproc :response-by-id)
 (length (elim-fetch-process-data (get-process "*elim*") :accounts))
 (setq eproc-blist (elim-fetch-process-data (get-process "*elim*") :blist))
-(elim-fetch-process-data eproc :protocols     )
+(elim-fetch-process-data (get-process "*elim*") :protocols     )
 (elim-fetch-process-data eproc :initialised   )
 (assq 'elim-blist-remove-node (elim-fetch-process-data eproc :client-ops))
 (elim-fetch-process-data eproc :callbacks     )

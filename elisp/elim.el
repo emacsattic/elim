@@ -240,8 +240,8 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon i/o loop
 (defun elim-handle-sexp (proc sexp)
-  (when (eq (caar (cddr sexp)) 'elim-blist-remove-node)
-    (elim-debug "RECEIVED: %S" sexp))
+  ;;(when (eq (caar (cddr sexp)) 'elim-blist-remove-node)
+  ;;  (elim-debug "RECEIVED: %S" sexp))
   (when (listp sexp)
     (let ((type (car   sexp))
           (name (caar (cddr sexp)))
@@ -299,11 +299,11 @@ and return an s-expression suitable for making a call to an elim daemon."
       (elim-call-client-handler proc name id 0 args)) ))
 
 (defun elim-process-sentinel (process message)
-  (sit-for 1)
   (let ((status (process-status process)))
     (when (memq status '(exit signal closed failed))
+      (elim-call-client-handler process 'elim-exit "-none-" 0 status)
       (when (buffer-live-p (process-buffer process))
-        (kill-buffer (process-buffer process))))))
+        (kill-buffer (process-buffer process)) )) ))
 
 (defun elim-input-filter (process data)
   (let ((pt nil) (sexp nil) (read-error nil) (sexp-list nil))
@@ -326,26 +326,28 @@ and return an s-expression suitable for making a call to an elim daemon."
          (lambda (S) (elim-handle-sexp process S)) 
          (nreverse sexp-list))) )))
 
-(defun elim-process-send (process sexp-value)
-  (let ((print-level  nil) 
-        (print-length nil)
-        (sexp-string  nil))
-    (setq sexp-string (prin1-to-string sexp-value))
-    (process-send-string process sexp-string)
-    (elim-debug "sent: %s" sexp-string)
-    (accept-process-output)))
+;; (defun elim-process-send (process sexp-value)
+;;   (let ((print-level  nil) 
+;;         (print-length nil)
+;;         (sexp-string  nil))
+;;     (setq sexp-string (prin1-to-string sexp-value))
+;;     (process-send-string process sexp-string)
+;;     (elim-debug "sent: %s" sexp-string)
+;;    (accept-process-output)))
 
-(defun elim-process-send-with-callback (process sexp-value callback)
-  (let ((print-level  nil) 
+(defun elim-process-send (process sexp-value &optional callback)
+  (let ((print-level  nil)
         (print-length nil)
         (sexp-string  nil)
-        (attr (car  (cdar (cddr sexp-value))))
+        (attr         nil)
         (call-id      nil))
-    (setq call-id (cdr (assq 'id attr)))
     (setq sexp-string (prin1-to-string sexp-value))
-    (elim-set-resp-handler-by-id process call-id callback)
+    (when callback 
+      (setq attr    (car (cdar (cddr sexp-value)))
+            call-id (cdr (assq 'id attr)))
+      (elim-set-resp-handler-by-id process call-id callback))
     (process-send-string process sexp-string)
-    (elim-debug "sent-cb: %s" sexp-string)
+    (elim-debug "sent: %s" sexp-string)
     (accept-process-output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -399,7 +401,7 @@ and return an s-expression suitable for making a call to an elim daemon."
       (funcall handler proc name id status args)) ))
 
 (defun elim-default-response-handler (proc name id attr args)
-  (let ( (status (elim-avalue "status" args)) call-arg)
+  (let ((status (elim-avalue "status" args)) call-arg)
     (setq call-arg (elim-unwrap-resp-args status args))
     (if (equal status 0)
         (elim-debug "%s<%s> successful %S" name id call-arg)
@@ -1085,7 +1087,7 @@ add that user to your buddy list"
         (progn
           (setq group   (or group "Buddies")
                 arglist (nconc (list 'alist nil
-                                     (elim-atom-to-item "buddy-name" buddy)
+                                     (elim-atom-to-item "bnode-name" buddy)
                                      (elim-atom-to-item "group"      group))
                                arglist))
           (elim-process-send process (elim-daemon-call 'add-buddy nil arglist)))
@@ -1185,14 +1187,21 @@ must also be supplied."
     ;;(elim-debug        "%S"
                        (elim-daemon-call 'join-chat nil arglist)) ))
 
-(defun elim-account-options (process account callback)
+(defun elim-account-options (process account &optional callback)
   (let ((account-data (elim-account-data process account)) arglist)
-    (if account-data 
-        (setq account (car account-data)) 
+    (if account-data
+        (setq account (car account-data))
       (error "No such account: %S" account))
     (setq arglist (list 'alist nil (elim-atom-to-item "account-uid" account)))
-    (elim-process-send-with-callback 
+    (elim-process-send 
      process (elim-daemon-call 'account-options nil arglist) callback)))
+
+(defun elim-buddy-menu (process buddy &optional callback)
+  (let ((buddy-data (elim-buddy-data process buddy)) arglist sexp)
+    (setq arglist (elim-simple-list-to-proto-alist 
+                   (list "bnode-uid" (elim-avalue "bnode-uid" buddy-data)))
+          sexp    (elim-daemon-call 'buddy-menu nil arglist))
+    (elim-process-send process sexp callback) ))
 
 (defvar elim-standard-status-types 
   '(("available"      . :available  )

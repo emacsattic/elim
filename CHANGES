@@ -1,0 +1,8 @@
+2009-05-07  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* CHANGES : initial change log entry
+	* elisp   : handle elim process dying (update account statuses;
+	            put warning message in all live garak buffers)
+	* handlers: provide buddy-menu and buddy-menu-action handlers
+	* elisp   : implement (dynamic) extended buddy menu handling
+

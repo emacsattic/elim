@@ -20,25 +20,30 @@
 # along with elim.  If not, see <http://www.gnu.org/licenses/>.
 ############################################################################
 # make macro functions:
-INSTALLED   = $(if $(shell pkg-config $(1) --exists || echo t),\
-                   $(error $(1) package not installed))
+empty       := 
+s           := ..
+S           := $(empty) $(empty)
+INSTALLED = $(if $(shell pkg-config $(subst $s,$S,$(1)) --exists || echo t ),\
+                 $(error $(shell echo $(subst $s,$S,$(1))) not installed)  )
 ############################################################################
 # package dependencies:
-PACKAGES    := glib-2.0 libxml-2.0 purple libxml-2.0
+PACKAGES    := glib-2.0..\>=..2.0.12 libxml-2.0 purple
 $(foreach P, $(PACKAGES), $(call INSTALLED, $P))
 ############################################################################
 DEFINES     := -D_GNU_SOURCE \
                $(shell                                                      \
                  if pkg-config glib-2.0 --atleast-version 2.14 2>/dev/null; \
-                  then                                                      \
-                      echo '-D';                                            \
-                  else                                                      \
-                      echo '-U';                                            \
-                  fi;)GLIB_HAS_ADD_SECONDS
+                 then                                                       \
+                     echo '-D';                                             \
+                 else                                                       \
+                     echo '-U';                                             \
+                 fi;)GLIB_HAS_ADD_SECONDS
 
 CFLAGS      += -Wall -std=c99 $(DEFINES)
-CFLAGS      += $(foreach P, $(PACKAGES), $(shell pkg-config --cflags $P)) 
-LDFLAGS     += $(foreach P, $(PACKAGES), $(shell pkg-config --libs   $P)) 
+CFLAGS      += $(foreach P, $(PACKAGES), \
+                         $(shell pkg-config --cflags $(subst $s,$S,$P))) 
+LDFLAGS     += $(foreach P, $(PACKAGES), \
+                         $(shell pkg-config --libs   $(subst $s,$S,$P))) 
 TVER        := $(shell etags --version | head -n 1 | grep -i exuberant)
 BINARIES    := elim-client
 CH_FILES    := $(wildcard *.c         ) \
@@ -54,7 +59,7 @@ UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.o
 CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))
 
 ############################################################################
-.PHONY: clean diag distclean
+.PHONY: clean diag distclean check-libdeps
 
 all: $(BINARIES)
 
@@ -86,11 +91,17 @@ handler-list.h: make/handler-list-h.sh $(wildcard handlers/*.h)
 
 ############################################################################
 diag:
-	@echo "packages : "$(PACKAGES)
+	@echo "packages : "$(subst $s,$S,$(PACKAGES))
 	@echo "CFLAGS   : "$(CFLAGS)
 	@echo "LDFLAGS  : "$(LDFLAGS)
 	@echo "CH_FILES : "$(CH_FILES)
 	@echo "OBJ_FILES: "$(OBJ_FILES)
+
+check-libdeps:
+	@echo -n
+	$(foreach P, $(PACKAGES),\
+	    $(if $(shell pkg-config $(subst $s,$S,$P) --exists && echo t ),\
+	         $(info  $(shell echo $(subst $s,$S,$P)) is installed OK)))
 
 clean:
 	@( rm -fv $(BINARIES) $(OBJ_FILES) \
@@ -104,3 +115,6 @@ TAGS: $(CH_FILES)
 
 distclean: clean
 	@find . -type f -name *~ -exec rm {} \;
+
+dummy:
+	@echo -n

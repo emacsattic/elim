@@ -48,7 +48,7 @@ xmlnode * _h_elim_add_buddy ( const char *name ,
         return response_error( ENXIO, id, name, "unknown account" );
     }
 
-    const char *b_arg = ALIST_VAL_STRING( args, "buddy-name" );
+    const char *b_arg = ALIST_VAL_STRING( args, "bnode-name" );
     const char *bname = purple_normalize( acct, b_arg        );
     const char *gname = ALIST_VAL_STRING( args, "group"      );
     if( !gname || !*gname ) gname = "Buddies";
@@ -82,10 +82,10 @@ xmlnode * _h_elim_add_buddy ( const char *name ,
 
     xmlnode *rval = xnode_new( "alist" );
     AL_PTR( rval, "account-uid" , acct  );
-    AL_PTR( rval, "buddy-uid"   , buddy );
+    AL_PTR( rval, "bnode-uid"   , buddy );
     AL_PTR( rval, "group-uid"   , group );
-    AL_STR( rval, "buddy-name"  , purple_buddy_get_name         ( buddy ) );
-    AL_STR( rval, "buddy-alias" , purple_buddy_get_alias        ( buddy ) );
+    AL_STR( rval, "bnode-name"  , purple_buddy_get_name         ( buddy ) );
+    AL_STR( rval, "bnode-alias" , purple_buddy_get_alias        ( buddy ) );
     AL_STR( rval, "account-name", purple_account_get_username   ( acct  ) );
     AL_STR( rval, "im-protocol" , purple_account_get_protocol_id( acct  ) );
     AL_STR( rval, "group-name"  , purple_group_get_name         ( group ) );

@@ -1,7 +1,6 @@
 (require 'lui   nil t)
 (require 'elim  nil t)
 (require 'widget     )
-(require 'wid-edit   )
 (require 'tree-widget)
 (require 'time-date  )
 (require 'image      )
@@ -186,7 +185,9 @@ substitute these characters for the basic ascii ones:\n
     ;; messages:
     (elim-conv-write-chat        . garak-chat-message        )
     (elim-conv-write-im          . garak-user-message        )
-    (elim-conv-write-sys         . garak-misc-message        ))
+    (elim-conv-write-sys         . garak-misc-message        )
+    ;; process related
+    (elim-exit                   . garak-elim-exit           ))
   "Alist of elim callbacks and their corresponding handlers")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -212,6 +213,20 @@ substitute these characters for the basic ascii ones:\n
               garak-conversation-buffers
               (cons (cons uid buffer) garak-conversation-buffers))))
     buffer))
+
+(defun garak-elim-exit (proc name id status args)
+  (mapc (lambda (acct) (garak-account-update proc name id 0 (list acct)))
+        (mapcar
+         (lambda (A) (cons "account-uid" (car A)))
+         (elim-fetch-process-data proc :accounts)))
+  (mapc
+   (lambda (buffer)
+     (with-current-buffer buffer
+       (when (and (eq 'garak-mode  major-mode) 
+                  (eq garak-elim-process proc)) 
+         (let ((message (format "* elim process finished: %S *" args)))
+           (lui-insert (elim-add-face message 'garak-warning-face)) )) ))
+   (buffer-list)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message callbacks
@@ -368,6 +383,15 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-ui-cancel-cb (&optional parent child event &rest stuff)
   (when elim-form-ui-args (kill-buffer nil)))
 
+(defun garak-menu-choice-mouse-down-action (widget &optional event)
+  (let ((args (widget-get widget :args  ))
+	(old  (widget-get widget :choice)))
+    (cond ((not (display-popup-menus-p))              nil)     ;; no popups
+	  ((> (length args) widget-menu-max-size)     nil)     ;; list too long
+	  ((> (length args) 2)                          t)     ;; use menu
+	  ((and widget-choice-toggle (memq old args)) nil)     ;; toggle
+	  (t                                            t)) )) ;; ask
+
 (defun garak-ui-account-options-ok-cb (&optional parent child event &rest stuff)
   (when elim-form-ui-args
     (let (proc account arglist account-arg)
@@ -438,8 +462,35 @@ substitute these characters for the basic ascii ones:\n
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list
+(defun garak-menu-actions-to-choices (raw &optional cooked)
+  (mapc 
+   (lambda (entry)
+     (cond ((listp (cdr entry))
+            (setq cooked (cons (car entry) cooked)
+                  cooked
+                  (nreverse 
+                   (garak-menu-actions-to-choices (cdr entry) cooked))))
+           (t (setq cooked (cons entry cooked))) )) raw)
+  (nreverse cooked))
+
+(defun garak-buddy-menu-response-handler (proc name id attr args &optional ev)
+  (let (bnode-data bnode-uid bnode-name choices menu value arglist call)
+    (when (equal (elim-avalue "status" args) 0)
+      (setq args       (elim-avalue "value"       args)
+            bnode-uid  (elim-avalue "bnode-uid"   args)
+            menu       (elim-avalue "menu"        args)
+            bnode-data (elim-buddy-data proc bnode-uid)
+            bnode-name (elim-avalue "bnode-name" bnode-data)
+            choices    (garak-menu-actions-to-choices  menu)
+            value      (when menu (widget-choose bnode-name choices ev)))
+      (when (numberp value)
+        (setq arglist (list "bnode-uid" bnode-uid "menu-action" value)
+              arglist (elim-simple-list-to-proto-alist arglist)
+              call    (elim-daemon-call 'buddy-menu-action nil arglist))
+        (elim-process-send proc call) )) ))
+
 (defun garak-buddy-list-node-command (&optional widget child event &rest stuff)
-  (let (value op buid proc buddy auid bname)
+  (let (value op buid proc buddy auid bname menu-cb)
     (setq proc  garak-elim-process
           value (widget-value widget)
           op    (car value)
@@ -449,6 +500,13 @@ substitute these characters for the basic ascii ones:\n
           auid  (elim-avalue "account-uid" buddy))
     (cond ((eq op 'del ) (elim-remove-buddy proc nil  buid))
           ((eq op 'join) (elim-join-chat    proc auid buid))
+          ((eq op 'menu) 
+           (lexical-let ((m-event event))
+             (setq menu-cb 
+                   (lambda (proc name id attr args) 
+                     (garak-buddy-menu-response-handler 
+                      proc name id attr args m-event)))
+             (elim-buddy-menu proc buid menu-cb) ))
           ((eq op 'msg ) (elim-message proc auid bname
                                        (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
@@ -468,24 +526,27 @@ substitute these characters for the basic ascii ones:\n
   (list 'choice-item :format "%[%t%]" :tag tag :value value))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid menu type name remove plabel blabel auid aicon)
-    (setq uid    (elim-avalue "bnode-uid"   bnode)
-          name   (elim-avalue "bnode-name"  bnode)
-          type   (elim-avalue "bnode-type"  bnode)
-          auid   (elim-avalue "account-uid" bnode)
-          remove (list 'choice-item :tag "Remove" :value (cons 'del uid))
-          kids   (mapcar
-                  (lambda (N) (garak-buddy-list-node-widget proc N))
-                  (delq nil (elim-buddy-children proc uid)))
-          menu   (cond ((eq type :chat-node )
-                        (list (garak-choice-item "Join" (cons 'join uid))))
-                       ((eq type :buddy-node)
-                        (setq plabel (if (elim-avalue "allowed" bnode)
-                                         "Block" "Unblock"))
-                        (list (garak-choice-item "Send IM" (cons 'msg  uid))
-                              (garak-choice-item plabel    (cons 'priv uid)))) )
-          menu   (cons (garak-choice-item "---------" '(noop))
-                       (nconc menu (list remove))))
+  (let (kids uid menu type name mtail plabel blabel auid aicon)
+    (setq uid   (elim-avalue "bnode-uid"   bnode)
+          name  (elim-avalue "bnode-name"  bnode)
+          type  (elim-avalue "bnode-type"  bnode)
+          auid  (elim-avalue "account-uid" bnode)
+          mtail (list (garak-choice-item "Remove"  (cons 'del  uid)))
+          kids  (mapcar
+                 (lambda (N) (garak-buddy-list-node-widget proc N))
+                 (delq nil (elim-buddy-children proc uid)))
+          menu  (cond ((eq type :chat-node )
+                       (list (garak-choice-item "Join" (cons 'join uid))))
+                      ((eq type :buddy-node)
+                       (setq plabel (if (elim-avalue "allowed" bnode)
+                                        "Block" "Unblock"))
+                       (list (garak-choice-item "Send IM" (cons 'msg  uid))
+                             (garak-choice-item plabel    (cons 'priv uid)))) )
+          menu  (cons (garak-choice-item "---------" '(noop))
+                      (nconc menu mtail)))
+    (when (memq type '(:chat-node :buddy-node))
+      (setcdr (last mtail)
+              (list (garak-choice-item "Extended Menu -->" (cons 'menu uid))) ))
     ;; pick an account icon if this bnode has an account and we want icons
     (when (and auid (tree-widget-use-image-p))
         (let (proto iname adata)
@@ -504,26 +565,29 @@ substitute these characters for the basic ascii ones:\n
                :value      uid
                :garak-type :bnode
                :expander   'garak-buddy-list-node-children
-               :node        (apply 'widget-convert 'menu-choice
-                                   :format    "%[%t%]\n"
-                                   :tag        blabel
-                                   :value      '(noop)
-                                   :value-get 'widget-value-value-get
-                                   :inline     t
-                                   :notify    'garak-buddy-list-node-command
-                                   menu)
+               :node       (apply 'widget-convert 'menu-choice
+                                  :format    "%[%t%]\n"
+                                  :tag        blabel
+                                  :mouse-down-action 
+                                    'garak-menu-choice-mouse-down-action
+                                  :value      '(noop)
+                                  :value-get 'widget-value-value-get
+                                  :inline     t
+                                  :notify    'garak-buddy-list-node-command
+                                  menu)
                kids)
       (apply 'widget-convert
              'menu-choice
-             :format     "%[%t%]\n"
-             :tag        blabel
-             :value      '(noop)
-             :buddy      uid
-             :garak-type :bnode
-             :value-get 'widget-value-value-get
-             :inline     t
-             :notify    'garak-buddy-list-node-command
-             menu)) ))
+             :format            "%[%t%]\n"
+             :tag                blabel
+             :value             '(noop)
+             :buddy              uid
+             :garak-type        :bnode
+             :value-get         'widget-value-value-get
+             :mouse-down-action 'garak-menu-choice-mouse-down-action
+             :inline             t
+             :notify            'garak-buddy-list-node-command
+             menu                )) ))
 
 (defun garak-buddy-list-skip (proc bnode)
   (cond
@@ -556,15 +620,16 @@ substitute these characters for the basic ascii ones:\n
                     (concat (propertize alt 'display icon) aname)
                   (concat alt aname)))
     (widget-convert 'menu-choice
-                    :format      "%[%t%]\n"
-                    :garak-type  :account
-                    :tag          label
-                    :im-protocol  proto
-                    :value       '(noop)
-                    :account      uid
-                    :value-get   'widget-value-value-get
-                    :inline       t
-                    :notify      'garak-account-list-node-command
+                    :format            "%[%t%]\n"
+                    :garak-type        :account
+                    :tag                label
+                    :im-protocol        proto
+                    :value             '(noop)
+                    :account            uid
+                    :mouse-down-action 'garak-menu-choice-mouse-down-action
+                    :value-get         'widget-value-value-get
+                    :inline             t
+                    :notify            'garak-account-list-node-command
                     (garak-choice-item "Log In"  (cons 'login  uid))
                     (garak-choice-item "Log Out" (cons 'logout uid))) ))
 
@@ -598,7 +663,7 @@ substitute these characters for the basic ascii ones:\n
 
 (defun garak-insert-buddy-list-top (proc bnode)
   (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids)
-    (setq remove (list 'choice-item :tag "Delete All" :value (cons 'del uid))
+    (setq ;remove (garak-choice-item "Delete All" (cons 'del uid))
           name   (elim-avalue "bnode-name" bnode)
           kids   (mapcar
                   (lambda (N)
@@ -775,7 +840,11 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (when (not status) (setq status (elim-account-status     proc auid)))
 
         ;; pick the most suitable status icon
-        (setq icon-name (garak-account-list-choose-icon conn status))
+        (if (eq name 'elim-exit)
+            (setq icon-name ":offline")
+          (setq icon-name (garak-account-list-choose-icon conn status)))
+
+        (message "CHOSE ICON: %S" icon-name)
 
         ;; widget not found or removing an account => refresh the parent node.
         ;; otherwise                               => update node icon
@@ -1256,7 +1325,6 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (funcall completer prefix garak-im-protocol)) )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define-derived-mode garak-mode lui-mode "Garak"
   "An IM mode based on elim"
   (setq lui-input-function 'garak-input-handler)

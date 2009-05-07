@@ -1,544 +1,0 @@
-
-ui_ops/account_ui_ops.h,61
-#define _ELIM_ACCOUNT_UI_OPS_H__ELIM_ACCOUNT_UI_OPS_H_2,32
-
-ui_ops/core_ui_ops.c,442
-PurpleCoreUiOps elim_core_ui_ops = elim_core_ui_ops9,301
-static void        _elim_ui_prefs_init ( void ){}_elim_ui_prefs_init23,568
-static void        _elim_debug_ui_init ( void ){} _elim_debug_ui_init24,618
-static void        _elim_ui_init       ( void ){}_elim_ui_init25,669
-static void        _elim_quit          ( void ){}_elim_quit26,719
-static GHashTable* _elim_get_ui_info   ( void ){ return NULL; }_elim_get_ui_info27,769
-
-ui_ops/blist_ui_ops.h,57
-#define _ELIM_BLIST_UI_OPS_H__ELIM_BLIST_UI_OPS_H_2,30
-
-ui_ops/ops.h,39
-#define _ELIM_OPS_H__ELIM_OPS_H_2,21
-
-ui_ops/core_ui_ops.h,55
-#define _ELIM_CORE_UI_OPS_H__ELIM_CORE_UI_OPS_H_2,29
-
-ui_ops/connections_ui_ops.c,844
-PurpleConnectionUiOps elim_connections_ui_ops = elim_connections_ui_ops17,905
-static void _elim_notice ( PurpleConnection *conn, const char *msg )_elim_notice32,1279
-static void _elim_connect_progress        ( PurpleConnection *gc ,_elim_connect_progress53,2138
-static void _elim_connected ( PurpleConnection *gc )_elim_connected80,3316
-static void _elim_disconnected ( PurpleConnection *gc )_elim_disconnected85,3411
-static void _elim_network    ( const char *call )_elim_network90,3512
-static void _elim_network_connected   () { _elim_network("elim-network-up"  ); }_elim_network_connected98,3710
-static void _elim_network_disconnected() { _elim_network("elim-network-down"); }_elim_network_disconnected99,3791
-static void _elim_report_disconnect_reason( PurpleConnection     *conn   ,_elim_report_disconnect_reason101,3873
-
-ui_ops/eventloop_ui_ops.h,65
-#define _ELIM_EVENTLOOP_UI_OPS_H__ELIM_EVENTLOOP_UI_OPS_H_2,34
-
-ui_ops/eventloop_ui_ops.c,1225
-typedef struct _purple_glib_ioclosure_purple_glib_ioclosure5,109
-    PurpleInputFunction function;function7,149
-    guint               result;result8,183
-    gpointer            data;data9,215
-} purple_glib_ioclosure;purple_glib_ioclosure10,245
-#define PURPLE_GLIB_READ_COND PURPLE_GLIB_READ_COND12,271
-#define PURPLE_GLIB_WRITE_COND PURPLE_GLIB_WRITE_COND13,335
-#define G_TIMEOUT_ADD_SECONDS(G_TIMEOUT_ADD_SECONDS17,442
-#define G_TIMEOUT_ADD_SECONDS(G_TIMEOUT_ADD_SECONDS19,519
-static void     __elim_io_destroy   ( gpointer data       ) { g_free(data); }__elim_io_destroy38,1521
-static gboolean __elim_io_invoke    ( GIOChannel  *source , __elim_io_invoke39,1599
-PurpleEventLoopUiOps elim_eventloop_ui_ops =elim_eventloop_ui_ops56,2312
-static guint timeout_add ( guint       interval ,timeout_add71,2658
-static gboolean timeout_remove ( guint handle )timeout_remove78,2866
-static guint input_add ( int                  fd        ,input_add83,2957
-static gboolean input_remove ( guint handle ) input_remove109,4074
-static int input_get_error ( int fd, int *error ) { return 0; }input_get_error114,4165
-static guint timeout_add_seconds ( guint       interval ,timeout_add_seconds116,4230
-
-ui_ops/idle_ui_ops.h,55
-#define _ELIM_IDLE_UI_OPS_H__ELIM_IDLE_UI_OPS_H_2,29
-
-ui_ops/connections_ui_ops.h,69
-#define _ELIM_CONNECTIONS_UI_OPS_H__ELIM_CONNECTIONS_UI_OPS_H_2,36
-
-ui_ops/account_ui_ops.c,900
-#define PARA_CB PARA_CB4,102
-PurpleAccountUiOps elim_account_ui_ops =elim_account_ui_ops34,1556
-static void _elim_notify_added ( PurpleAccount *account    ,_elim_notify_added48,1811
-static void _elim_status_changed ( PurpleAccount *account ,_elim_status_changed67,2688
-static void _elim_request_add ( PurpleAccount *account ,_elim_request_add83,3471
-typedef struct _AUI_RESP AUI_RESP;AUI_RESP102,4327
-struct _AUI_RESP_AUI_RESP103,4362
-    char     *id   ;id105,4381
-    gpointer  data ;data106,4402
-    PARA_CB   ok   ;ok107,4423
-    PARA_CB   nok  ;nok108,4444
-static xmlnode * _elim_request_authorise_cb( gpointer ptr, SEXP_VALUE *args )_elim_request_authorise_cb111,4469
-static void *_elim_request_authorise ( PurpleAccount *account      ,_elim_request_authorise131,5000
-static void _elim_close_account_request ( gpointer ui_handle )_elim_close_account_request165,6609
-
-ui_ops/blist_ui_ops.c,1163
-#define PBLN_GET(PBLN_GET21,1157
-PurpleBlistUiOps elim_blist_ui_ops =elim_blist_ui_ops24,1303
-static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b )_elim_blnode_to_xnode39,1719
-static void _elim_bl_new_list          ( PurpleBuddyList *list ) { }_elim_bl_new_list142,5319
-static xmlnode * __elim_bl_xnode( PurpleBlistNode *node, const char *name )__elim_bl_xnode144,5389
-static void _elim_bl_new_node( PurpleBlistNode *node )_elim_bl_new_node153,5651
-static void _elim_bl_update ( PurpleBuddyList *list , PurpleBlistNode *node )_elim_bl_update158,5787
-static void _elim_bl_remove ( PurpleBuddyList *list , PurpleBlistNode *node )_elim_bl_remove163,5946
-static void _elim_bl_show         ( PurpleBuddyList *list ) {}_elim_bl_show169,6106
-static void _elim_bl_destroy      ( PurpleBuddyList *list ) {}_elim_bl_destroy170,6169
-static void _elim_bl_set_visible  ( PurpleBuddyList *list , gboolean show ) {}_elim_bl_set_visible171,6232
-static void _elim_bl_request_add_buddy ( PurpleAccount *account  ,_elim_bl_request_add_buddy172,6311
-static void _elim_bl_request_add_chat  ( PurpleAccount *account  ,_elim_bl_request_add_chat176,6582
-
-ui_ops/idle_ui_ops.c,234
-static time_t when = 0;when4,44
-PurpleIdleUiOps elim_idle_ui_ops = elim_idle_ui_ops6,69
-time_t elim_idle (void) { return time(NULL) - when; }elim_idle16,185
-time_t elim_ping (void) { return when = time(NULL); }elim_ping17,239
-
-ui_ops/conversation_ui_ops.c,1756
-PurpleConversationUiOps elim_conversation_ui_ops =elim_conversation_ui_ops47,3030
-static gboolean _elim_strippable ( PurpleConversation   *conv  , _elim_strippable71,3640
-static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )_elim_conv_args86,4302
-static void _elim_create_conversation  ( PurpleConversation *conv )_elim_create_conversation106,5251
-static void _elim_destroy_conversation ( PurpleConversation *conv )_elim_destroy_conversation116,5552
-static void _elim_write_chat ( PurpleConversation *conv    , _elim_write_chat126,5854
-static void _elim_write_im ( PurpleConversation *conv    , _elim_write_im151,6718
-static void _elim_write_conv ( PurpleConversation *conv    ,_elim_write_conv176,7566
-static void _elim_chat_add_users       ( PurpleConversation *conv         ,_elim_chat_add_users203,8584
-static void _elim_chat_rename_user     ( PurpleConversation *conv      , _elim_chat_rename_user230,9738
-static void _elim_chat_remove_users    ( PurpleConversation *conv  , _elim_chat_remove_users234,10034
-static void _elim_chat_update_user     ( PurpleConversation *conv, _elim_chat_update_user236,10175
-static void _elim_present              ( PurpleConversation *conv )_elim_present238,10313
-static void _elim_custom_smiley_write  ( PurpleConversation *conv  , _elim_custom_smiley_write248,10616
-static void _elim_custom_smiley_close  ( PurpleConversation *conv  , _elim_custom_smiley_close252,10896
-static void _elim_send_confirm         ( PurpleConversation *conv  , _elim_send_confirm254,11037
-static gboolean _elim_has_focus        ( PurpleConversation *conv )_elim_has_focus257,11179
-static gboolean _elim_custom_smiley_add( PurpleConversation *conv  , _elim_custom_smiley_add262,11269
-
-ui_ops/conversation_ui_ops.h,71
-#define _ELIM_CONVERSATION_UI_OPS_H__ELIM_CONVERSATION_UI_OPS_H_2,37
-
-ui_ops/request_ui_ops.c,2639
-PurpleRequestUiOps elim_request_ui_ops =elim_request_ui_ops78,4877
-typedef void (*action_func) (gpointer data);action_func93,5155
-typedef struct _REQ_RESP REQ_RESP;REQ_RESP94,5200
-struct _REQ_RESP_REQ_RESP95,5235
-    char             *id   ;id97,5254
-    gpointer          data ;data98,5283
-    PurpleRequestType type ;type99,5312
-        struct { PurpleRequestInputCb  ok; PurpleRequestInputCb  nok; } input ;ok102,5361
-        struct { PurpleRequestInputCb  ok; PurpleRequestInputCb  nok; } input ;nok102,5361
-        struct { PurpleRequestInputCb  ok; PurpleRequestInputCb  nok; } input ;input102,5361
-        struct { PurpleRequestChoiceCb ok; PurpleRequestChoiceCb nok; } choice;ok103,5441
-        struct { PurpleRequestChoiceCb ok; PurpleRequestChoiceCb nok; } choice;nok103,5441
-        struct { PurpleRequestChoiceCb ok; PurpleRequestChoiceCb nok; } choice;choice103,5441
-        struct { action_func        *func; int                 count; } action;func104,5521
-        struct { action_func        *func; int                 count; } action;count104,5521
-        struct { action_func        *func; int                 count; } action;action104,5521
-        struct { PurpleRequestFileCb   ok; PurpleRequestFileCb   nok; } path  ;ok105,5601
-        struct { PurpleRequestFileCb   ok; PurpleRequestFileCb   nok; } path  ;nok105,5601
-        struct { PurpleRequestFileCb   ok; PurpleRequestFileCb   nok; } path  ;path105,5601
-    } req;req106,5681
-static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )_elim_request_input_cb109,5696
-static void *_elim_request_input ( const char         *title         ,_elim_request_input137,6457
-static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )_elim_request_choice_cb203,9526
-static void *_elim_request_choice( const char         *title         ,_elim_request_choice231,10300
-static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )_elim_request_action_cb297,13306
-static void *_elim_request_action( const char          *title        ,_elim_request_action329,14247
-static void *_elim_request_fields( const char          *title        ,_elim_request_fields401,17208
-static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )_elim_request_path_cb417,18082
-static void *_elim_request_file  ( const char            *title      ,_elim_request_file445,18833
-static void _elim_close_request  ( PurpleRequestType type, void *ui_handle )_elim_close_request502,21218
-static void *_elim_request_folder( const char            *title      ,_elim_request_folder513,21496
-
-ui_ops/request_ui_ops.h,111
-#define _ELIM_REQUEST_UI_OPS_H__ELIM_REQUEST_UI_OPS_H_2,32
-#define VA_LIST_TO_ALIST(VA_LIST_TO_ALIST10,193
-
-test/sexp-test.c,46
-int main ( int argc, char **argv )main8,125
-
-test/sexp-example.h,125
-#define _EMACSIM_SEXP_EXAMPLE_H__EMACSIM_SEXP_EXAMPLE_H_2,33
-#define EXAMPLE_SEXP_METHODCALL EXAMPLE_SEXP_METHODCALL4,67
-
-prpl/util.c,264
-PurpleConversation *find_conv_by_acct_uid( PurpleAccount *acct, gpointer id )find_conv_by_acct_uid5,59
-PurpleAccount *find_acct_by_uid(gpointer uid)find_acct_by_uid18,466
-PurplePlugin *find_plugin_by_protocol( const char *name )find_plugin_by_protocol29,739
-
-prpl/util.h,63
-#define _EMACSIM_HANDLER_UTIL_H__EMACSIM_HANDLER_UTIL_H_2,33
-
-handlers/init.c,62
-xmlnode * _h_elim_init ( const char *name ,_h_elim_init4,46
-
-handlers/init.h,63
-#define _EMACSIM_HANDLER_INIT_H__EMACSIM_HANDLER_INIT_H_2,33
-
-handlers/disconnect.c,75
-xmlnode * _h_elim_disconnect ( const char *name , _h_elim_disconnect5,78
-
-handlers/connect.c,69
-xmlnode * _h_elim_connect ( const char *name , _h_elim_connect6,76
-
-handlers/default.c,68
-xmlnode * _h_elim_default( const char *name , _h_elim_default3,22
-
-handlers/add_account.h,77
-#define _EMACSIM_HANDLER_ADD_ACCOUNT_H__EMACSIM_HANDLER_ADD_ACCOUNT_H_2,40
-
-handlers/default.h,69
-#define _EMACSIM_HANDLER_DEFAULT_H__EMACSIM_HANDLER_DEFAULT_H_2,36
-
-handlers/response.c,71
-xmlnode * _h_elim_response ( const char *name , _h_elim_response4,48
-
-handlers/connect.h,69
-#define _EMACSIM_HANDLER_CONNECT_H__EMACSIM_HANDLER_CONNECT_H_2,36
-
-handlers/response.h,71
-#define _EMACSIM_HANDLER_RESPONSE_H__EMACSIM_HANDLER_RESPONSE_H_2,37
-
-handlers/add_account.c,186
-static void _h_elim_account_options ( PurpleAccount *acct, GHashTable *opts )_h_elim_account_options5,79
-xmlnode * _h_elim_add_account ( const char *name , _h_elim_add_account10,238
-
-handlers/list_protocols.c,82
-xmlnode * _h_elim_list_protocols ( const char *name ,_h_elim_list_protocols4,56
-
-handlers/disconnect.h,75
-#define _EMACSIM_HANDLER_DISCONNECT_H__EMACSIM_HANDLER_DISCONNECT_H_2,39
-
-handlers/add_buddy.c,72
-xmlnode * _h_elim_add_buddy ( const char *name ,_h_elim_add_buddy6,78
-
-handlers/add_buddy.h,73
-#define _EMACSIM_HANDLER_ADD_BUDDY_H__EMACSIM_HANDLER_ADD_BUDDY_H_2,38
-
-handlers/join.h,63
-#define _EMACSIM_HANDLER_JOIN_H__EMACSIM_HANDLER_JOIN_H_2,33
-
-handlers/join.c,272
-static void __ghash_copy_sexp_str( gpointer key, gpointer value, gpointer data )__ghash_copy_sexp_str5,72
-static GHashTable * __ghash_str_sexp__str_str( GHashTable *src )__ghash_str_sexp__str_str54,1320
-xmlnode * _h_elim_join( const char *name , _h_elim_join65,1582
-
-handlers/debug.c,64
-xmlnode * _h_elim_debug ( const char *name ,_h_elim_debug4,47
-
-handlers/message.c,68
-xmlnode * _h_elim_message ( const char *name ,_h_elim_message5,75
-
-handlers/message.h,69
-#define _EMACSIM_HANDLER_MESSAGE_H__EMACSIM_HANDLER_MESSAGE_H_2,36
-
-handlers/list_protocols.h,83
-#define _EMACSIM_HANDLER_LIST_PROTOCOLS_H__EMACSIM_HANDLER_LIST_PROTOCOLS_H_2,43
-
-handlers/debug.h,65
-#define _EMACSIM_HANDLER_DEBUG_H__EMACSIM_HANDLER_DEBUG_H_2,34
-
-sexp/sexp-xml.c,983
-#define STATE STATE5,62
-#define DEBUGP_on(DEBUGP_on22,1059
-#define DEBUGP_off(DEBUGP_off24,1214
-#define DEBUGP DEBUGP26,1238
-#define DEBUGI DEBUGI27,1273
-void sexp_init( SEXP *sexp )sexp_init29,1309
-void sexp_rset( SEXP *sexp )sexp_rset41,1667
-void sexp_exit( SEXP *sexp )sexp_exit50,1837
-xmlnode * xnode_from_sexp ( const char *sexp )xnode_from_sexp59,2076
-int xnode_from_sexp_char ( const char c, SEXP *sexp )xnode_from_sexp_char75,2370
-int xnode_from_sexp_chunk ( const char *src, SEXP *sexp, size_t len )xnode_from_sexp_chunk222,6931
-char * sexp_escape_symbol( const char *symbol, int len )sexp_escape_symbol264,8435
-char * sexp_escape_string( const char *symbol, int len, gboolean significant )sexp_escape_string297,9311
-_xnode_to_sexp( xmlnode *node, int *len, int depth )_xnode_to_sexp332,10206
-char * xnode_to_sexp( xmlnode *node, int *len )xnode_to_sexp416,12639
-GString * xnode_to_sexp_gstring( xmlnode *node )xnode_to_sexp_gstring423,12800
-
-sexp/sexp-xml.h,1270
-#define _EMACSIM_SEXP_XML_H__EMACSIM_SEXP_XML_H_2,29
-typedef enum _sexp_state _sexp_state7,107
-    SEXP_TOPLEVEL    , /* top level of xml   */SEXP_TOPLEVEL9,135
-    SEXP_TAG_NAME    , /* tag name */SEXP_TAG_NAME10,183
-    SEXP_TAG_NAMED   , /* tag name collected */SEXP_TAG_NAMED11,221
-    SEXP_ATTR        , /* after tag name, looks like an attr alist */SEXP_ATTR12,269
-    SEXP_ATTR_NAME   , /* attr alist key */SEXP_ATTR_NAME13,339
-    SEXP_ATTR_NAMED  , /* obtained an attr alist key */SEXP_ATTR_NAMED14,383
-    SEXP_ATTR_VAL    , /* attr alias value */SEXP_ATTR_VAL15,439
-    SEXP_ATTR_VALUED , /* obtained an attr alist value */SEXP_ATTR_VALUED16,485
-    SEXP_NESTED      ,SEXP_NESTED17,543
-    SEXP_DATA        ,SEXP_DATA18,566
-    SEXP_PARSEDSEXP_PARSED19,589
-} sexp_state;sexp_state20,605
-typedef struct _SEXP SEXP;SEXP22,620
-struct _SEXP_SEXP23,647
-    xmlnode    *root   ; root25,662
-    xmlnode    *node   ;node26,688
-    sexp_state  state  ;state27,713
-    gboolean    start  ;start28,738
-    gboolean    escape ;escape29,763
-    GString    *buffer ;buffer30,788
-    GString    *tname  ;tname31,813
-    GString    *aname  ;aname32,838
-    GString    *aval   ;aval33,863
-    GString    *data   ;data34,888
-
-sexp/sexp-util.c,922
-#define BASE64_ENCODE(BASE64_ENCODE3,24
-#define BASE64_DECODE(BASE64_DECODE4,94
-typedef struct _ITEM ITEM;ITEM8,233
-struct _ITEM_ITEM9,260
-    GString *str;str11,275
-    guint    depth;depth12,293
-SEXP_TYPE_MAP type_map[] = { { "string", SEXP_STRING  } ,type_map15,317
-static sexp_type _tag_to_type ( const char *name )_tag_to_type24,784
-void sexp_val_glist_free ( gpointer v, gpointer x ) { sexp_val_free( v ); }sexp_val_glist_free36,1097
-void sexp_val_free ( gpointer ptr )sexp_val_free38,1174
-void _sexp_item_to_str( gpointer key, gpointer value, gpointer udata )_sexp_item_to_str72,2093
-void _sexp_listent_to_str( gpointer value, gpointer udata )_sexp_listent_to_str91,2684
-static char * _sexp_to_str( SEXP_VALUE *sexp, int depth, const char *name )_sexp_to_str110,3235
-char * sexp_to_str ( SEXP_VALUE *sexp )sexp_to_str193,5733
-SEXP_VALUE * sexp_value( xmlnode *node )sexp_value198,5820
-
-sexp/sexp-util.h,1426
-#define _EMACSIM_SEXP_UTIL_H__EMACSIM_SEXP_UTIL_H_2,30
-#define ALIST_VAL(ALIST_VAL10,167
-#define ALIST_VAL_STRING(ALIST_VAL_STRING12,228
-#define ALIST_VAL_STR(ALIST_VAL_STR16,422
-#define ALIST_VAL_GSTRING(ALIST_VAL_GSTRING18,472
-#define ALIST_VAL_INT(ALIST_VAL_INT23,662
-#define ALIST_VAL_PTR(ALIST_VAL_PTR28,846
-#define ALIST_VAL_BOOL(ALIST_VAL_BOOL33,1044
-#define ALIST_VAL_ALIST(ALIST_VAL_ALIST38,1232
-typedef enum _sexp_type_sexp_type44,1420
-    SEXP_UNKNOWN ,SEXP_UNKNOWN46,1446
-    SEXP_STRING  ,SEXP_STRING47,1465
-    SEXP_INT     ,SEXP_INT48,1484
-    SEXP_FLOAT   ,SEXP_FLOAT49,1503
-    SEXP_BOOL    ,SEXP_BOOL50,1522
-    SEXP_B64     ,SEXP_B6451,1541
-    SEXP_ALIST   ,SEXP_ALIST52,1560
-    SEXP_LISTSEXP_LIST53,1579
-} sexp_type;sexp_type54,1593
-typedef struct _SEXP_TYPE_MAP SEXP_TYPE_MAP;SEXP_TYPE_MAP56,1607
-struct _SEXP_TYPE_MAP_SEXP_TYPE_MAP57,1652
-    const char *name;name59,1676
-    sexp_type   type;type60,1698
-typedef struct _SEXP_VALUE SEXP_VALUE;SEXP_VALUE64,1725
-struct _SEXP_VALUE _SEXP_VALUE65,1764
-    sexp_type type;type67,1786
-        GString    *string ;string70,1823
-        GString    *data   ;data71,1852
-        int         integer;integer72,1881
-        double      number ;number73,1910
-        gboolean    bool   ;bool74,1939
-        GHashTable *hash   ;hash75,1968
-        GList      *list   ;list76,1997
-    } x;x77,2026
-
-elim-rpc.c,495
-static guint       id      = 0;id3,23
-static GHashTable *cb_data = NULL;cb_data4,55
-xmlnode * response_error( int         code    ,response_error6,91
-xmlnode * response_value( int         code  ,response_value34,1205
-xmlnode * func_call ( const char *name, const char *id, xmlnode *args )func_call58,2080
-char * new_elim_id ()new_elim_id68,2387
-gboolean store_cb_data( char *key, gpointer value )store_cb_data75,2540
-gpointer fetch_cb_data( const char *key )fetch_cb_data87,2787
-
-elim-rpc.h,565
-#define _EMACS_IM_HANDLER_H__EMACS_IM_HANDLER_H_2,29
-#define ASSERT_ALISTP(ASSERT_ALISTP14,269
-#define AL_STR(AL_STR22,762
-#define AL_INT(AL_INT25,858
-#define AL_BOOL(AL_BOOL28,954
-#define AL_NODE(AL_NODE31,1050
-typedef xmlnode *(*CB_FUNC)(gpointer data, SEXP_VALUE *args);CB_FUNC36,1223
-typedef struct _CB_HANDLER CB_HANDLER;CB_HANDLER37,1285
-struct _CB_HANDLER { CB_FUNC func; gpointer data; };_CB_HANDLER38,1324
-struct _CB_HANDLER { CB_FUNC func; gpointer data; };func38,1324
-struct _CB_HANDLER { CB_FUNC func; gpointer data; };data38,1324
-
-make/elim-ops-h.sh,0
-
-make/handler-list-h.sh,0
-
-make/elim-func-handlers-c.sh,0
-
-Makefile,742
-INSTALLED   = $(if $(shell pkg-config $(1) --exists || echo t),\INSTALLED3,101
-PACKAGES    := glib-2.0 libxml-2.0 purple libxml-2.0PACKAGES7,323
-DEFINES     := -D_GNU_SOURCE \DEFINES10,502
-TVER        := $(shell etags --version | head -n 1 | grep -i exuberant)TVER22,1236
-BINARIES    := elim-client test/sexp-testBINARIES23,1308
-CH_FILES    := $(wildcard *.c         ) \CH_FILES24,1350
-HANDLER_SRC := $(wildcard handlers/*.c)HANDLER_SRC30,1600
-HANDLER_OBJ := $(patsubst %.c, %.o, $(HANDLER_SRC) )HANDLER_OBJ31,1640
-OBJ_FILES   := $(patsubst %.c, %.o, $(CH_FILES) )OBJ_FILES32,1693
-UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.oUTIL_OBJ33,1743
-CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))CLIENT_OBJ34,1788
-
-elim-client-utils.h,61
-#define _EMACSIM_CLIENT_UTIL_H__EMACSIM_CLIENT_UTIL_H_2,32
-
-elim-client.h,498
-#define _IM_CLIENT_H__IM_CLIENT_H_2,22
-typedef enum _xmlrpc_type_xmlrpc_type18,326
-    XRPC_UNKNOWN ,XRPC_UNKNOWN20,354
-    XRPC_INTEGER ,XRPC_INTEGER21,373
-    XRPC_BOOLEAN ,XRPC_BOOLEAN22,392
-    XRPC_FLOAT   ,XRPC_FLOAT23,411
-    XRPC_STRING  ,XRPC_STRING24,430
-    XRPC_BASE64  ,XRPC_BASE6425,449
-    XRPC_ALIST   ,XRPC_ALIST26,468
-    XRPC_LIST    ,XRPC_LIST27,487
-    XRPC_DATE    ,XRPC_DATE28,506
-    XRPC_NIL         XRPC_NIL29,525
-} xmlrpc_type;xmlrpc_type30,547
-
-elim-client.c,740
-#define IO_IN IO_IN3,26
-#define IO_ERR IO_ERR4,65
-#define IO_OUT IO_OUT5,116
-#define CHUNK CHUNK6,142
-static GQueue         out_queue ;out_queue9,242
-static SEXP           parser    ;parser10,276
-static GIOChannel    *out       ;out11,310
-static sexp_func get_handler ( const char *name )get_handler20,798
-guint add_outbound_sexp ( xmlnode *resp )add_outbound_sexp32,1121
-static gboolean sexp_xmitter(GIOChannel *io, GIOCondition cond, gpointer data)sexp_xmitter58,1781
-static gboolean sexp_handler(GIOChannel *io, GIOCondition cond, gpointer data)sexp_handler99,2929
-static gboolean quit_handler(GIOChannel *in, GIOCondition cond, gpointer data)quit_handler172,5713
-int main ( int argc, char **argv )main178,5858
-
-xnode/xnode.c,3833
-#define XML_DECL XML_DECL8,123
-xnode_first_child_tag ( xmlnode *node )xnode_first_child_tag11,194
-xnode_get_next_sibling ( xmlnode *node )xnode_get_next_sibling19,379
-xnode_markup_unescape_entity( const char *text, int *length )xnode_markup_unescape_entity27,574
-#define ENTITY(ENTITY34,729
-#undef ENTITYENTITY60,1761
-xnode_unescape_html( const char *html ) xnode_unescape_html67,1841
-new_node( const char *name, XMLNodeType type )new_node103,2621
-xnode_new( const char *name )xnode_new114,2809
-xnode_new_child( xmlnode *parent, const char *name )xnode_new_child122,2950
-xnode_insert_child(xmlnode *parent, xmlnode *child)xnode_insert_child137,3240
-xnode_insert_data( xmlnode *node, const char *data, gssize size )xnode_insert_data151,3575
-xnode_remove_attrib( xmlnode *node, const char *attr )xnode_remove_attrib171,4030
-static gboolean _xnode_compare_xmlns( const char *xmlns1, const char *xmlns2 )_xnode_compare_xmlns197,4843
-xnode_remove_attrib_with_namespace( xmlnode    *node  , xnode_remove_attrib_with_namespace207,5110
-xnode_set_attrib( xmlnode *node, const char *attr, const char *value )xnode_set_attrib236,6012
-xnode_set_attrib_with_namespace( xmlnode    *node  , xnode_set_attrib_with_namespace252,6427
-xnode_set_attrib_with_prefix( xmlnode    *node   , xnode_set_attrib_with_prefix273,7050
-xnode_get_attrib( xmlnode *node, const char *attr )xnode_get_attrib294,7617
-xnode_get_attrib_with_namespace( xmlnode    *node  , xnode_get_attrib_with_namespace310,7930
-void xnode_set_namespace( xmlnode *node, const char *xmlns )xnode_set_namespace329,8423
-const char *xnode_get_namespace( xmlnode *node )xnode_get_namespace337,8592
-void xnode_set_prefix( xmlnode *node, const char *prefix )xnode_set_prefix344,8719
-const char *xnode_get_prefix( xmlnode *node )xnode_get_prefix352,8889
-xnode_free( xmlnode *node )xnode_free359,9018
-xnode_get_child( const xmlnode *parent, const char *name )xnode_get_child403,10135
-xnode_get_child_with_namespace( const xmlnode *parent , xnode_get_child_with_namespace409,10274
-xnode_get_data( xmlnode *node )xnode_get_data449,11402
-xnode_get_data_unescaped( xmlnode *node )xnode_get_data_unescaped471,11885
-xnode_to_str_foreach_append_ns( const char *key   , xnode_to_str_foreach_append_ns482,12108
-xnode_to_str_helper( xmlnode *node, int *len, gboolean formatting, int depth )xnode_to_str_helper491,12434
-xnode_to_str( xmlnode *node, int *len )xnode_to_str616,16535
-xnode_to_formatted_str( xmlnode *node, int *len )xnode_to_formatted_str622,16642
-struct _xnode_parser_data _xnode_parser_data640,17095
-    xmlnode *current;current642,17124
-    gboolean error;error643,17146
-xnode_parser_element_start_libxml( void           *user_data     ,xnode_parser_element_start_libxml647,17182
-xnode_parser_element_end_libxml( void          *user_data    ,xnode_parser_element_end_libxml718,19793
-xnode_parser_element_text_libxml( void          *user_data ,xnode_parser_element_text_libxml736,20352
-xnode_parser_error_libxml( void *user_data, const char *msg, ... )xnode_parser_error_libxml749,20767
-static xmlSAXHandler xnode_parser_libxml = xnode_parser_libxml765,21151
-xnode_from_str( const char *str, gssize size )xnode_from_str802,23387
-xnode_copy( const xmlnode *src )xnode_copy834,24132
-xnode_get_next_twin( xmlnode *node )xnode_get_next_twin879,25064
-#define _ALIST_ITEM(_ALIST_ITEM906,25869
-xmlnode * xnode_alist_item_string( const char *name, const char *value )xnode_alist_item_string910,26006
-xmlnode * xnode_alist_item_integer( const char *name, int value )xnode_alist_item_integer920,26205
-xmlnode * xnode_alist_item_boolean( const char *name, gboolean value )xnode_alist_item_boolean935,26514
-xmlnode * xnode_alist_item_xnode( const char *name, xmlnode *value )xnode_alist_item_xnode945,26720
-
-xnode/xnode.h,140
-#define _EMACSIM_XMLNODE_H__EMACSIM_XMLNODE_H_2,28
-#define INT_32BIT_MAX INT_32BIT_MAX8,225
-#define INT_32BIT_MIN INT_32BIT_MIN10,333
-
-data/init.el,0
-
-data/sexprpc.el,0
-
-data/list-protocols.el,0
-
-elim-client-queue.h,61
-#define _EMACSIM_IM_CLIENT_Q_H__EMACSIM_IM_CLIENT_Q_H_2,32
-
-handler-list.h,63
-#define _EMACSIM_HANDLER_LIST_H__EMACSIM_HANDLER_LIST_H_2,33
-
-elisp/elim.el,3274
-(defcustom elim-executable "elim-client" elim-executable4,117
-(defcustom elim-directory (expand-file-name "~/.emacs.d/elim")elim-directory9,262
-(defvar elim-call-handler-alistelim-call-handler-alist15,447
-(defvar elim-resp-handler-alistelim-resp-handler-alist42,1389
-(defvar elim-call-id          0)elim-call-id55,1927
-(defvar elim-proto-buffer   nil)elim-proto-buffer56,1960
-(defvar elim-process        nil)elim-process57,1993
-(defvar elim-callback-stack nil)elim-callback-stack58,2026
-(defvar elim-conversations  nil)elim-conversations59,2059
-(defvar elim-accounts       nil)elim-accounts60,2092
-(defun elim-call-id ()elim-call-id62,2126
-(defun elim-command () elim-command65,2210
-(defun elim-parse-proto-args (arg)elim-parse-proto-args71,2481
-(defun elim-number-to-proto (number)elim-number-to-proto89,3422
-(defun elim-atom-to-proto (x)elim-atom-to-proto98,3763
-(defun elim-atom-to-item (k v)elim-atom-to-item104,4042
-(defun elim-sexp-to-item (k v)elim-sexp-to-item109,4235
-(defun elim-simple-list-to-proto-alist (arg-list)elim-simple-list-to-proto-alist114,4421
-(defun elim-daemon-call (name id args)elim-daemon-call127,4967
-(defun elim-debug (&rest args)elim-debug138,5508
-(defun elim-handle-sexp (proc sexp)elim-handle-sexp143,5654
-(defun elim-get-handler-by-id   (proc id  ) nil)elim-get-handler-by-id158,6338
-(defun elim-get-handler-by-name (proc name)elim-get-handler-by-name159,6387
-(defun elim-handle-resp (proc name attr args)elim-handle-resp164,6583
-(defun elim-handle-call (proc name attr args)elim-handle-call175,7121
-(defun elim-input-filter (process data)elim-input-filter179,7204
-(defun elim-process-send (process sexp-value)elim-process-send197,7860
-(defun elim-store-process-data (proc key value)elim-store-process-data208,8272
-(defun elim-fetch-process-data (proc key)elim-fetch-process-data214,8534
-(defun elim-default-fail-handler (proc name id attr args)elim-default-fail-handler219,8733
-(defun elim-default-response-handler (proc name id attr args)elim-default-response-handler222,8836
-(defun elim-list-protocols-response (proc name id attr args)elim-list-protocols-response227,9077
-(defun elim-response-filter-account-data (proc name id attr args)elim-response-filter-account-data232,9323
-(defun elim-init (process &optional ui-string user-dir) elim-init248,10116
-(defun elim-protocol-alist (process)elim-protocol-alist270,11147
-(defun elim-protocol-supported (process protocol)elim-protocol-supported274,11313
-(defun elim-assoc (key list &optional test test-cons)elim-assoc279,11552
-(defun elim-account-data (process account)elim-account-data286,11790
-(defun elim-account-proto-items (process account)elim-account-proto-items302,12654
-(defun elim-start (&optional ui-string user-dir)elim-start314,13224
-(defun elim-update-protocol-list (process)elim-update-protocol-list344,14633
-(defun elim-add-account (process account protocol password &optional options)elim-add-account350,14876
-(defun elim-co-disco (process account operation)elim-co-disco370,15817
-(defun elim-disconnect (process account)elim-disconnect376,16081
-(defun elim-connect (process account)elim-connect380,16241
-(defun elim-join-chat (process account alias options)elim-join-chat384,16390
-
-elisp/test.el,0
-
-elim-func-handlers.h,299
-#define _ELIM_FUNC_HANDLERS_H__ELIM_FUNC_HANDLERS_H_2,31
-typedef xmlnode * (*sexp_func) ( const char *name , sexp_func7,118
-typedef struct _func_handler func_handler;func_handler12,330
-struct _func_handler_func_handler13,373
-    char      *name;name15,396
-    sexp_func  func;func16,417
-
-elim-func-handlers.c,41
-func_handler handlers[] = handlers2,32
