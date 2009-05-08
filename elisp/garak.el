@@ -182,6 +182,8 @@ substitute these characters for the basic ascii ones:\n
     ;; accounts:
     (add-account                 . garak-account-update      )
     (remove-account              . garak-account-update      )
+    ;; prefs
+    (get-prefs                   . garak-setup-prefs-buffer  )
     ;; messages:
     (elim-conv-write-chat        . garak-chat-message        )
     (elim-conv-write-im          . garak-user-message        )
@@ -201,18 +203,34 @@ substitute these characters for the basic ascii ones:\n
           garak-conv-uid
           garak-conv-name   )))
 
-(defun garak-conversation-buffer (args &optional do-not-create)
-  (let ((uid (cdr (assoc "conv-uid" args))) buffer)
-    (when uid (setq buffer (cdr (assoc uid garak-conversation-buffers))))
+(defun garak-buffer-reusable (proc buffer)
+  (let (oldproc)
+    (and (bufferp       buffer)
+         (buffer-live-p buffer)
+         (setq oldproc (buffer-local-value 'garak-elim-process buffer))
+         (let ((status (and (processp oldproc) (process-status oldproc))))
+           (or (eq oldproc proc)
+               (not (memq status '(run stop open connect))) )) )))
+
+(defun garak-conversation-buffer (proc args &optional do-not-create)
+  (let ((uid   (elim-avalue "conv-uid"  args))
+        (cname (elim-avalue "conv-name" args)) buffer)
+    (when uid
+      (setq buffer (or (elim-avalue uid garak-conversation-buffers) 
+                       (get-buffer cname))))
     (when (and (bufferp buffer) (not (buffer-live-p buffer)))
       (rassq-delete-all buffer garak-conversation-buffers)
       (setq buffer nil))
-    (when (and (not buffer) (not do-not-create))
-      (progn
-        (setq buffer (generate-new-buffer (cdr (assoc "conv-name" args)))
-              garak-conversation-buffers
-              (cons (cons uid buffer) garak-conversation-buffers))))
+    (if (not (garak-buffer-reusable proc buffer))
+        (if do-not-create
+            (setq buffer nil)
+          (setq buffer (generate-new-buffer cname)
+                garak-conversation-buffers
+                (cons (cons uid buffer) garak-conversation-buffers)) ))
     buffer))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; process tracking and management
 
 (defun garak-elim-exit (proc name id status args)
   (mapc (lambda (acct) (garak-account-update proc name id 0 (list acct)))
@@ -234,7 +252,7 @@ substitute these characters for the basic ascii ones:\n
   (if (string-match "^\\(.*?\\)@" nick) (match-string 1 nick) nick))
 
 (defun garak-command-response (process call call-id status args)
-  (let ((buffer (garak-conversation-buffer args t)) cmd cstatus err)
+  (let ((buffer (garak-conversation-buffer process args t)) cmd cstatus err)
     ;;(message "garak-command-response %S %S %S" call status args)
     (if buffer
       (with-current-buffer buffer
@@ -282,7 +300,7 @@ substitute these characters for the basic ascii ones:\n
     (format "%s (%s ago)" absolute dlabel)))
 
 (defun garak-chat-message (process call call-id status args)
-  (let ( (buffer  (garak-conversation-buffer args t))
+  (let ( (buffer  (garak-conversation-buffer process args t))
          (flags   (cdr (assoc "flags" args)))
          (mformat "<%s> %s")
          text who nick-face title when stamp)
@@ -323,9 +341,9 @@ substitute these characters for the basic ascii ones:\n
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; conv callbacks
 (defun garak-new-conversation (process call call-id status args)
-  (let ((buffer (garak-conversation-buffer args t)))
+  (let ((buffer (garak-conversation-buffer process args t)))
     (when (not buffer)
-      (setq buffer (garak-conversation-buffer args))
+      (setq buffer (garak-conversation-buffer process args))
       (with-current-buffer buffer
         (garak-mode)
         (garak-init-local-storage)
@@ -339,7 +357,7 @@ substitute these characters for the basic ascii ones:\n
       buffer))
 
 (defun garak-end-conversation (process call call-id status args)
-  (let ((buffer (garak-conversation-buffer args t)))
+  (let ((buffer (garak-conversation-buffer process args t)))
     (when buffer
       (with-current-buffer buffer
         (setq garak-dead-conversation-buffers
@@ -349,7 +367,7 @@ substitute these characters for the basic ascii ones:\n
         (lui-insert "*conversation ended*") )) ))
 
 (defun garak-chat-add-users (process call call-id status args)
-  (let ((buffer (garak-conversation-buffer args t))
+  (let ((buffer (garak-conversation-buffer process args t))
         people name new message cname)
     (when (not buffer)
       (setq buffer (garak-new-conversation process call call-id status args)))
@@ -379,6 +397,9 @@ substitute these characters for the basic ascii ones:\n
   (let ((id   (cons "fields" (car field)))
         (data (cdr field)))
     (elim-request-field (cons id data)) ))
+
+(defun garak-choice-item (tag value)
+  (list 'choice-item :format "%[%t%]" :tag tag :value value))
 
 (defun garak-ui-cancel-cb (&optional parent child event &rest stuff)
   (when elim-form-ui-args (kill-buffer nil)))
@@ -461,7 +482,96 @@ substitute these characters for the basic ascii ones:\n
         (display-buffer ui-buffer) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; preferences buffer
+(defun garak-ui-create-prefs-buffer (proc) 
+  (let ((buffer (or (elim-fetch-process-data proc :prefs-buffer) 
+                    (get-buffer "*garak-prefs**"))))
+    (when (not (garak-buffer-reusable proc buffer))
+      (setq buffer (generate-new-buffer "*garak-prefs*"))
+      (elim-store-process-data proc :prefs-buffer buffer))
+    (with-current-buffer buffer 
+      (elim-init-ui-buffer)
+      (garak-init-local-storage)
+      (setq garak-elim-process proc)
+      (tree-widget-set-theme)
+      (use-local-map widget-keymap)
+      (widget-setup)
+      (elim-get-prefs proc 'garak-ui-insert-prefs-widget)) buffer))
+
+(defun garak-ui-pref-to-node (pref)
+  (let (type name kids data value w-args)
+    (setq data  (cdr pref)
+          name  (car (last (split-string (car pref) "/" nil)))
+          type  (elim-avalue "pref-type"  data)
+          value (elim-avalue "pref-value" data))
+    (setq w-args
+          (cond ((eq type :boolean) (list 'toggle    :value  value 
+                                                     :format "%[%t: %v%]\n")) 
+                ((eq type :string ) (list 'string    :value (or value "")))
+                ((eq type :path   ) (list 'directory :value (or value "")))
+                ((eq type :int    ) (list 'number    :value (or value 0 ))) 
+                (t                  (list 'const     :value value))))
+    (apply 'widget-convert (nconc w-args (list :tag name))) ))
+
+(defun garak-ui-pref-to-widget (pref)
+  (apply 'widget-convert 'tree-widget
+         :open   t
+         :node   (garak-ui-pref-to-node pref)
+         :inline t
+         :notify 'garak-ui-pref-node-command
+         (garak-ui-pref-children pref)))
+
+(defun garak-ui-pref-children (pref)
+  (let (kids)
+    (setq kids (elim-avalue "pref-children" (cdr pref)))
+    (mapcar 'garak-ui-pref-to-widget kids)))
+
+(defun garak-ui-insert-prefs-widget (proc name id attr args)
+  (let ((buffer (elim-fetch-process-data proc :prefs-buffer)) prefs) 
+    (when buffer
+      (with-current-buffer buffer
+        (setq prefs (elim-avalue "prefs" (elim-avalue "value" args)))
+        (mapc 
+         (lambda (pref) 
+           (apply 'widget-create 'tree-widget
+                  :open   t
+                  :node   (garak-ui-pref-to-node pref)
+                  :inline t
+                  :notify 'garak-ui-pref-node-command
+                  (garak-ui-pref-children pref) )) prefs) )) ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list
+(defun garak-ui-create-widget-buffer (proc)
+  (when (tree-widget-use-image-p) (garak-load-icons))
+  (let ((blist   (elim-buddy-list proc))
+        (icons   (copy-sequence garak-icons))
+        (bbuffer (or (elim-fetch-process-data proc :blist-buffer) 
+                     (get-buffer "*Garak*"))))
+    (when (not (garak-buffer-reusable proc bbuffer))
+      (setq bbuffer (generate-new-buffer "*Garak*")))
+    (elim-store-process-data proc :blist-buffer bbuffer)
+    (with-current-buffer bbuffer
+      (elim-init-ui-buffer)
+      (garak-init-local-storage)
+      (setq garak-elim-process proc)
+      ;; initialise tree-widget support in this buffer
+      (tree-widget-set-theme)
+      ;; add our icons into the whatever tree-widget theme
+      ;; the user wanted as the default:
+      (setq icons (nconc icons (aref tree-widget--theme 3)))
+      (aset tree-widget--theme 3 icons)
+      (add-hook 'tree-widget-before-create-icon-functions
+                'garak-ui-node-setup-icon nil t)
+      (setq elim-form-ui-args (list :process proc))
+      (garak-insert-account-list)
+      (mapc
+       (lambda (N)
+         (garak-insert-buddy-list-toplevel proc N)) blist)
+      (use-local-map widget-keymap)
+      (widget-setup))
+    bbuffer))
+
 (defun garak-menu-actions-to-choices (raw &optional cooked)
   (mapc 
    (lambda (entry)
@@ -521,9 +631,6 @@ substitute these characters for the basic ascii ones:\n
     (cond ((eq op 'login ) (elim-connect    proc auid))
           ((eq op 'logout) (elim-disconnect proc auid))
           (t (elim-debug "UI Account Operation `%S' not implemented" op))) ))
-
-(defun garak-choice-item (tag value)
-  (list 'choice-item :format "%[%t%]" :tag tag :value value))
 
 (defun garak-buddy-list-node-widget (proc bnode)
   (let (kids uid menu type name mtail plabel blabel auid aicon)
@@ -973,34 +1080,6 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (when (setq tag (elim-avalue icon garak-icon-tags))
         (widget-put wicon :tag tag)) ) ))
 
-(defun garak-create-ui-widget-buffer (proc)
-  (when (tree-widget-use-image-p) (garak-load-icons))
-  (let ((blist   (elim-buddy-list proc))
-        (icons   (copy-sequence garak-icons))
-        (bbuffer (elim-fetch-process-data proc :blist-buffer)))
-    (when (or (not bbuffer) (not (buffer-live-p bbuffer)))
-      (setq bbuffer (generate-new-buffer "*Garak*"))
-      (elim-store-process-data proc :blist-buffer bbuffer))
-    (with-current-buffer bbuffer
-      (elim-init-ui-buffer)
-      (garak-init-local-storage)
-      (setq garak-elim-process proc)
-      ;; initialise tree-widget support in this buffer
-      (tree-widget-set-theme)
-      ;; add our icons into the whatever tree-widget theme
-      ;; the user wanted as the default:
-      (setq icons (nconc icons (aref tree-widget--theme 3)))
-      (aset tree-widget--theme 3 icons)
-      (add-hook 'tree-widget-before-create-icon-functions
-                'garak-ui-node-setup-icon nil t)
-      (setq elim-form-ui-args (list :process proc))
-      (garak-insert-account-list)
-      (mapc
-       (lambda (N)
-         (garak-insert-buddy-list-toplevel proc N)) blist)
-      (use-local-map widget-keymap)
-      (widget-setup))
-    bbuffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commands
@@ -1335,20 +1414,30 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 (defun garak-gui ()
   "Create and display the garak buddy and account list widget buffer"
   (interactive)
-  (let ((gui (garak-create-ui-widget-buffer garak-elim-process))
+  (let ((gui (garak-ui-create-widget-buffer garak-elim-process))
+        (display-buffer-reuse-frames t))
+    (display-buffer gui)))
+
+(defun garak-prefs ()
+  "Create and display the garak preferences buffer"
+  (interactive)
+  (let ((gui (garak-ui-create-prefs-buffer garak-elim-process))
         (display-buffer-reuse-frames t))
     (display-buffer gui)))
 
 (defun garak ()
   (interactive)
-  (switch-to-buffer (generate-new-buffer "*garak*"))
-  (garak-mode)
-  (setq lui-input-function 'garak-input-handler)
-  (lui-insert "starting elim" t)
-  (set (make-local-variable 'garak-elim-process)
-       (elim-start "garak" nil garak-callbacks))
-  (let ((display-buffer-reuse-frames t))
-    (display-buffer (garak-create-ui-widget-buffer garak-elim-process)))
-  (end-of-buffer))
+  (let ((buffer (get-buffer "*garak*")))
+    (if (garak-buffer-reusable nil buffer)
+        (switch-to-buffer buffer)
+      (switch-to-buffer (generate-new-buffer "*garak*"))
+      (make-local-variable 'garak-elim-process)
+      (garak-mode))
+    (setq lui-input-function 'garak-input-handler)
+    (lui-insert "starting elim" t)
+    (setq garak-elim-process (elim-start "garak" nil garak-callbacks))
+    (let ((display-buffer-reuse-frames t))
+      (display-buffer (garak-ui-create-widget-buffer garak-elim-process)))
+    (end-of-buffer)))
 
 (provide 'garak)

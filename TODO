@@ -2,8 +2,8 @@
 * importers
 ** TODO account importer
 ** TODO buddy importer
-* proces control
-** TODO make buffer selection code re-use buffers from dead elim processes
+* process control
+** DONE make buffer selection code re-use buffers from dead elim processes
 ** DONE make process sentinel warn the user when elim dies
 * account list
 ** DONE update account status in ascii mode
@@ -17,12 +17,20 @@
 ** DONE update buddy status in ascii as well as gui mode
 ** DONE add protocol icon to buddy entries
 ** DONE extended buddy list menu actions
+** TODO buddy info action, inc display buddy icon
 ** TODO make blocking/unblocking work
 ** TODO remove buddy from CLI as well as GUI
 ** TODO distinguish homonymous entries by account
-** TODO rename buddy
+** TODO rename/alias buddy
 ** TODO move buddy to a new group
 ** TODO fix buddy add so only one entry per buddy in blist (no clones)
 ** TODO offline buddies (when option set)
 *** DONE hide when offline at login-time
 *** TODO hide when they go offline after you log in
+* misc stuff
+** TODO set buddy icon
+** TODO update docs to cover new client-to-daemon commands
+* preferences
+** DONE fetch preferences list and display it in editable widget form
+** TODO add specialised preference widgets for those that need it
+** TODO implement setting preferences

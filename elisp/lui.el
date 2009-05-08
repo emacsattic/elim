@@ -125,16 +125,9 @@ is then associated with the match."
   :group 'lui)
 
 (defcustom lui-buttons-list
-  `((,(rx (or (and (or "http"
-                       "https"
-                       "ftp"
-                       "irc")
-                   "://"
-                   (* (not (any "()<> \n")))
-                   (any "a-zA-Z0-9/"))
-              (and "www."
-                   (* (any "a-zA-Z0-9./?~-"))
-                   (any "a-zA-Z0-9/"))))
+  `((,(concat 
+       "\\(?:" "\\(?:ftp\\|https?\\|irc\\)" "://[^()<> \n]*[a-zA-Z0-9/]" "\\|"
+               "www\\.[a-zA-Z0-9./?~-]*[a-zA-Z0-9/]"                     "\\)")
      0 browse-url 0)
     ("`\\([A-Za-z0-9+=*/-]+\\)'" 1 lui-button-elisp-symbol 1)
     ("RFC ?\\([0-9]+\\)" 0 lui-button-rfc 1)

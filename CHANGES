@@ -1,3 +1,9 @@
+2009-05-08  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp   : re-use old dead garak buffers on restart (M-x garak)
+	* handlers: fetch preferences tree
+	* elisp   : display editable preferences widget (M-x garak-prefs)
+
 2009-05-07  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* CHANGES : initial change log entry

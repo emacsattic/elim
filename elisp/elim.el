@@ -37,7 +37,7 @@
   "elim client (libpurple) working directory. 
 Buddy lists etc will be stored here"
   :group 'elim
-  :type '(directory))
+  :type  '(directory))
 
 (defvar elim-enum-alist      nil
   "An alist of (:key (:label0 . value0) (:label1 . value1)) entries describing 
@@ -1035,6 +1035,10 @@ be initialised to the value of `elim-directory' if you do not supply it."
                 (<  (elim-fetch-process-data elim :initialised) 3))
       (accept-process-output))
     elim))
+
+(defun elim-get-prefs (process &optional callback) 
+  "Fetch the preference list for the IM daemon."
+  (elim-process-send process (elim-daemon-call 'get-prefs nil nil) callback))
 
 (defun elim-update-account-list (process)
   "Update (asynchronously) the IM account list cache."
