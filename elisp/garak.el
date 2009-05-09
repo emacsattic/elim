@@ -1,3 +1,23 @@
+;; Copyright © 2009 Vivek Dasmohapatra 
+
+;; email : vivek@etla.org
+;; irc   : fledermaus on freenode, oftc
+;; jabber: fledermaus@jabber.earth.li
+
+;; This file is part of elim.
+
+;; elim is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; elim is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with elim.  If not, see <http://www.gnu.org/licenses/>.
 (require 'lui   nil t)
 (require 'elim  nil t)
 (require 'widget     )
@@ -495,30 +515,50 @@ substitute these characters for the basic ascii ones:\n
       (setq garak-elim-process proc)
       (tree-widget-set-theme)
       (use-local-map widget-keymap)
-      (widget-setup)
       (elim-get-prefs proc 'garak-ui-insert-prefs-widget)) buffer))
 
 (defun garak-ui-pref-to-node (pref)
-  (let (type name kids data value w-args)
-    (setq data  (cdr pref)
-          name  (car (last (split-string (car pref) "/" nil)))
-          type  (elim-avalue "pref-type"  data)
-          value (elim-avalue "pref-value" data))
-    (setq w-args
-          (cond ((eq type :boolean) (list 'toggle    :value  value 
-                                                     :format "%[%t: %v%]\n")) 
-                ((eq type :string ) (list 'string    :value (or value "")))
-                ((eq type :path   ) (list 'directory :value (or value "")))
-                ((eq type :int    ) (list 'number    :value (or value 0 ))) 
-                (t                  (list 'const     :value value))))
-    (apply 'widget-convert (nconc w-args (list :tag name))) ))
+  (let (type name kids data val w-args label)
+    (setq data   (cdr pref)
+          name   (car (last (split-string (car pref) "/" nil)))
+          type   (elim-avalue "pref-type"    data)
+          val    (elim-avalue "pref-value"   data)
+          choice (elim-avalue "pref-choices" data)
+          label  (format "%s%s" name type))
+    (if choice
+        (setq w-args 
+              (apply 'list 'choice 
+                     :value  val
+                     :format "%t: %[%v%]\n"
+                     (mapcar 
+                      (lambda (p) 
+                        (list 'const :format "%t" :tag (car p) (cdr p))) 
+                      choice)))
+      (setq w-args
+            (cond 
+             ((eq type :boolean) (list 'toggle    :format "%t: %[%v%]\n" val))
+             ((eq type :string ) (list 'string    (or val "")))
+             ((eq type :path   ) (list 'directory (or val "")))
+             ((eq type :int    ) (list 'number    (or val 0 ))) 
+             (t                  (list 'const     :value val)))))
+    ;;(message "(widget-convert %S %S %S %S)" 
+    ;;         (car w-args) :tag name (cdr w-args))
+    (apply 'widget-convert
+           (car w-args)
+           :tag        (format "%-16s" name)
+           :old-value  val  
+           :garak-pref (car pref)
+           (cdr w-args)) ))
+
+(defun garak-ui-pref-node-command (&optional widget child event &rest args)
+  (message "garak-ui-pref-node-command(%S %S %S %S)" 
+           (car widget) (car child) event args))
 
 (defun garak-ui-pref-to-widget (pref)
   (apply 'widget-convert 'tree-widget
-         :open   t
-         :node   (garak-ui-pref-to-node pref)
-         :inline t
-         :notify 'garak-ui-pref-node-command
+         :open       t
+         :node       (garak-ui-pref-to-node pref)
+         :inline     t
          (garak-ui-pref-children pref)))
 
 (defun garak-ui-pref-children (pref)
@@ -532,13 +572,13 @@ substitute these characters for the basic ascii ones:\n
       (with-current-buffer buffer
         (setq prefs (elim-avalue "prefs" (elim-avalue "value" args)))
         (mapc 
-         (lambda (pref) 
+         (lambda (pref)
            (apply 'widget-create 'tree-widget
-                  :open   t
-                  :node   (garak-ui-pref-to-node pref)
-                  :inline t
-                  :notify 'garak-ui-pref-node-command
-                  (garak-ui-pref-children pref) )) prefs) )) ))
+                  :open       t
+                  :node       (garak-ui-pref-to-node pref)
+                  :inline     t
+                  (garak-ui-pref-children pref)) ) prefs)
+        (widget-setup) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list
@@ -950,9 +990,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (if (eq name 'elim-exit)
             (setq icon-name ":offline")
           (setq icon-name (garak-account-list-choose-icon conn status)))
-
-        (message "CHOSE ICON: %S" icon-name)
-
+        ;;(message "CHOSE ICON: %S" icon-name)
         ;; widget not found or removing an account => refresh the parent node.
         ;; otherwise                               => update node icon
         (if (or (eq 'remove-account name) (not where-widget))

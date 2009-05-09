@@ -24,15 +24,119 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
-#define MAYBE_IGNORE_PREF( n )                      \
-     { if( !strcmp( (n), "/pidgin"      ) ) return; \
-       if( !strcmp( (n), "/plugins/gtk" ) ) return; }
+typedef gboolean (*pref_func)( xmlnode *node, const char *name );
+typedef struct _pref_handler { char *name; pref_func func; } pref_handler;
+
+static gboolean _pref_idle_rep     ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node, "pref-choices", choices );
+    AL_STR ( choices, "external (OS/display)", "system" );
+    AL_STR ( choices, "internal (libpurple)" , "purple" );
+    AL_STR ( choices, "none"                 , "none"   );
+    return TRUE;
+}
+static gboolean _pref_auto_rep     ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node, "pref-choices", choices );
+    AL_STR ( choices, "Away + Idle" , "awayidle" );
+    AL_STR ( choices, "Never"       , "never"    );
+    AL_STR ( choices, "Away"        , "away"     );
+    return TRUE; 
+}
+static gboolean _pref_idle_stat    ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    GList   *status  = purple_savedstatuses_get_all();
+    AL_NODE( node, "pref-choices", choices );
+
+    for( ; status; status = status->next )
+    {
+        PurpleSavedStatus *s = status->data;
+        const char    *title = purple_savedstatus_get_title        ( s );
+        time_t         value = purple_savedstatus_get_creation_time( s );
+        AL_INT( choices, title, value );
+    }
+
+    return TRUE;     
+}
+static gboolean _pref_log_format   ( xmlnode *node, const char *name )
+{
+    GList   *logger  = NULL;
+    GList   *loggers = purple_log_logger_get_options();
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node, "pref-choices", choices );
+    for( logger = loggers; logger; logger = logger->next->next )
+    {
+        const char *name = logger->data;
+        const char *id   = logger->next->data;
+        AL_STR( choices, name, id );
+    }
+    g_list_free( loggers );
+    return TRUE;
+}
+static gboolean _pref_proxy_type   ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node   , "pref-choices"    , choices  );
+    AL_STR ( choices, "No Proxy"        , "none"   );
+    AL_STR ( choices, "HTTP Proxy"      , "http"   );
+    AL_STR ( choices, "SOCKS v4"        , "socks4" );
+    AL_STR ( choices, "SOCKS v5"        , "socks5" );
+    AL_STR ( choices, "From Environment", "envvar" );
+    return TRUE;
+}
+static gboolean _pref_snd_while    ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node   , "pref-choices"   , choices  );
+    AL_INT ( choices, "When Available" , 1        );
+    AL_INT ( choices, "When Away"      , 2        );
+    AL_INT ( choices, "Always"         , 3        );    
+    AL_INT ( choices, "Never"          , 4        );
+    return TRUE;    
+}
+static gboolean _pref_meanwhile_bl ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    AL_NODE( node, "pref-choices", choices );
+    AL_INT ( choices, "Local Storage Only"        , 1 );
+    AL_INT ( choices, "Merge From Server"         , 2 );
+    AL_INT ( choices, "Merge From+Save To Server" , 3 );
+    AL_INT ( choices, "Sync With Server"          , 4 );
+    return TRUE;    
+}
+
+static pref_handler handlers[] =
+  { { "/purple/away/idle_reporting"          , _pref_idle_rep     } ,
+    { "/purple/away/auto_reply"              , _pref_auto_rep     } ,
+    { "/purple/savedstatus/idleaway"         , _pref_idle_stat    } ,
+    { "/purple/logging/format"               , _pref_log_format   } ,
+    { "/purple/proxy/type"                   , _pref_proxy_type   } ,
+    { "/purple/sound/while_status"           , _pref_snd_while    } ,
+    { "/plugins/prpl/meanwhile/blist_action" , _pref_meanwhile_bl } ,
+    { NULL                                   , NULL               } };
+
+#define MAYBE_IGNORE_PREF( n )                                    \
+    { if( !strcmp( (n), "/pidgin"                     ) ) return; \
+      if( !strcmp( (n), "/plugins/gtk"                ) ) return; \
+      if( !strcmp( (n), "/purple/savedstatus/default" ) ) return; }
+
+static gboolean _munge_special_pref( xmlnode *node, const char *name )
+{
+    pref_handler *h = NULL; 
+    if( name )
+        for( h = handlers; h && h->name; h++ )
+            if( !strcmp( name, h->name ) ) return (h->func)( node, name );
+    return FALSE;
+}
 
 static void _add_pref_data( xmlnode *node, const char *name )
 {
     xmlnode    *entry = NULL;
-    PurplePrefType pt = purple_prefs_get_type( name );
     GList      *vlist = NULL;
+    PurplePrefType pt = purple_prefs_get_type( name );
 
     MAYBE_IGNORE_PREF( name );
 
@@ -40,6 +144,7 @@ static void _add_pref_data( xmlnode *node, const char *name )
 
     AL_NODE( node , name, entry );
     AL_ENUM( entry, "pref-type", pt, ":pref-type" );
+    _munge_special_pref( entry, name );
 
     switch( pt )
     {
@@ -54,11 +159,13 @@ static void _add_pref_data( xmlnode *node, const char *name )
         break;
       case PURPLE_PREF_PATH   :
         AL_STR ( entry, "pref-value", purple_prefs_get_path  ( name ) );
+        AL_BOOL( entry, "is-path"   , TRUE );
         break;
       case PURPLE_PREF_STRING_LIST:
         vlist = purple_prefs_get_string_list( name );
       case PURPLE_PREF_PATH_LIST  :
         vlist = purple_prefs_get_path_list  ( name );
+        AL_BOOL( entry, "is-path"   , TRUE );
       break;
       case PURPLE_PREF_NONE   :
         break;
