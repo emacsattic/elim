@@ -33,6 +33,12 @@
   :group 'elim
   :type  '(file))
 
+(defcustom elim-sh-file "/bin/sh"
+  "Shell to use to run `elim-executable'. 
+Must support Bourne shell style redirection."
+  :group 'elim
+  :type  '(file))
+
 (defcustom elim-directory (expand-file-name "~/.emacs.d/elim")
   "elim client (libpurple) working directory. 
 Buddy lists etc will be stored here"
@@ -325,15 +331,6 @@ and return an s-expression suitable for making a call to an elim daemon."
         (mapc 
          (lambda (S) (elim-handle-sexp process S)) 
          (nreverse sexp-list))) )))
-
-;; (defun elim-process-send (process sexp-value)
-;;   (let ((print-level  nil) 
-;;         (print-length nil)
-;;         (sexp-string  nil))
-;;     (setq sexp-string (prin1-to-string sexp-value))
-;;     (process-send-string process sexp-string)
-;;     (elim-debug "sent: %s" sexp-string)
-;;    (accept-process-output)))
 
 (defun elim-process-send (process sexp-value &optional callback)
   (let ((print-level  nil)
@@ -1010,9 +1007,10 @@ USER-DIR is the directory in which more-or-less permanent user data
 \(buddy lists, account details and so forth) will be stored. It will also
 be initialised to the value of `elim-directory' if you do not supply it."
   (let ( (buf (generate-new-buffer "*elim*"))
-         (process-connection-type nil)
-         (elim-initialising         t)
-         (elim                    nil) )
+         (process-connection-type  nil)
+         (elim-initialising          t)
+         (shell-file-name elim-sh-file)
+         (elim                     nil) )
     ;; set up the process, io buffer, input filters etc:
     (setq elim (start-process-shell-command
                 (buffer-name buf) buf (elim-command)))
