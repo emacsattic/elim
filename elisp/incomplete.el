@@ -1,6 +1,6 @@
 ;;; incomplete.el --- Intelligent Completion
 
-;; Copyright (C) 2005  Jorgen Schaefer
+;; Copyright © 2005  Jorgen Schaefer
 
 ;; Version: 1.0
 ;; Keywords: Completion, pcomplete

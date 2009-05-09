@@ -1,6 +1,6 @@
 ;;; tracking.el --- Buffer modification tracking
 
-;; Copyright (C) 2006  Jorgen Schaefer
+;; Copyright © 2006  Jorgen Schaefer
 
 ;; Version: 1.0
 ;; Author: Jorgen Schaefer <forcer@forcix.cx>

@@ -1,6 +1,6 @@
 ;;; lui.el --- Linewise User Interface
 
-;; Copyright (C) 2005  Jorgen Schaefer
+;; Copyright © 2005  Jorgen Schaefer
 
 ;; Version: 2
 ;; Keywords: User-interface
