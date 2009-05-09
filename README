@@ -132,14 +132,19 @@ hasn't had a lot of testing.
 
 To display the buddy list:
 
-M-x garak-buddy-list RET
+M-x garak-gui RET
 
 Not that the buddy list widget/buffer is only partially implemented, 
 you cannot block or unblock buddies (yet), even though the menu item 
 is present.
 
-To recreate the *Garak* buffer, M-x garak-buddy-list RET in the *garak*
+To recreate the *Garak* buffer, M-x garak-gui RET in the *garak*
 buffer or any conversation buffer.
 
 -- 
 fledermaus <vivek@etla.org>
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without warranty of any kind.
