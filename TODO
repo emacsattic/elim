@@ -32,5 +32,5 @@
 ** TODO update docs to cover new client-to-daemon commands
 * preferences
 ** DONE fetch preferences list and display it in editable widget form
-** TODO add specialised preference widgets for those that need it
-** TODO implement setting preferences
+** DONE add specialised preference widgets for those that need it
+** DONE implement setting preferences

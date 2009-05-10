@@ -202,6 +202,13 @@ alist item envelope with name K."
   (let ((item (copy-sequence v)))
     (nconc (list (car item) (list (cons 'name k))) (cddr item))))
 
+(defun elim-simple-alist-to-proto-alist (alist)
+  (let (rval)
+    (mapc 
+     (lambda (cell)
+       (setq rval (cons (elim-atom-to-item (car cell) (cdr cell)) rval))) alist)
+    (nconc (list 'alist nil) (nreverse rval)) ))
+
 (defun elim-simple-list-to-proto-alist (arg-list)
   "Take ARG-LIST of the form (string-key value string-key value ...)
 and return an s-expression suitable for use as the argument in an elim
@@ -1037,6 +1044,15 @@ be initialised to the value of `elim-directory' if you do not supply it."
 (defun elim-get-prefs (process &optional callback) 
   "Fetch the preference list for the IM daemon."
   (elim-process-send process (elim-daemon-call 'get-prefs nil nil) callback))
+
+(defun elim-set-prefs (process prefs-alist &optional callback)
+  (let (arglist)
+    (setq arglist
+          (elim-sexp-to-item "prefs"
+                             (elim-simple-alist-to-proto-alist prefs-alist))
+          arglist (nconc (list 'alist nil) (list arglist)))
+    (elim-process-send process
+                       (elim-daemon-call 'set-prefs nil arglist) callback) ))
 
 (defun elim-update-account-list (process)
   "Update (asynchronously) the IM account list cache."

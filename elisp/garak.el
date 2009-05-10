@@ -515,21 +515,21 @@ substitute these characters for the basic ascii ones:\n
       (setq garak-elim-process proc)
       (tree-widget-set-theme)
       (use-local-map widget-keymap)
-      (elim-get-prefs proc 'garak-ui-insert-prefs-widget)) buffer))
+      (elim-get-prefs proc 'garak-ui-prefs-insert-widget)) buffer))
 
 (defun garak-ui-pref-to-node (pref)
-  (let (type name kids data val w-args label)
+  (let (type name kids data val w-args node)
     (setq data   (cdr pref)
           name   (car (last (split-string (car pref) "/" nil)))
           type   (elim-avalue "pref-type"    data)
           val    (elim-avalue "pref-value"   data)
-          choice (elim-avalue "pref-choices" data)
-          label  (format "%s%s" name type))
+          choice (elim-avalue "pref-choices" data))
     (if choice
         (setq w-args 
-              (apply 'list 'choice 
-                     :value  val
-                     :format "%t: %[%v%]\n"
+              (apply 'list      'choice 
+                     :value      val
+                     :format    "%t: %[%v%]\n"
+                     :value-get 'widget-value-value-get
                      (mapcar 
                       (lambda (p) 
                         (list 'const :format "%t" :tag (car p) (cdr p))) 
@@ -541,14 +541,43 @@ substitute these characters for the basic ascii ones:\n
              ((eq type :path   ) (list 'directory (or val "")))
              ((eq type :int    ) (list 'number    (or val 0 ))) 
              (t                  (list 'const     :value val)))))
-    ;;(message "(widget-convert %S %S %S %S)" 
-    ;;         (car w-args) :tag name (cdr w-args))
     (apply 'widget-convert
            (car w-args)
            :tag        (format "%-16s" name)
            :old-value  val  
            :garak-pref (car pref)
            (cdr w-args)) ))
+
+(defun garak-ui-pref-significant-widgets ()
+  (let ((last-point -1) wlist widget)
+    (save-excursion 
+      (beginning-of-buffer)
+      (while (< last-point (point))
+        (when (and (setq widget (widget-at)) 
+                   (widget-get widget :garak-pref))
+          (setq wlist (cons widget wlist)))
+        (setq last-point (point))
+        (ignore-errors (widget-forward 1)))
+      wlist) ))
+
+(defun garak-pref-equal (old new)
+  (if (not old)
+    (cond ((stringp  new) (and (equal "" new) t))
+          ((numberp  new) (and (zerop    new) t))
+          (t (equal old new)))
+    (equal old new)))
+
+(defun garak-ui-prefs-changed ()
+  (let (pref)
+    (delq nil
+          (mapcar 
+           (lambda (w)
+             (when (setq pref (widget-get w :garak-pref))
+               (let ((old-value (widget-get   w :old-value)) 
+                     (new-value (widget-value w)))
+                 (and (not (garak-pref-equal old-value new-value))
+                      (cons pref new-value)) )))
+           (garak-ui-pref-significant-widgets))) ))
 
 (defun garak-ui-pref-node-command (&optional widget child event &rest args)
   (message "garak-ui-pref-node-command(%S %S %S %S)" 
@@ -557,6 +586,7 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-ui-pref-to-widget (pref)
   (apply 'widget-convert 'tree-widget
          :open       t
+         :help-echo  nil
          :node       (garak-ui-pref-to-node pref)
          :inline     t
          (garak-ui-pref-children pref)))
@@ -566,18 +596,48 @@ substitute these characters for the basic ascii ones:\n
     (setq kids (elim-avalue "pref-children" (cdr pref)))
     (mapcar 'garak-ui-pref-to-widget kids)))
 
-(defun garak-ui-insert-prefs-widget (proc name id attr args)
+(defun garak-ui-prefs-process-widgets (&optional parent child event &rest stuff)
+  (let ((actions (widget-value parent)) 
+        (proc     garak-elim-process))
+    (message "UI Prefs Button: %S" actions)
+    (when (memq 'save   actions) (elim-set-prefs proc (garak-ui-prefs-changed)))
+    (when (memq 'reload actions) (garak-ui-create-prefs-buffer proc))
+    (when (memq 'close  actions) (kill-buffer nil)) ))
+
+(defun garak-ui-prefs-insert-buttons ()
+  (widget-create 'push-button
+                 :format "%[[%t]%]"
+                 :tag    "Save Prefs"
+                 :notify 'garak-ui-prefs-process-widgets
+                 :value  '(save reload))
+  (widget-insert " ")
+  (widget-create 'push-button
+                 :format "%[[%t]%]"
+                 :tag    "Save and Close Editor"
+                 :notify 'garak-ui-prefs-process-widgets
+                 :value  '(save close))
+  (widget-insert " ")
+  (widget-create 'push-button
+                 :format "%[[%t]%]"
+                 :tag    "Close Prefs Editor"
+                 :notify 'garak-ui-prefs-process-widgets
+                 :value  '(close))
+  (widget-insert "\n"))
+
+(defun garak-ui-prefs-insert-widget (proc name id attr args)
   (let ((buffer (elim-fetch-process-data proc :prefs-buffer)) prefs) 
     (when buffer
       (with-current-buffer buffer
+        (garak-ui-prefs-insert-buttons)
         (setq prefs (elim-avalue "prefs" (elim-avalue "value" args)))
-        (mapc 
+        (mapc
          (lambda (pref)
            (apply 'widget-create 'tree-widget
                   :open       t
                   :node       (garak-ui-pref-to-node pref)
                   :inline     t
                   (garak-ui-pref-children pref)) ) prefs)
+        (garak-ui-prefs-insert-buttons)
         (widget-setup) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -902,7 +962,7 @@ substitute these characters for the basic ascii ones:\n
                    (eql (garak-tree-widget-get (widget-at) type) uid))
           (setq found (cons (point) (car widget))))
         (setq last-point (point))
-        (ignore-errors (widget-forward 1))) )
+        (ignore-errors (widget-forward 1)) ))
     found))
 
 ;;!! update icon of visible node

@@ -1,3 +1,16 @@
+2009-05-10  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* doc                 : added copyright and GFDL notices, and GFDL
+
+	* elisp/garak.el      : finish prefs browse/edit/save functionality
+
+	* handlers/set_prefs.c: implement setting preferences.
+
+	* elisp/elim.el       : implement setting preferences.
+	                        provide alist -> proto alist function
+
+	* handlers/get_prefs.c: add some more 'choice' metadata for prefs
+
 2009-05-08  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp   : re-use old dead garak buffers on restart (M-x garak)

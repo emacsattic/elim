@@ -36,7 +36,8 @@ static gboolean _pref_idle_rep     ( xmlnode *node, const char *name )
     AL_STR ( choices, "none"                 , "none"   );
     return TRUE;
 }
-static gboolean _pref_auto_rep     ( xmlnode *node, const char *name )
+
+static gboolean _pref_auto_rep ( xmlnode *node, const char *name )
 {
     xmlnode *choices = xnode_new( "alist" );
     AL_NODE( node, "pref-choices", choices );
@@ -45,7 +46,8 @@ static gboolean _pref_auto_rep     ( xmlnode *node, const char *name )
     AL_STR ( choices, "Away"        , "away"     );
     return TRUE; 
 }
-static gboolean _pref_idle_stat    ( xmlnode *node, const char *name )
+
+static gboolean _pref_status ( xmlnode *node, const char *name )
 {
     xmlnode *choices = xnode_new( "alist" );
     GList   *status  = purple_savedstatuses_get_all();
@@ -61,7 +63,25 @@ static gboolean _pref_idle_stat    ( xmlnode *node, const char *name )
 
     return TRUE;     
 }
-static gboolean _pref_log_format   ( xmlnode *node, const char *name )
+
+static gboolean _pref_status_or_nil ( xmlnode *node, const char *name )
+{
+    xmlnode *choices = xnode_new( "alist" );
+    GList   *status  = purple_savedstatuses_get_all();
+    AL_NODE( node   , "pref-choices" , choices );
+    AL_PTR ( choices, "-unspecified-", NULL    );
+
+    for( ; status; status = status->next )
+    {
+        PurpleSavedStatus *s = status->data;
+        const char    *title = purple_savedstatus_get_title        ( s );
+        time_t         value = purple_savedstatus_get_creation_time( s );
+        AL_INT( choices, title, value );
+    }
+
+    return TRUE;     
+}
+static gboolean _pref_log_format ( xmlnode *node, const char *name )
 {
     GList   *logger  = NULL;
     GList   *loggers = purple_log_logger_get_options();
@@ -76,7 +96,7 @@ static gboolean _pref_log_format   ( xmlnode *node, const char *name )
     g_list_free( loggers );
     return TRUE;
 }
-static gboolean _pref_proxy_type   ( xmlnode *node, const char *name )
+static gboolean _pref_proxy_type ( xmlnode *node, const char *name )
 {
     xmlnode *choices = xnode_new( "alist" );
     AL_NODE( node   , "pref-choices"    , choices  );
@@ -87,7 +107,7 @@ static gboolean _pref_proxy_type   ( xmlnode *node, const char *name )
     AL_STR ( choices, "From Environment", "envvar" );
     return TRUE;
 }
-static gboolean _pref_snd_while    ( xmlnode *node, const char *name )
+static gboolean _pref_snd_while ( xmlnode *node, const char *name )
 {
     xmlnode *choices = xnode_new( "alist" );
     AL_NODE( node   , "pref-choices"   , choices  );
@@ -109,21 +129,22 @@ static gboolean _pref_meanwhile_bl ( xmlnode *node, const char *name )
 }
 
 static pref_handler handlers[] =
-  { { "/purple/away/idle_reporting"          , _pref_idle_rep     } ,
-    { "/purple/away/auto_reply"              , _pref_auto_rep     } ,
-    { "/purple/savedstatus/idleaway"         , _pref_idle_stat    } ,
-    { "/purple/logging/format"               , _pref_log_format   } ,
-    { "/purple/proxy/type"                   , _pref_proxy_type   } ,
-    { "/purple/sound/while_status"           , _pref_snd_while    } ,
-    { "/plugins/prpl/meanwhile/blist_action" , _pref_meanwhile_bl } ,
-    { NULL                                   , NULL               } };
+  { { "/purple/away/idle_reporting"          , _pref_idle_rep      } ,
+    { "/purple/away/auto_reply"              , _pref_auto_rep      } ,
+    { "/purple/savedstatus/default"          , _pref_status        } ,
+    { "/purple/savedstatus/idleaway"         , _pref_status        } ,
+    { "/purple/savedstatus/startup"          , _pref_status_or_nil } ,
+    { "/purple/logging/format"               , _pref_log_format    } ,
+    { "/purple/proxy/type"                   , _pref_proxy_type    } ,
+    { "/purple/sound/while_status"           , _pref_snd_while     } ,
+    { "/plugins/prpl/meanwhile/blist_action" , _pref_meanwhile_bl  } ,
+    { NULL                                   , NULL                } };
 
-#define MAYBE_IGNORE_PREF( n )                                    \
-    { if( !strcmp( (n), "/pidgin"                     ) ) return; \
-      if( !strcmp( (n), "/plugins/gtk"                ) ) return; \
-      if( !strcmp( (n), "/purple/savedstatus/default" ) ) return; }
+#define MAYBE_IGNORE_PREF( n )                     \
+    { if( !strcmp( (n), "/pidgin"      ) ) return; \
+      if( !strcmp( (n), "/plugins/gtk" ) ) return; }
 
-static gboolean _munge_special_pref( xmlnode *node, const char *name )
+static gboolean _munge_special_pref ( xmlnode *node, const char *name )
 {
     pref_handler *h = NULL; 
     if( name )
@@ -132,7 +153,7 @@ static gboolean _munge_special_pref( xmlnode *node, const char *name )
     return FALSE;
 }
 
-static void _add_pref_data( xmlnode *node, const char *name )
+static void _add_pref_data ( xmlnode *node, const char *name )
 {
     xmlnode    *entry = NULL;
     GList      *vlist = NULL;
