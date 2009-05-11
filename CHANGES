@@ -1,5 +1,7 @@
 2009-05-11  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* Makefile: target to generate tarballs (signed or non)
+
 	* handlers/account_menu.c       : generate dynamic extended account menu
 
 	* handlers/account_menu_action.c: execute account menu action

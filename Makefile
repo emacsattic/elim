@@ -59,7 +59,7 @@ UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.o
 CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))
 
 ############################################################################
-.PHONY: clean diag distclean check-libdeps
+.PHONY: clean diag distclean check-libdeps signed-tar tar
 
 all: $(BINARIES)
 
@@ -116,5 +116,19 @@ TAGS: $(CH_FILES)
 distclean: clean
 	@find . -type f -name *~ -exec rm {} \;
 
+
+############################################################################
+
+%.tar.gz: distclean
+	@tar -C $(abspath $(@D)) --exclude .git -czvf $(@F) $(notdir $(CURDIR))
+
+%.tar.gz.sig: %.tar.gz
+	@gpg -b $<
+
+signed-tar: ../$(shell echo elim.$$(date +%Y%m%d-%H%M%S).tar.gz.sig)
+
+tar       : ../$(shell echo elim.$$(date +%Y%m%d-%H%M%S).tar.gz)
+
+############################################################################
 dummy:
 	@echo -n
