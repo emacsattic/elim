@@ -10,7 +10,7 @@
 ** DONE update account status in gui mode
 ** DONE add protocol icon/tag to account entry
 ** DONE log in/out menu items from account entry
-** TODO dynamic account menus for connected accounts
+** DONE dynamic account menus for connected accounts
 ** TODO remove account (CLI and GUI)
 ** TODO roomlist
 * buddy list
@@ -32,6 +32,7 @@
 ** TODO set buddy icon
 ** TODO update docs to cover new client-to-daemon commands
 ** TODO can dynamic submenus be generated at parent invocation time?
+** TODO notify ui ups
 * preferences
 ** DONE fetch preferences list and display it in editable widget form
 ** DONE add specialised preference widgets for those that need it
