@@ -47,6 +47,7 @@ xmlnode * _h_elim_init ( const char *name ,
     purple_idle_set_ui_ops         ( &elim_idle_ui_ops         );
     purple_connections_set_ui_ops  ( &elim_connections_ui_ops  );
     purple_conversations_set_ui_ops( &elim_conversation_ui_ops );
+    purple_notify_set_ui_ops       ( &elim_notify_ui_ops       );
 
     // load any data for init:    
     if( purple_get_core() == NULL )
