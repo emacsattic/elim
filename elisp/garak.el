@@ -683,6 +683,21 @@ substitute these characters for the basic ascii ones:\n
            (t (setq cooked (cons entry cooked))) )) raw)
   (nreverse cooked))
 
+(defun garak-account-menu-response-handler (proc name id attr args &optional ev)
+  (let (acct-data acct-uid acct-name choices menu value arglist call)
+    (when (equal (elim-avalue "status" args) 0)
+      (setq args      (elim-avalue "value"        args)
+            acct-uid  (elim-avalue "account-uid"  args)
+            acct-name (elim-avalue "account-name" args)
+            menu      (elim-avalue "menu"         args)
+            choices   (garak-menu-actions-to-choices menu)
+            value     (when menu (widget-choose acct-name choices ev)))
+      (when (and (numberp value) (not (zerop value)))
+        (setq arglist (list "account-uid" acct-uid "menu-action" value)
+              arglist (elim-simple-list-to-proto-alist arglist)
+              call    (elim-daemon-call 'account-menu-action nil arglist))
+        (elim-process-send proc call)) )))
+
 (defun garak-buddy-menu-response-handler (proc name id attr args &optional ev)
   (let (bnode-data bnode-uid bnode-name choices menu value arglist call)
     (when (equal (elim-avalue "status" args) 0)
@@ -722,15 +737,24 @@ substitute these characters for the basic ascii ones:\n
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
 (defun garak-account-list-node-command (&optional widget child event &rest x)
-  (let (value op proc acct auid)
+  (let (value op proc acct auid ccb menu-cb)
     (setq proc  garak-elim-process
           value (widget-value widget)
+          ccb   'garak-account-options-ui-cb
           op    (car value)
           auid  (cdr value)
           acct  (elim-account-data proc auid))
-    (cond ((eq op 'login ) (elim-connect    proc auid))
-          ((eq op 'logout) (elim-disconnect proc auid))
-          (t (elim-debug "UI Account Operation `%S' not implemented" op))) ))
+    (cond ((eq op :login ) (elim-connect         proc auid))
+          ((eq op :logout) (elim-disconnect      proc auid))
+          ((eq op :config) (elim-account-options proc auid ccb))
+          ((eq op :menu  )
+           (lexical-let ((m-event event))
+             (setq menu-cb
+                   (lambda (proc name id attr args)
+                     (garak-account-menu-response-handler proc name id
+                                                          attr args m-event)))
+             (elim-account-menu proc auid menu-cb) ))
+          (t (elim-debug "UI Account Operation `%S' not implemented" value))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
   (let (kids uid menu type name mtail plabel blabel auid aicon)
@@ -837,8 +861,10 @@ substitute these characters for the basic ascii ones:\n
                     :value-get         'widget-value-value-get
                     :inline             t
                     :notify            'garak-account-list-node-command
-                    (garak-choice-item "Log In"  (cons 'login  uid))
-                    (garak-choice-item "Log Out" (cons 'logout uid))) ))
+                    (garak-choice-item "Log In"        (cons :login  uid))
+                    (garak-choice-item "Log Out"       (cons :logout uid))
+                    (garak-choice-item "Configure"     (cons :config uid))
+                    (garak-choice-item "Extended Menu" (cons :menu   uid))) ))
 
 (defun garak-account-list-node-children (&optional widget)
   (mapcar

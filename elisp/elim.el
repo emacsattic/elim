@@ -1221,6 +1221,14 @@ must also be supplied."
           sexp    (elim-daemon-call 'buddy-menu nil arglist))
     (elim-process-send process sexp callback) ))
 
+(defun elim-account-menu (process account &optional callback)
+  (let ((acct-data (elim-account-data process account)) arglist sexp)
+    (elim-debug "elim-account-menu: %S" acct-data)
+    (setq arglist (elim-simple-list-to-proto-alist 
+                   (list "account-uid" (car acct-data)))
+          sexp    (elim-daemon-call 'account-menu nil arglist))
+    (elim-process-send process sexp callback) ))
+
 (defvar elim-standard-status-types 
   '(("available"      . :available  )
     ("away"           . :away       )

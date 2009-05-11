@@ -144,15 +144,19 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
 
         if( args && (args->type == SEXP_ALIST) )
         {
+            PurpleRequestInputCb cb = NULL;
             int status = ALIST_VAL_INT( args, "status" );
             if( status == 0 ) 
             {
                 char *input = ALIST_VAL_STR( args, "value" );
-                ( input ? 
-                  handle->req.input.ok  : 
-                  handle->req.input.nok )( data, input );
+                cb = ( input ? handle->req.input.ok : handle->req.input.nok );
+                if( cb ) (cb)( data, input );
             }
-            else { (handle->req.input.nok)( data, "" ); }
+            else 
+            { 
+                cb = (handle->req.input.nok);
+                if( cb ) (cb)( data, "" ); 
+            }
         }
         else { handle->req.input.nok( data, "" ); }
     }
@@ -246,15 +250,20 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
 
         if( args && (args->type == SEXP_ALIST) )
         {
+            PurpleRequestChoiceCb cb = NULL;
             int status = ALIST_VAL_INT( args, "status" );
             if( status == 0 ) 
             {
                 int choice = ALIST_VAL_INT( args, "value" );
-                ( (choice != -1) ? 
-                  handle->req.choice.ok  : 
-                  handle->req.choice.nok )( data, choice );
+                cb =  ( (choice != -1) ? 
+                        handle->req.choice.ok : handle->req.choice.nok );
+                if( cb ) (cb)( data, choice );
             }
-            else { (handle->req.choice.nok)( data, 0 ); }
+            else 
+            {
+                cb = handle->req.choice.nok; 
+                if( cb ) (cb)( data, 0 ); 
+            }
         }
         else { handle->req.choice.nok( data, 0 ); }
     }
@@ -365,7 +374,6 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
                         fprintf( stderr, "   unmatched action: %p\n", *(F+x) );
                     }
             }
-            else { (handle->req.input.nok)( data, "" ); }
         }
     }
 
@@ -526,10 +534,20 @@ static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
             {
                 // copy the result data back:
                 _elim_merge_request_fields( F, ALIST_VAL(args, "value") );
-                handle->req.fields.ok( data, F );
-            } else { handle->req.fields.nok( data, F ); }
+                if( handle->req.fields.ok )
+                    handle->req.fields.ok( data, F );
+            } 
+            else 
+            {
+                if( handle->req.fields.nok )
+                    handle->req.fields.nok( data, F ); 
+            }
         }
-        else { handle->req.fields.nok( data, F ); }
+        else 
+        {
+            if( handle->req.fields.nok )
+                handle->req.fields.nok( data, F ); 
+        }
     }
 
   //if( handle ) g_free( handle );
@@ -710,6 +728,7 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
     if( handle ) 
     {
         gpointer data = handle->data;
+        PurpleRequestFileCb cb = NULL; 
 
         if( args && (args->type == SEXP_ALIST) )
         {
@@ -717,13 +736,20 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
             if( status == 0 ) 
             {
                 char *path = ALIST_VAL_STR( args, "value" );
-                ( path ? 
-                  handle->req.path.ok  : 
-                  handle->req.path.nok )( data, path );
+                cb = ( path ?  handle->req.path.ok : handle->req.path.nok );
+                if( cb ) (cb)( data, path );
             }
-            else { (handle->req.path.nok)( data, "" ); }
+            else 
+            { 
+                cb = handle->req.path.nok;
+                if( cb ) (cb)( data, "" ); 
+            }
         }
-        else { handle->req.path.nok( data, "" ); }
+        else 
+        { 
+            cb = handle->req.path.nok;
+            if( cb ) (cb)( data, "" ); 
+        }
     }
     
     //if( handle ) g_free( handle );

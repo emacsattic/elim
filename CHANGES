@@ -1,3 +1,17 @@
+2009-05-11  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* handlers/account_menu.c       : generate dynamic extended account menu
+
+	* handlers/account_menu_action.c: execute account menu action
+
+	* elisp/garak.el                : extended account menu items 
+	                                  configure account menu item
+
+	* elisp/elim.el                 : fetch extended account menu
+
+	* ui_ops/request_ui_ops.c       : callbacks passed into us may be NULL.
+	                                  check for this.
+
 2009-05-10  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* doc                 : added copyright and GFDL notices, and GFDL
