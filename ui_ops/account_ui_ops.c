@@ -143,7 +143,8 @@ struct _AUI_RESP
 
 static xmlnode * _elim_request_authorise_cb( gpointer ptr, SEXP_VALUE *args )
 {
-    AUI_RESP *handle = ptr;
+    CB_HANDLER  *cbh = ptr;
+    AUI_RESP *handle = cbh->data;
     if( handle && args && (args->type == SEXP_ALIST) )
     {
         gpointer data   = handle->data;
@@ -155,8 +156,8 @@ static xmlnode * _elim_request_authorise_cb( gpointer ptr, SEXP_VALUE *args )
         }
     }
 
-    if( handle ) g_free( handle );
-    if( args   ) sexp_val_free( args );
+    purple_account_request_close( cbh );
+    if( args ) sexp_val_free( args );
 
     return NULL;
 }

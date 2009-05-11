@@ -137,7 +137,8 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
 {
     fprintf( stderr, "(_elim_request_input_cb)\n" );
 
-    REQ_RESP *handle = ptr;
+    CB_HANDLER  *cbh = ptr;
+    REQ_RESP *handle = cbh->data;
     if( handle ) 
     {
         gpointer data = handle->data;
@@ -161,7 +162,7 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.input.nok( data, "" ); }
     }
     
-  //if( handle ) g_free( handle );
+    purple_request_close( handle->type, cbh );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -243,7 +244,8 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
 {
     fprintf( stderr, "(_elim_request_choice_cb)\n" );
 
-    REQ_RESP *handle = ptr;
+    CB_HANDLER *cbh  = ptr;
+    REQ_RESP *handle = cbh->data;
     if( handle ) 
     {
         gpointer data = handle->data;
@@ -268,7 +270,8 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
         else { handle->req.choice.nok( data, 0 ); }
     }
     
-  //if( handle ) g_free( handle );
+  //if( handle ) g_free( handle )
+    purple_request_close( handle->type, cbh );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -348,7 +351,8 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
 {
     fprintf( stderr, "(_elim_request_action_cb)\n" );
 
-    REQ_RESP *handle = ptr;
+    CB_HANDLER  *cbh = ptr;
+    REQ_RESP *handle = cbh->data;
     if( handle )
     {
         gpointer data = handle->data;
@@ -377,10 +381,7 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
         }
     }
 
-    //if( handle->type == PURPLE_REQUEST_ACTION )
-    //    g_free( handle->req.action.func );
-    //if( handle ) g_free       ( handle );
-
+    purple_request_close( handle->type, cbh );
     if( args ) sexp_val_free( args );
 
     return NULL;
@@ -518,8 +519,9 @@ static void _elim_merge_request_fields( PurpleRequestFields *fields ,
 static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
 {
     fprintf( stderr, "(_elim_request_fields_cb)\n" );
-    
-    REQ_RESP *handle = ptr;
+
+    CB_HANDLER  *cbh = ptr;
+    REQ_RESP *handle = cbh->data;
     if( handle )
     {
         PurpleRequestFields *F = handle->req.fields.fields;
@@ -550,7 +552,7 @@ static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
         }
     }
 
-  //if( handle ) g_free( handle );
+    purple_request_close( handle->type, cbh );
     if( args   ) sexp_val_free( args );
 
     return NULL;
@@ -724,7 +726,8 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
 {
     fprintf( stderr, "(_elim_request_path_cb)\n" );
 
-    REQ_RESP *handle = ptr;
+    CB_HANDLER  *cbh = ptr;
+    REQ_RESP *handle = cbh->data;
     if( handle ) 
     {
         gpointer data = handle->data;
@@ -752,6 +755,7 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
         }
     }
     
+    purple_request_close( handle->type, cbh );
     //if( handle ) g_free( handle );
 
     if( args ) sexp_val_free( args );

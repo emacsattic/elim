@@ -38,9 +38,8 @@ xmlnode * _h_elim_response ( const char *name ,
     if( cbh )
     {
         CB_FUNC  func   = cbh->func;
-        gpointer handle = cbh->data;
         xmlnode *rval   = NULL;
-        if( func ) rval = func( handle, args );
+        if( func ) rval = func( cbh, args );
         else       sexp_val_free( args );
 
         // BAD: do not do this here!
