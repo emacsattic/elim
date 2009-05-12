@@ -53,7 +53,7 @@ void *_elim_notify_search     ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 gpointer user_data                 );
 
-void _elim_notify_search_rows ( PurpleConnection *gc               ,
+void _elim_notify_search_more ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         );
 
@@ -73,7 +73,7 @@ PurpleNotifyUiOps elim_notify_ui_ops =
     _elim_notify_emails      ,
     _elim_notify_formatted   ,
     _elim_notify_search      ,
-    _elim_notify_search_rows ,
+    _elim_notify_search_more ,
     _elim_notify_userinfo    ,
     _elim_notify_uri         ,
     _elim_close_notify       ,
@@ -232,6 +232,8 @@ void *_elim_notify_emails     ( PurpleConnection *gc               ,
     NOTIFY_CLOSE_FUNC( EMAILS, emails );
 }
 
+#undef MAYBE_ATTRIBUTE
+
 void *_elim_notify_formatted  ( const char *title                  ,
                                 const char *primary                ,
                                 const char *secondary              ,
@@ -256,7 +258,7 @@ void *_elim_notify_search     ( PurpleConnection *gc               ,
     NOTIFY_CLOSE_FUNC( SEARCHRESULTS, search );
 }
 
-void _elim_notify_search_rows ( PurpleConnection *gc               ,
+void _elim_notify_search_more ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         )
 {

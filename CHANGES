@@ -1,3 +1,10 @@
+2009-05-12  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el: handle notify types: email, message, formatted, uri
+	                  still underway: emails, search, userinfo
+
+	* ui_ops/notify_ui_ops.c: rename _elim_notify_search_rows -> …_more
+
 2009-05-11  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* Makefile: target to generate tarballs (signed or non)

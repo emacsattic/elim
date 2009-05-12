@@ -204,6 +204,15 @@ substitute these characters for the basic ascii ones:\n
     (remove-account              . garak-account-update      )
     ;; prefs
     (get-prefs                   . garak-setup-prefs-buffer  )
+    ;; notify
+    (elim-notify-message         . garak-notify-message      )
+    (elim-notify-formatted       . garak-notify-formatted    )
+    (elim-notify-email           . garak-notify-email        )
+    (elim-notify-emails          . garak-notify-emails       )
+    (elim-notify-search          . garak-notify-search       )
+    (elim-notify-search-more     . garak-notify-search-more  )
+    (elim-notify-userinfo        . garak-notify-userinfo     )
+    (elim-notify-uri             . garak-notify-uri          )
     ;; messages:
     (elim-conv-write-chat        . garak-chat-message        )
     (elim-conv-write-im          . garak-user-message        )
@@ -265,6 +274,112 @@ substitute these characters for the basic ascii ones:\n
          (let ((message (format "* elim process finished: %S *" args)))
            (lui-insert (elim-add-face message 'garak-warning-face)) )) ))
    (buffer-list)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; notifications:
+(defun garak-notice-buffer (proc) 
+  (let ((nbuf (elim-fetch-process-data proc :notice-buffer)))
+    (when (not (buffer-live-p nbuf))
+      (setq nbuf (get-buffer "*garak-notices*"))
+      (when (not (garak-buffer-reusable proc nbuf))
+        (setq nbuf (generate-new-buffer "*garak-notices*")))
+      (with-current-buffer nbuf
+        (elim-init-ui-buffer)
+        (garak-init-local-storage)
+        (setq garak-elim-process proc)
+        (use-local-map widget-keymap)
+        (elim-store-process-data proc :notice-buffer nbuf)))
+    nbuf))
+
+(defun garak-kill-notice (&optional widget child event &rest stuff)
+  (let ((value (widget-value widget)) 
+        (sprop 'garak-notice-start)
+        (eprop 'garak-notice-close)
+        (proc   garak-elim-process)
+        response name id start end pos)
+    (setq name     (nth 0 value)
+          id       (nth 1 value)
+          response (elim-daemon-response name id 0 (elim-atom-to-proto nil)))
+    ;; track down the start and end of this notice:
+    (when (equal (get-text-property (point-min) sprop) id)
+      (setq start (point-min)))
+    (setq pos (point-min))
+    (while (and (not start)
+                (< pos (point-max))
+                (setq pos (next-single-char-property-change pos sprop nil)))
+      (when (equal (get-text-property pos sprop) id)
+        (setq start pos)))
+    (while (and (not end)
+                (< pos (point-max))
+                (setq pos (next-single-char-property-change pos eprop nil)))
+      (when (equal (get-text-property pos eprop) id)
+        (setq end pos)))
+    ;;(elim-debug "CHECKING ID: %S" id)
+    ;;(elim-debug "ERASE: %S to %S in %S" start end (current-buffer))
+    ;;(elim-debug "SEND : %S" response)
+    (elim-process-send proc response)
+    (when (and start end) (delete-region start end))
+    (when (< (point-max) 2) (bury-buffer)) ))
+
+(defalias 'garak-notify-message 'garak-notify-formatted)
+(defun garak-notify-formatted (proc name id status args)
+  (let ((nbuf  (garak-notice-buffer proc))
+        (mface 'garak-marker-face)
+        (title (or (elim-avalue "title" args) "-Notice-"))
+        (h1    (elim-avalue "primary"   args))
+        (h2    (elim-avalue "secondary" args))
+        (text  (elim-avalue "text"      args)))
+    (with-current-buffer nbuf
+      (widget-insert (propertize " "   'garak-notice-start id))
+      (widget-insert (propertize title 'face 'garak-warning-face))
+      (widget-insert "\n")
+      (when h1   (widget-insert (propertize h1 'face mface) ":\n"))
+      (when h2   (widget-insert (propertize h2 'face mface) ":\n"))
+      (when text (widget-insert text))
+      (widget-create 'push-button
+                     :format "%[[Ok]%]" 
+                     :notify 'garak-kill-notice
+                     :value  (list name id))
+      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+    (let ((display-buffer-reuse-frames t)) 
+      (display-buffer nbuf)) ))
+
+(defun garak-notify-email (proc name id status args)
+  (let ((nbuf  (garak-notice-buffer proc))
+        (mface 'garak-marker-face)
+        (title (or (elim-avalue "subject" args) "-email-"))
+        (url   (elim-avalue "url" args))
+        (from  (or (elim-avalue "from" args) "?"))
+        (to    (or (elim-avalue "to"   args) "?")))
+    (setq from (propertize from 'face 'garak-nick-face    ))
+    (setq to   (propertize to   'face 'garak-own-nick-face))
+    (with-current-buffer nbuf
+      (widget-insert (propertize " "   'garak-notice-start id))
+      (widget-insert (propertize title 'face mface) "\n")
+      (when url (widget-insert (propertize url 'face mface) ":\n"))
+      (widget-insert (format "%s -> %s" from to) "\n")
+      (widget-create 'push-button
+                     :format "%[[Ok]%]" 
+                     :notify 'garak-kill-notice
+                     :value  (list name id))
+      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+    (let ((display-buffer-reuse-frames t))
+      (display-buffer nbuf)) ))
+
+(defun garak-notify-uri (proc name id status args)
+  (let ((nbuf  (garak-notice-buffer proc))
+        (mface 'garak-marker-face)
+        (url   (elim-avalue "url" args)))
+    (with-current-buffer nbuf
+      (widget-insert (propertize " "   'garak-notice-start id))
+      (widget-insert (propertize url 'face mface) "\n")
+      (widget-create 'push-button
+                     :format "%[[Ok]%]" 
+                     :notify 'garak-kill-notice
+                     :value  (list name id))
+      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+    (let ((display-buffer-reuse-frames t))
+      (display-buffer nbuf)) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message callbacks
