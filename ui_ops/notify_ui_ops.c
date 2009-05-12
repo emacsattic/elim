@@ -86,7 +86,7 @@ PurpleNotifyUiOps elim_notify_ui_ops =
 typedef struct _NOTIFY_RESP
 {
     char *id;                           // elim call id
-    PurpleNotifyType    notify_type ;
+    PurpleNotifyType type ;
 } NOTIFY_RESP;
 
 
@@ -97,59 +97,40 @@ typedef struct _NOTIFY_RESP
     char        *ID     = new_elim_id()
 
 #define NOTIFY_CLOSE_FUNC(NTYPE,NAME) \
-    resp  ->id           = ID;                                       \
-    resp  ->notify_type  = PURPLE_NOTIFY_ ## NTYPE;                  \
-    handle->func         = _elim_notify_ ## NAME ## _cb;             \
-    handle->data         = resp;                                     \
-    store_cb_data( ID, handle );                                     \
-    xmlnode *mcall = func_call( "elim-notify-" # NAME, ID, alist );  \
-    add_outbound_sexp( mcall );                                      \
+    resp  ->id   = ID;                                              \
+    resp  ->type = PURPLE_NOTIFY_ ## NTYPE;                         \
+    handle->func = _elim_notify_cb;                                 \
+    handle->data = resp;                                            \
+    store_cb_data( ID, handle );                                    \
+    xmlnode *mcall = func_call( "elim-notify-" # NAME, ID, alist ); \
+    add_outbound_sexp( mcall );                                     \
     return handle;
 
 
 // *************************************************************************
-static xmlnode  *_elim_notify_message_cb    ( gpointer data, SEXP_VALUE *args )
+static const char const * _nlabel( PurpleNotifyType type )
 {
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_MESSAGE, handle );
-    return NULL;
+    switch( type )
+    {
+      case PURPLE_NOTIFY_MESSAGE       : return "PURPLE_NOTIFY_MESSAGE"       ;
+      case PURPLE_NOTIFY_EMAIL         : return "PURPLE_NOTIFY_EMAIL"         ;
+      case PURPLE_NOTIFY_EMAILS        : return "PURPLE_NOTIFY_EMAILS"        ;
+      case PURPLE_NOTIFY_FORMATTED     : return "PURPLE_NOTIFY_FORMATTED"     ;
+      case PURPLE_NOTIFY_SEARCHRESULTS : return "PURPLE_NOTIFY_SEARCHRESULTS" ;
+      case PURPLE_NOTIFY_USERINFO      : return "PURPLE_NOTIFY_USERINFO"      ;
+      case PURPLE_NOTIFY_URI           : return "PURPLE_NOTIFY_URI"           ;
+    }
+    return "UNKNOWN";
 }
-static xmlnode  *_elim_notify_email_cb      ( gpointer data, SEXP_VALUE *args )
+static xmlnode  *_elim_notify_cb    ( gpointer data, SEXP_VALUE *args )
 {
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_EMAIL, handle );
-    return NULL;
-}
-static xmlnode  *_elim_notify_emails_cb     ( gpointer data, SEXP_VALUE *args )
-{
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_EMAILS, handle );
-    return NULL;
-}
-static xmlnode  *_elim_notify_formatted_cb  ( gpointer data, SEXP_VALUE *args )
-{
-    CB_HANDLER *handle = data;
-    fprintf( stderr, "_elim_notify_formatted_cb(%p, %p)\n", data, args );
-    purple_notify_close( PURPLE_NOTIFY_FORMATTED, handle );
-    if( args ) sexp_val_free( args );
-    return NULL;
-}
-static xmlnode  *_elim_notify_search_cb     ( gpointer data, SEXP_VALUE *args )
-{
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_SEARCHRESULTS, handle );
-    return NULL;
-}
-static xmlnode  *_elim_notify_userinfo_cb   ( gpointer data, SEXP_VALUE *args )
-{
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_USERINFO, handle );
-    return NULL;
-}
-static xmlnode  *_elim_notify_uri_cb        ( gpointer data, SEXP_VALUE *args )
-{
-    CB_HANDLER *handle = data;
-    purple_notify_close( PURPLE_NOTIFY_URI, handle );
+    CB_HANDLER  *handle = data;
+    NOTIFY_RESP *notify = handle->data;
+    PurpleNotifyType nt = notify->type;
+    const char  *nlabel = _nlabel( nt );
+    const char  *id     = notify->id;
+    fprintf( stderr, "purple_notify_close( %s.%s, %p )\n", nlabel, id, handle );
+    purple_notify_close( nt, handle );
     return NULL;
 }
 
@@ -263,7 +244,7 @@ void _elim_notify_search_more ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         )
 {
-    return NULL;
+    return;
 }
 
 void *_elim_notify_userinfo   ( PurpleConnection     *gc  ,
