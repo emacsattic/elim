@@ -1183,6 +1183,19 @@ may be started if none by that name exists."
                            (elim-daemon-call 'message nil arglist))
         (error "No such account: %S" account)) ))
 
+(defun elim-buddy-info (process account buddy)
+  (let (acct-data buddy-data auid buid call arglist)
+    (setq acct-data  (elim-account-data process account))
+    (when acct-data
+      (setq auid       (car acct-data)
+            buddy-data (elim-buddy-data process buddy auid))
+    (message "BUDDY: %S" buddy-data)
+      (when buddy-data 
+        (setq buid    (car buddy-data)
+              arglist (elim-simple-list-to-proto-alist (list "bnode-uid" buid))
+              call (elim-daemon-call 'buddy-info nil arglist))
+        (elim-process-send process call))) ))
+
 (defun elim-join-chat-parse-chat-parameter (thing)
   (let (name)
     (when (setq name (cond ((numberp thing) "bnode-uid" )

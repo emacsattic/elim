@@ -838,16 +838,18 @@ substitute these characters for the basic ascii ones:\n
           buddy (elim-buddy-data proc buid)
           bname (elim-avalue "bnode-name"  buddy)
           auid  (elim-avalue "account-uid" buddy))
-    (cond ((eq op 'del ) (elim-remove-buddy proc nil  buid))
-          ((eq op 'join) (elim-join-chat    proc auid buid))
-          ((eq op 'menu) 
+    (elim-debug "%S" (list op auid buid))
+    (cond ((eq op :del ) (elim-remove-buddy proc nil  buid))
+          ((eq op :join) (elim-join-chat    proc auid buid))
+          ((eq op :info) (elim-buddy-info   proc auid buid))
+          ((eq op :menu)
            (lexical-let ((m-event event))
              (setq menu-cb 
                    (lambda (proc name id attr args) 
                      (garak-buddy-menu-response-handler 
                       proc name id attr args m-event)))
              (elim-buddy-menu proc buid menu-cb) ))
-          ((eq op 'msg ) (elim-message proc auid bname
+          ((eq op :msg ) (elim-message proc auid bname
                                        (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
@@ -877,22 +879,23 @@ substitute these characters for the basic ascii ones:\n
           name  (elim-avalue "bnode-name"  bnode)
           type  (elim-avalue "bnode-type"  bnode)
           auid  (elim-avalue "account-uid" bnode)
-          mtail (list (garak-choice-item "Remove"  (cons 'del  uid)))
+          mtail (list (garak-choice-item "Remove"  (cons :del  uid)))
           kids  (mapcar
                  (lambda (N) (garak-buddy-list-node-widget proc N))
                  (delq nil (elim-buddy-children proc uid)))
           menu  (cond ((eq type :chat-node )
-                       (list (garak-choice-item "Join" (cons 'join uid))))
+                       (list (garak-choice-item "Join" (cons :join uid))))
                       ((eq type :buddy-node)
                        (setq plabel (if (elim-avalue "allowed" bnode)
                                         "Block" "Unblock"))
-                       (list (garak-choice-item "Send IM" (cons 'msg  uid))
-                             (garak-choice-item plabel    (cons 'priv uid)))) )
+                       (list (garak-choice-item "Get Info" (cons :info uid))
+                             (garak-choice-item "Send IM"  (cons :msg  uid))
+                             (garak-choice-item plabel     (cons :priv uid)))) )
           menu  (cons (garak-choice-item "---------" '(noop))
                       (nconc menu mtail)))
     (when (memq type '(:chat-node :buddy-node))
       (setcdr (last mtail)
-              (list (garak-choice-item "Extended Menu -->" (cons 'menu uid))) ))
+              (list (garak-choice-item "Extended Menu -->" (cons :menu uid))) ))
     ;; pick an account icon if this bnode has an account and we want icons
     (when (and auid (tree-widget-use-image-p))
         (let (proto iname adata)
@@ -1011,7 +1014,7 @@ substitute these characters for the basic ascii ones:\n
 
 (defun garak-insert-buddy-list-top (proc bnode)
   (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids)
-    (setq ;remove (garak-choice-item "Delete All" (cons 'del uid))
+    (setq ;remove (garak-choice-item "Delete All" (cons :del uid))
           name   (elim-avalue "bnode-name" bnode)
           kids   (mapcar
                   (lambda (N)
@@ -1030,8 +1033,8 @@ substitute these characters for the basic ascii ones:\n
                :value      uid
                :expander  'garak-buddy-list-node-children
                kids )
-      (setq menu (list (garak-choice-item ""       (cons 'noop uid))
-                       (garak-choice-item "Remove" (cons 'del  uid))))
+      (setq menu (list (garak-choice-item ""       (cons :noop uid))
+                       (garak-choice-item "Remove" (cons :del  uid))))
       (apply 'widget-create
              'tree-widget
              :open       t
