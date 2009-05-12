@@ -1,5 +1,5 @@
 /*
-Copyright © 2009 Vivek Dasmohapatra 
+Copyright © 2009 Vivek Dasmohapatra
 
 email : vivek@etla.org
 irc   : fledermaus on freenode, oftc
@@ -57,16 +57,16 @@ void _elim_notify_search_more ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         );
 
-void *_elim_notify_userinfo   ( PurpleConnection *gc               ,
-                                const char *who                    ,
-                                PurpleNotifyUserInfo *user_info    );
+void *_elim_notify_userinfo   ( PurpleConnection     *gc           ,
+                                const char           *who          ,
+                                PurpleNotifyUserInfo *ui           );
 
 void *_elim_notify_uri        ( const char *uri                    );
 
 void _elim_close_notify       ( PurpleNotifyType type              ,
-                                void *ui_handle);
+                                void *ui_handle                    );
 
-PurpleNotifyUiOps elim_notify_ui_ops = 
+PurpleNotifyUiOps elim_notify_ui_ops =
 {
     _elim_notify_message     ,
     _elim_notify_email       ,
@@ -83,7 +83,7 @@ PurpleNotifyUiOps elim_notify_ui_ops =
     NULL
 };
 
-typedef struct _NOTIFY_RESP 
+typedef struct _NOTIFY_RESP
 {
     char *id;                           // elim call id
     PurpleNotifyType    notify_type ;
@@ -108,7 +108,7 @@ typedef struct _NOTIFY_RESP
 
 
 // *************************************************************************
-static xmlnode  *_elim_notify_message_cb    ( gpointer data, SEXP_VALUE *args ) 
+static xmlnode  *_elim_notify_message_cb    ( gpointer data, SEXP_VALUE *args )
 {
     CB_HANDLER *handle = data;
     purple_notify_close( PURPLE_NOTIFY_MESSAGE, handle );
@@ -217,10 +217,10 @@ void *_elim_notify_emails     ( PurpleConnection *gc               ,
     AL_PTR ( alist, "account-uid" , acct  );
     AL_STR ( alist, "account-name", aname );
     AL_STR ( alist, "im-protocol" , proto );
-    
+
     for( x = 0; x < count; x++ )
     {
-        xmlnode *mesg = xnode_new( "alist" );        
+        xmlnode *mesg = xnode_new( "alist" );
         snprintf( nth, sizeof(nth) - 1, "%ld", (long)x );
         MAYBE_ATTRIBUTE( subject, mesg );
         MAYBE_ATTRIBUTE( from   , mesg );
@@ -254,24 +254,53 @@ void *_elim_notify_search     ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 gpointer user_data                 )
 {
-    NOTIFY_START_FUNC;
-    NOTIFY_CLOSE_FUNC( SEARCHRESULTS, search );
+    //NOTIFY_START_FUNC;
+    //NOTIFY_CLOSE_FUNC( SEARCHRESULTS, search );
+    return NULL;
 }
 
 void _elim_notify_search_more ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         )
 {
-
+    return NULL;
 }
 
-void *_elim_notify_userinfo   ( PurpleConnection *gc               ,
-                                const char *who                    ,
-                                PurpleNotifyUserInfo *user_info    )
+void *_elim_notify_userinfo   ( PurpleConnection     *gc  ,
+                                const char           *who ,
+                                PurpleNotifyUserInfo *ui  )
 {
-    //NOTIFY_START_FUNC;
-    //NOTIFY_CLOSE_FUNC( USERINFO, userinfo );
-    return NULL;
+    NOTIFY_START_FUNC;
+
+    GList         *entry = purple_notify_user_info_get_entries  ( ui   );
+    PurpleAccount *acct  = gc   ? purple_connection_get_account ( gc   ) : NULL;
+    const char    *aname = acct ? purple_account_get_username   ( acct ) : NULL;
+    const char    *proto = acct ? purple_account_get_protocol_id( acct ) : NULL;
+    xmlnode       *user  = xnode_new( "alist" );
+
+    AL_PTR ( alist, "account-uid"  , acct  );
+    AL_STR ( alist, "account-name" , aname );
+    AL_STR ( alist, "im-protocol"  , proto );
+    AL_STR ( alist, "user-name"    , who   );
+    AL_NODE( alist, "user-info"    , user  );
+
+    for( ; entry; entry = entry->next )
+    {
+        PurpleNotifyUserInfoEntry *item = entry->data;
+        xmlnode    *uitem = xnode_new( "alist" );
+        const char *label = purple_notify_user_info_entry_get_label( item );
+        const char *value = purple_notify_user_info_entry_get_value( item );
+        PurpleNotifyUserInfoEntryType type = 
+          purple_notify_user_info_entry_get_type( item );
+
+        if( !label ) label = "-";
+
+        AL_ENUM( uitem, "type" , type  , ":notify-user-info-entry" );
+        AL_STR ( uitem, "value", value );
+        AL_NODE( user ,  label , uitem );
+    }
+
+    NOTIFY_CLOSE_FUNC( USERINFO, userinfo );
 }
 
 void *_elim_notify_uri ( const char *uri )

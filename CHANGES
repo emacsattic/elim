@@ -1,5 +1,7 @@
 2009-05-12  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* ui_ops/notify_ui_ops.c: implement server side of notify-userinfo
+
 	* elisp/garak.el: handle notify types: email, message, formatted, uri
 	                  still underway: emails, search, userinfo
 
