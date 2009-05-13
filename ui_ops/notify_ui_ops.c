@@ -85,8 +85,9 @@ PurpleNotifyUiOps elim_notify_ui_ops =
 
 typedef struct _NOTIFY_RESP
 {
-    char *id;                           // elim call id
-    PurpleNotifyType type ;
+    char            *id       ; // elim call id
+    PurpleNotifyType type     ;
+    GList           *image_ids;
 } NOTIFY_RESP;
 
 
@@ -97,8 +98,8 @@ typedef struct _NOTIFY_RESP
     char        *ID     = new_elim_id()
 
 #define NOTIFY_CLOSE_FUNC(NTYPE,NAME) \
-    resp  ->id   = ID;                                              \
-    resp  ->type = PURPLE_NOTIFY_ ## NTYPE;                         \
+    resp  ->id        = ID;                                         \
+    resp  ->type      = PURPLE_NOTIFY_ ## NTYPE;                    \
     handle->func = _elim_notify_cb;                                 \
     handle->data = resp;                                            \
     store_cb_data( ID, handle );                                    \
@@ -122,14 +123,14 @@ static const char const * _nlabel( PurpleNotifyType type )
     }
     return "UNKNOWN";
 }
+
 static xmlnode  *_elim_notify_cb    ( gpointer data, SEXP_VALUE *args )
 {
     CB_HANDLER  *handle = data;
     NOTIFY_RESP *notify = handle->data;
     PurpleNotifyType nt = notify->type;
     const char  *nlabel = _nlabel( nt );
-    const char  *id     = notify->id;
-    fprintf( stderr, "purple_notify_close( %s.%s, %p )\n", nlabel, id, handle );
+    fprintf( stderr, "purple_notify_close( %s, %p )\n", nlabel, handle );
     purple_notify_close( nt, handle );
     return NULL;
 }
@@ -147,7 +148,6 @@ void *_elim_notify_message ( PurpleNotifyMsgType type ,
     AL_STR ( alist, "primary"     , primary   );
     AL_STR ( alist, "secondary"   , secondary );
     AL_ENUM( alist, "message-type", type      , ":notify-msg-type" );
-
     NOTIFY_CLOSE_FUNC( MESSAGE, message );
 }
 
@@ -177,13 +177,13 @@ void *_elim_notify_email ( PurpleConnection *gc ,
 #define MAYBE_ATTRIBUTE(slot,alist) \
     if( slot ## s ) { AL_STR( alist, #slot, *slot ## s ); slot ## s++; }
 
-void *_elim_notify_emails     ( PurpleConnection *gc               ,
-                                size_t count                       ,
-                                gboolean detailed                  ,
-                                const char **subjects              ,
-                                const char **froms                 ,
-                                const char **tos                   ,
-                                const char **urls                  )
+void *_elim_notify_emails ( PurpleConnection *gc  ,
+                            size_t count          ,
+                            gboolean detailed     ,
+                            const char **subjects ,
+                            const char **froms    ,
+                            const char **tos      ,
+                            const char **urls     )
 {
     NOTIFY_START_FUNC;
 
@@ -215,10 +215,10 @@ void *_elim_notify_emails     ( PurpleConnection *gc               ,
 
 #undef MAYBE_ATTRIBUTE
 
-void *_elim_notify_formatted  ( const char *title                  ,
-                                const char *primary                ,
-                                const char *secondary              ,
-                                const char *text                   )
+void *_elim_notify_formatted ( const char *title     ,
+                               const char *primary   ,
+                               const char *secondary ,
+                               const char *text      )
 {
     NOTIFY_START_FUNC;
     AL_STR ( alist, "title"     , title     );
@@ -228,12 +228,12 @@ void *_elim_notify_formatted  ( const char *title                  ,
     NOTIFY_CLOSE_FUNC( FORMATTED, formatted );
 }
 
-void *_elim_notify_search     ( PurpleConnection *gc               ,
-                                const char *title                  ,
-                                const char *primary                ,
-                                const char *secondary              ,
-                                PurpleNotifySearchResults *results ,
-                                gpointer user_data                 )
+void *_elim_notify_search ( PurpleConnection *gc               ,
+                            const char *title                  ,
+                            const char *primary                ,
+                            const char *secondary              ,
+                            PurpleNotifySearchResults *results ,
+                            gpointer user_data                 )
 {
     //NOTIFY_START_FUNC;
     //NOTIFY_CLOSE_FUNC( SEARCHRESULTS, search );
@@ -247,9 +247,37 @@ void _elim_notify_search_more ( PurpleConnection *gc               ,
     return;
 }
 
-void *_elim_notify_userinfo   ( PurpleConnection     *gc  ,
-                                const char           *who ,
-                                PurpleNotifyUserInfo *ui  )
+static void _elim_notify_track_images ( const char  *text , 
+                                        NOTIFY_RESP *r    , 
+                                        gboolean     ref  )
+{
+    gpointer   id = 0;
+    const char *c = NULL;
+    char       *e = NULL;
+    if( !text ) return;
+
+    void (*adjust_refcount) (int x) =
+      ( ref ?  purple_imgstore_ref_by_id : purple_imgstore_unref_by_id );
+
+    for( c = text; *c; c++ )
+        if( *c == '<' )
+            if( !strncmp( "<img id='", c, 9 ) )
+            {
+                c += 9;
+                id = (gpointer)strtol( c, &e, 10 );
+                if( e && (*c != *e) )
+                {
+                    c = e;
+                    e = NULL;
+                    (adjust_refcount)((int)id);
+                    if( r ) r->image_ids = g_list_prepend( r->image_ids,id );
+                }
+            }
+}
+
+void *_elim_notify_userinfo ( PurpleConnection     *gc  ,
+                              const char           *who ,
+                              PurpleNotifyUserInfo *ui  )
 {
     NOTIFY_START_FUNC;
 
@@ -276,7 +304,9 @@ void *_elim_notify_userinfo   ( PurpleConnection     *gc  ,
 
         if( !label ) label = "-";
 
-        AL_ENUM( uitem, "type" , type  , ":notify-user-info-entry" );
+        _elim_notify_track_images( value, resp, TRUE );
+
+        AL_ENUM( uitem, "type" , type  , ":notify-user-info-entry-type" );
         AL_STR ( uitem, "value", value );
         AL_NODE( user ,  label , uitem );
     }
@@ -295,6 +325,17 @@ void _elim_close_notify ( PurpleNotifyType type , void *ui_handle )
 {
     CB_HANDLER  *handle = ui_handle;
     NOTIFY_RESP *resp   = handle ? handle->data : NULL;
+    GList       *iids   = resp->image_ids;
+
+    if( iids )
+    {
+        for( ; iids; iids = iids->next )
+        {
+            int id = (int)( iids->data );
+            if( id > 0 ) purple_imgstore_unref_by_id( id );
+        }
+        g_list_free( resp->image_ids );
+    }
     g_free( resp   );
     g_free( handle );
 }
