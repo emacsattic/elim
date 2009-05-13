@@ -971,7 +971,7 @@ its data in the form (uid (:key . value) ...). :key items should include
     (setq b start a start)
     (while (< b end)
       (setq fprop (get-text-property a 'face object)
-            fprop (if (and fprop (listp fprop)) (cons face fprop) 
+            fprop (if (and fprop (listp fprop)) (cons face fprop)
                     (if fprop (list face fprop) face))
             b     (next-single-char-property-change a 'face object end))
       (add-text-properties a b (list 'face fprop) object)
@@ -990,13 +990,21 @@ its data in the form (uid (:key . value) ...). :key items should include
 (defun elim-italicised-text (str)
   (elim-add-face (match-string 1 str) 'italic))
 
+(defun elim-emboldened-text (str)
+  (elim-add-face (match-string 1 str) 'bold))
+
+
 (defun elim-interpret-markup (text)
-  (setq text (replace-regexp-in-string 
-              "<a.+?href=\"\\(.*?\\)\".*?>\\(\\(?:.\\|\n\\)*?\\)</a>"
-              'elim-buttonised-url text)
-        text (replace-regexp-in-string "<I>\\(\\(?:.\\|\n\\)+?\\)</I>"
-                                       'elim-italicised-text text))
-  text)
+  (let ((case-fold-search t))
+    (setq text (replace-regexp-in-string 
+                "<a.+?href=\"\\(.*?\\)\".*?>\\(\\(?:.\\|\n\\)*?\\)</a>"
+                'elim-buttonised-url text)
+          text (replace-regexp-in-string "<I>\\(\\(?:.\\|\n\\)+?\\)</I>"
+                                         'elim-italicised-text text)
+          text (replace-regexp-in-string "<B>\\(\\(?:.\\|\n\\)+?\\)</B>"
+                                         'elim-emboldened-text text)
+          text (replace-regexp-in-string "<BR\\s-*/>" "\n" text))
+    text))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; elim daemon calls:
@@ -1189,12 +1197,15 @@ may be started if none by that name exists."
     (when acct-data
       (setq auid       (car acct-data)
             buddy-data (elim-buddy-data process buddy auid))
-    (message "BUDDY: %S" buddy-data)
       (when buddy-data 
         (setq buid    (car buddy-data)
               arglist (elim-simple-list-to-proto-alist (list "bnode-uid" buid))
               call (elim-daemon-call 'buddy-info nil arglist))
         (elim-process-send process call))) ))
+
+(defun elim-image (process id &optional cb)
+  (let ((arglist (elim-simple-list-to-proto-alist (list "image-id" id))))
+    (elim-process-send process (elim-daemon-call 'image nil arglist) cb) ))
 
 (defun elim-join-chat-parse-chat-parameter (thing)
   (let (name)
