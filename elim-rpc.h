@@ -59,6 +59,9 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #define AL_ENUM(a,n,v,t) \
      xnode_insert_child( (a), xnode_alist_item_enum   ( (n), (v), (t) ) )
 
+#define AL_DATA(a,n,v,l) \
+     xnode_insert_child( (a), xnode_alist_item_data   ( (n), (v), (l) ) )
+
 // ==========================================================================
 
 typedef xmlnode *(*CB_FUNC)(gpointer data, SEXP_VALUE *args);

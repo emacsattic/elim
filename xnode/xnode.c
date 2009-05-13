@@ -27,6 +27,8 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include <ctype.h>
 #include <string.h>
 
+#define BASE64_ENCODE(x,y) (char *)g_base64_encode(((guchar *)x),(y))
+
 #define XML_DECL "<?xml version='1.0' encoding='UTF-8'?>\n"
 
 xmlnode *
@@ -948,7 +950,6 @@ xmlnode * xnode_alist_item_integer( const char *name, long value )
     xmlnode *item;
     GString *i = g_string_new( "" );
 
-
     _ALIST_ITEM( item, "int", name ); 
 
     g_string_printf  ( i, "%ld", value );
@@ -963,7 +964,6 @@ xmlnode * xnode_alist_item_enum( const char *name, int value, const char *type )
     xmlnode *item;
     GString *i = g_string_new( "" );
 
-
     _ALIST_ENUM( item, "int", name, type ); 
 
     g_string_printf  ( i, "%d", value );
@@ -973,6 +973,17 @@ xmlnode * xnode_alist_item_enum( const char *name, int value, const char *type )
     return item;
 }
 
+xmlnode * xnode_alist_item_data( const char *name, const char *v, size_t l )
+{
+    xmlnode *item;
+    char    *data = v ? BASE64_ENCODE( v, l ) : "";
+
+    _ALIST_ITEM( item, "data", name );
+    xnode_insert_data( item, data ? data : "" , -1 );
+    g_free( data );
+
+    return item;
+}
 
 xmlnode * xnode_alist_item_boolean( const char *name, gboolean value )
 {
