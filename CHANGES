@@ -1,3 +1,18 @@
+2009-05-14  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el        : Fetch and display buddy info data, including
+	                          support for markup and images.
+
+	* elisp/elim.el         : interpret more markup (bold, italic, newline)
+	                          fetch image data by ID (synchronous call)
+
+	* handlers/image.c      : fetch image data by imgstore ID
+
+	* ui_ops/notify_ui_ops.c: track image id refs in _elim_notify_userinfo
+	                          and _elim_close_notify.
+
+	* xnode/xnode.c (xnode_alist_item_data): base64 data type support.
+
 2009-05-12  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* ui_ops/notify_ui_ops.c: implement server side of notify-userinfo
