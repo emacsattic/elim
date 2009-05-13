@@ -291,6 +291,50 @@ substitute these characters for the basic ascii ones:\n
         (elim-store-process-data proc :notice-buffer nbuf)))
     nbuf))
 
+(defvar garak-image-cache nil)
+
+(defun garak-cache-image (proc name id attr args)
+  (when (equal (elim-avalue "status" args) 0)
+    (let ((image (elim-avalue "value" args)) iid data)
+      (setq iid  (elim-avalue "image-id"   image)
+            data (elim-avalue "image-data" image))
+      (assq-delete-all iid garak-image-cache)
+      (setq garak-image-cache (cons (cons iid data) garak-image-cache))
+      data)))
+
+(defun garak-interpret-image-markup (process string)
+  (let ((pos                 0) 
+        (case-fold-search    t) 
+        (counter             0) 
+        (garak-image-cache nil) ids id data image start end)
+    (while (string-match "<img\\s-+id='\\([0-9]+\\)'>" string pos)
+      (setq id  (string-to-int (match-string 1 string))
+            pos (match-end 0))
+      (add-to-list 'ids id nil 'eq))
+    (if (display-images-p)
+        (progn
+          (mapc 
+           (lambda (i) 
+             (elim-image process i 'garak-cache-image)
+             (mapc (lambda (x) 
+                     (accept-process-output process 0 50 1)) '(0 1 2))) ids)
+          (setq pos 0)
+          (while (string-match "<img\\s-+id='\\([0-9]+\\)'>" string pos) 
+            (setq pos   (match-end 0)
+                  start (match-beginning 0)
+                  end   (match-end       0)  
+                  id    (match-string 1 string)
+                  id    (string-to-int id)
+                  data  (cdr (assq id garak-image-cache))
+                  image (when data (create-image data nil t)))
+            (when (and data image)
+              (put-text-property start end 'display image string)))) 
+      (while (string-match "<img\\s-+id='\\([0-9]+\\)'>" string pos) 
+        (setq pos (match-end 0))
+        (put-text-property (match-beginning 0) 
+                           (match-end       0) 'display "[ICON]" string)))
+    string))
+
 (defun garak-kill-notice (&optional widget child event &rest stuff)
   (let ((value (widget-value widget)) 
         (sprop 'garak-notice-start)
@@ -318,8 +362,18 @@ substitute these characters for the basic ascii ones:\n
     ;;(elim-debug "ERASE: %S to %S in %S" start end (current-buffer))
     ;;(elim-debug "SEND : %S" response)
     (elim-process-send proc response)
-    (when (and start end) (delete-region start end))
+    (when (and  start  end) (delete-region start (1+ end)))
     (when (< (point-max) 2) (bury-buffer)) ))
+
+(defun garak-begin-notice (id)
+  (widget-insert (propertize "+---------\n" 'garak-notice-start id)))
+
+(defun garak-end-notice (name id)
+  (widget-create 'push-button
+                 :format "%[[Ok]%]" 
+                 :notify 'garak-kill-notice
+                 :value  (list name id))
+  (widget-insert (propertize "\n" 'garak-notice-close id)))
 
 (defalias 'garak-notify-message 'garak-notify-formatted)
 (defun garak-notify-formatted (proc name id status args)
@@ -330,17 +384,13 @@ substitute these characters for the basic ascii ones:\n
         (h2    (elim-avalue "secondary" args))
         (text  (elim-avalue "text"      args)))
     (with-current-buffer nbuf
-      (widget-insert (propertize " "   'garak-notice-start id))
+      (garak-begin-notice id)
       (widget-insert (propertize title 'face 'garak-warning-face))
       (widget-insert "\n")
       (when h1   (widget-insert (propertize h1 'face mface) ":\n"))
       (when h2   (widget-insert (propertize h2 'face mface) ":\n"))
       (when text (widget-insert text))
-      (widget-create 'push-button
-                     :format "%[[Ok]%]" 
-                     :notify 'garak-kill-notice
-                     :value  (list name id))
-      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+      (garak-end-notice name id)) 
     (let ((display-buffer-reuse-frames t)) 
       (display-buffer nbuf)) ))
 
@@ -354,15 +404,11 @@ substitute these characters for the basic ascii ones:\n
     (setq from (propertize from 'face 'garak-nick-face    ))
     (setq to   (propertize to   'face 'garak-own-nick-face))
     (with-current-buffer nbuf
-      (widget-insert (propertize " "   'garak-notice-start id))
+      (garak-begin-notice id)
       (widget-insert (propertize title 'face mface) "\n")
       (when url (widget-insert (propertize url 'face mface) ":\n"))
       (widget-insert (format "%s -> %s" from to) "\n")
-      (widget-create 'push-button
-                     :format "%[[Ok]%]" 
-                     :notify 'garak-kill-notice
-                     :value  (list name id))
-      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+      (garak-end-notice name id)) 
     (let ((display-buffer-reuse-frames t))
       (display-buffer nbuf)) ))
 
@@ -371,13 +417,51 @@ substitute these characters for the basic ascii ones:\n
         (mface 'garak-marker-face)
         (url   (elim-avalue "url" args)))
     (with-current-buffer nbuf
-      (widget-insert (propertize " "   'garak-notice-start id))
+      (garak-begin-notice id)
       (widget-insert (propertize url 'face mface) "\n")
-      (widget-create 'push-button
-                     :format "%[[Ok]%]" 
-                     :notify 'garak-kill-notice
-                     :value  (list name id))
-      (widget-insert (propertize "\n" 'garak-notice-close id))) 
+      (garak-end-notice name id)) 
+    (let ((display-buffer-reuse-frames t))
+      (display-buffer nbuf)) ))
+
+(defun garak-notify-userinfo (proc name id attr args)
+  (let ((nbuf  (garak-notice-buffer proc))
+        (mface 'garak-marker-face)
+        (l-len  5)
+        (l-fmt "%%-%ds : %%s\n")
+        (bname (elim-avalue "user-name" args))
+        (info  (elim-avalue "user-info" args)))
+    (with-current-buffer nbuf
+      (garak-begin-notice id)
+      (widget-insert (propertize bname 'face 'garak-nick-face) "\n")
+      (mapc 
+       (lambda (entry) 
+         (let ((label (car entry)))
+           (when (and (stringp label)
+                      (not (equal  label "-"))
+                      (<   (length label) 20)
+                      (>   (length label) l-len))
+             (setq l-len (length label)) ))) info)
+      (setq l-fmt (format l-fmt l-len))
+      (mapc
+       (lambda (entry)
+         (let ((label (car entry))
+               (type  (elim-avalue "type"  (cdr entry)))
+               (value (elim-avalue "value" (cdr entry))))
+           (if value
+               (setq value (elim-interpret-markup value)
+                     value (garak-interpret-image-markup proc value))
+             (setq value ""))
+           (cond ((eq type :section-break)
+                  (widget-insert "---------------------------------------\n"))
+                 ((eq type :section-header)
+                  (widget-insert 
+                   (format "%s "  (propertize label 'face 'garak-marker-face))
+                   (format "%s\n" (propertize value 'face 'garak-marker-face))))
+                 ((eq type :pair)
+                  (if (not (equal "-" label))
+                      (widget-insert (format l-fmt label value)) 
+                    (widget-insert value)) )) )) info)
+      (garak-end-notice name id)) 
     (let ((display-buffer-reuse-frames t))
       (display-buffer nbuf)) ))
 
@@ -792,9 +876,8 @@ substitute these characters for the basic ascii ones:\n
    (lambda (entry)
      (cond ((listp (cdr entry))
             (setq cooked (cons (car entry) cooked)
-                  cooked
-                  (nreverse 
-                   (garak-menu-actions-to-choices (cdr entry) cooked))))
+                  cooked (nreverse 
+                          (garak-menu-actions-to-choices (cdr entry) cooked))))
            (t (setq cooked (cons entry cooked))) )) raw)
   (nreverse cooked))
 
