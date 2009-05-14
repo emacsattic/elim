@@ -18,7 +18,7 @@
 ** DONE update buddy status in ascii as well as gui mode
 ** DONE add protocol icon to buddy entries
 ** DONE extended buddy list menu actions
-** TODO buddy info action, inc display buddy icon
+** DONE buddy info action, inc display buddy icon
 ** TODO make blocking/unblocking work
 ** TODO remove buddy from CLI as well as GUI
 ** TODO distinguish homonymous entries by account
@@ -31,8 +31,15 @@
 * misc stuff
 ** TODO set buddy icon
 ** TODO update docs to cover new client-to-daemon commands
-** TODO can dynamic submenus be generated at parent invocation time?
-** TODO notify ui ups
+** DONE can dynamic submenus be generated at parent invocation time?
+*** not easily enough. on hold for now.
+** TODO notify ui ops
+*** DONE email
+*** TODO emails (multi message notification)
+*** DONE url
+*** DONE generic message
+*** DONE user info
+*** TODO search results
 * preferences
 ** DONE fetch preferences list and display it in editable widget form
 ** DONE add specialised preference widgets for those that need it
