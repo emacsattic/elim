@@ -1027,6 +1027,7 @@ be initialised to the value of `elim-directory' if you do not supply it."
          (shell-file-name elim-sh-file)
          (elim                     nil) )
     ;; set up the process, io buffer, input filters etc:
+    (make-directory (or user-dir elim-directory) t)
     (setq elim (start-process-shell-command
                 (buffer-name buf) buf (elim-command)))
     (elim-store-process-data elim :client-ops      client-ops)
@@ -1039,7 +1040,6 @@ be initialised to the value of `elim-directory' if you do not supply it."
     (while (and (eq (process-status elim) 'run)
                 (< (elim-fetch-process-data elim :initialised) 1))
       (accept-process-output))
-    (make-directory (or user-dir elim-directory) t)
     (elim-init elim ui-string user-dir)
     (elim-update-protocol-list elim) ;; IM protocols supported
     (elim-update-account-list  elim) ;; User's accounts
