@@ -57,6 +57,7 @@ HANDLER_OBJ := $(patsubst %.c, %.o, $(HANDLER_SRC) )
 OBJ_FILES   := $(patsubst %.c, %.o, $(CH_FILES) )
 UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.o
 CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))
+TAR_FLAGS   := --exclude .git -czvf
 
 ############################################################################
 .PHONY: clean diag distclean check-libdeps signed-tar tar
@@ -120,7 +121,7 @@ distclean: clean
 ############################################################################
 
 %.tar.gz: distclean
-	@tar -C $(abspath $(@D)) --exclude .git -czvf $(@F) $(notdir $(CURDIR))
+	@tar -C $(abspath $(@D)) $(TAR_FLAGS) $@ $(notdir $(CURDIR))
 
 %.tar.gz.sig: %.tar.gz
 	@gpg -b $<
