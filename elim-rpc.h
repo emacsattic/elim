@@ -50,6 +50,9 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #define AL_INT(a,n,v)    \
      xnode_insert_child( (a), xnode_alist_item_integer( (n), (long)(v) ) )
 
+#define AL_NUM(a,n,v)    \
+     xnode_insert_child( (a), xnode_alist_item_number ( (n), (double)(v) ) )
+
 #define AL_BOOL(a,n,v)   \
      xnode_insert_child( (a), xnode_alist_item_boolean( (n), (v) ) )
 

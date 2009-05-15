@@ -959,6 +959,21 @@ xmlnode * xnode_alist_item_integer( const char *name, long value )
     return item;
 }
 
+xmlnode * xnode_alist_item_number( const char *name, double value )
+{
+    xmlnode *item;
+    GString *i = g_string_new( "" );
+
+    _ALIST_ITEM( item, "float", name ); 
+
+    g_string_printf  ( i, "%f", value );
+    xnode_insert_data( item, i->str, i->len );
+    g_string_free    ( i, TRUE );
+
+    return item;
+}
+
+
 xmlnode * xnode_alist_item_enum( const char *name, int value, const char *type )
 {
     xmlnode *item;
