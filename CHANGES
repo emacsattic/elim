@@ -1,3 +1,26 @@
+2009-05-15  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* ui_ops/notify_ui_ops.c:
+	(_elim_notify_track_images, _elim_close_notify): 64 bit size warning.
+
+	* elisp/elim.el:
+	(elim-update-process-data): abstracted out process data alist faff.
+	(elim-request-item)       : label buttons correctly for file request.
+	                            improve widget layout/info for file request.
+	
+	* elisp/garak.el (garak-cmd-prefs): /prefs command
+	
+	* Makefile                : build/link new signals directory
+
+	* signals/file_transfers.c: 
+	(elim_ft_signals_init) : file transfer signals handled.
+	(_elim_ft_ui_op_update): file transfer progress support.
+	(_elim_signal_ft_file) : file transfer meta data to client on signals.
+
+	* elim-rpc.h (AL_NUM): protocol float alist member helper macro.
+
+	* xnode/xnode.c (xnode_alist_item_number): protocol float support.
+
 2009-05-14  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el        : Fetch and display buddy info data, including
