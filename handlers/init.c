@@ -22,6 +22,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "init.h"
 #include "../ui_ops/ops.h"
+#include "../signals/sigs.h"
 
 static void _h_elim_warning( const gchar *msg ) { fputs( msg, stderr ); }
 
@@ -37,6 +38,7 @@ xmlnode * _h_elim_init ( const char *name ,
 
     if( !ui ) { ui = "elim"; }
 
+    // libpurple initialisation:
     purple_util_set_user_dir       ( dir  );
     purple_util_init               ();
     purple_core_set_ui_ops         ( &elim_core_ui_ops         );
@@ -58,6 +60,8 @@ xmlnode * _h_elim_init ( const char *name ,
         purple_blist_load();
         g_set_print_handler( (GPrintFunc)_h_elim_warning );
         purple_debug_set_enabled( FALSE );
+        // glib signal initialisation:
+        elim_ft_signals_init();
     }
     else
     {

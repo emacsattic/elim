@@ -51,9 +51,12 @@ CH_FILES    := $(wildcard *.c         ) \
                $(wildcard xnode/*.c   ) \
                $(wildcard sexp/*.c    ) \
                $(wildcard ui_ops/*.c  ) \
-               $(wildcard handlers/*.c)
+               $(wildcard handlers/*.c) \
+               $(wildcard signals/*.c )
 HANDLER_SRC := $(wildcard handlers/*.c)
 HANDLER_OBJ := $(patsubst %.c, %.o, $(HANDLER_SRC) )
+SIGNAL_SRC  := $(wildcard signals/*.c)
+SIGNAL_OBJ  := $(patsubst %.c, %.o, $(SIGNAL_SRC) )
 OBJ_FILES   := $(patsubst %.c, %.o, $(CH_FILES) )
 UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.o
 CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))
@@ -79,12 +82,19 @@ $(OBJ_FILES): %.o: %.c %.h
 
 $(HANDLER_OBJ): ui_ops/ops.h prpl/util.h elim-rpc.h
 
+$(SIGNAL_OBJ): prpl/util.h elim-rpc.h
+
+handlers/init.o: signals/sigs.h
+
 ############################################################################
 # generated source files:
 elim-func-handlers.c: make/elim-func-handlers-c.sh $(HANDLER_SRC) 
 	$< $(filter-out %.sh, $^) > $@;
 
 ui_ops/ops.h: make/elim-ops-h.sh $(patsubst %.c, %.h, $(wildcard ui_ops/*.c))
+	$< $(filter-out %.sh, $^) > $@;
+
+signals/sigs.h: make/sigsigs-h.sh $(patsubst %.c, %.h, $(wildcard signals/*.c))
 	$< $(filter-out %.sh, $^) > $@;
 
 handler-list.h: make/handler-list-h.sh $(wildcard handlers/*.h)
@@ -108,6 +118,7 @@ clean:
 	@( rm -fv $(BINARIES) $(OBJ_FILES) \
 	          handler-list.h           \
 	          ui_ops/ops.h             \
+	          signals/sigs.h 	   \
 	          elim-func-handlers.c     \
 	          TAGS                     );
 
