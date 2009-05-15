@@ -20,14 +20,14 @@
 # You should have received a copy of the GNU General Public License
 # along with elim.  If not, see <http://www.gnu.org/licenses/>.
 
-echo    "#include \"elim-func-handlers.h\"";
-echo    "func_handler handlers[] = ";
-echo -n "  {";
+echo   "#include \"elim-func-handlers.h\"";
+echo   "func_handler handlers[] = ";
+printf "  {";
 FILLER="";
 for FILE in "$@";
 do
     BN=$(basename $FILE .c);
-    FN=$(echo -n $BN | sed -e 's/_/-/g');
+    FN=$(echo $BN | sed -e 's/_/-/g');
     printf "$FILLER { %-15s, _h_elim_%-11s } ,\n" \"$FN\" $BN;
     FILLER="   ";
 done;
