@@ -77,6 +77,9 @@ flags rather than simple enumerations.")
     (elim-request-file          . elim-request-item)
     (elim-request-directory     . elim-request-item)
     (elim-request-action        ) ;; done
+    ;; file transfer
+    (elim-file-transfer-status  )
+    (elim-file-transfer-percent )
     ;; conversation
     (elim-conv-create           )
     (elim-conv-destroy          )
@@ -270,11 +273,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;; if we implement setting up response handlers for individual call instances
 ;; via elim-callback-alist, this is where we will fetch said handlers back:
 (defun elim-set-resp-handler-by-id (proc id handler)
-  (let ((store (elim-fetch-process-data proc :callbacks)) slot) 
-    (if (setq slot (elim-avalue id store))
-        (setcdr slot handler)
-      (setq store (cons (cons id handler) store)))
-    (elim-store-process-data proc :callbacks store)))
+  (elim-update-process-data proc :callbacks id handler))
 
 (defun elim-get-resp-handler-by-id (proc id)
   (let ((store (elim-fetch-process-data proc :callbacks)) slot)
@@ -369,6 +368,12 @@ and return an s-expression suitable for making a call to an elim daemon."
   (elim-store-process-data proc :initialised 
                            (1+ (elim-fetch-process-data proc :initialised))))
 
+(defun elim-update-process-data (proc type key value)
+  (let ((store (elim-fetch-process-data proc type)) slot)
+    (if (setq   slot (assoc key store))
+        (setcdr slot value)
+      (setq store (cons (cons key value) store))
+      (elim-store-process-data proc type store))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon response handlers:
 (defun elim-unwrap-resp-args (status raw-args)
@@ -445,20 +450,14 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defun elim-response-filter-account-data (proc name id attr args)
   (let (uid proto aname store adata (val (elim-avalue "value" args)) slot)
     (when (setq uid (elim-avalue "account-uid" val))
-      (setq store (elim-fetch-process-data proc :accounts))
       ;;(message "elim-response-filter-account-data :: %S -> %S" uid store)
       (setq aname (elim-avalue "account-name" val)
             proto (elim-avalue "im-protocol"  val)
             adata (list (cons :name  aname)
                         (cons :proto proto)))
-      (if (setq slot (assoc uid store))
-          (setcdr slot adata)
-        (setq store (cons (cons uid adata) store)))
-      (elim-store-process-data proc :accounts store)
-      ;;(message "elim-response-filter-account-data :: %S -> %S accounts" 
-      ;;         uid (length store))
+      (elim-update-process-data proc :accounts uid adata)
       (elim-call-client-handler proc name id 0 val)
-      (or adata uid) )))
+      (or adata uid)) ))
 
 (defun elim-remove-account-response (proc name id attr args)
   (let (uid store slot value)
@@ -491,13 +490,8 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;; daemon-to-client call handlers:
 
 (defun elim-blist-update-node (proc name id status args)
-  (let ((store      (elim-fetch-process-data proc :blist))
-        (bnode-uid  (elim-avalue "bnode-uid" args))
-        (bnode-cons  nil))
-    (if (setq bnode-cons (assoc bnode-uid store))
-        (setcdr bnode-cons args)
-      (setq store (cons (cons bnode-uid args) store))
-      (elim-store-process-data proc :blist store)))
+  (let ((bnode-uid (elim-avalue "bnode-uid" args)))
+    (elim-update-process-data proc :blist bnode-uid args))
   (elim-call-client-handler proc name id status args))
 
 (defun elim-blist-create-node (proc name id status args) 
@@ -521,13 +515,8 @@ into any clients."
 
 (defun elim-account-info-cache (proc name id status args type)
   (when (memq type '(:account-status :account-connection))
-    (let ((store       (elim-fetch-process-data proc type))
-          (account-uid (elim-avalue "account-uid" args))
-          (slot  nil))
-      (if (setq slot (assoc account-uid store))
-          (setcdr slot args)
-        (setq store (cons (cons account-uid args) store))
-        (elim-store-process-data proc type store)))
+    (let ((account-uid (elim-avalue "account-uid" args)))
+      (elim-update-process-data proc type account-uid args))
     (elim-call-client-handler proc name id status args)))
 
 (defun elim-account-status-changed (proc name id status args)
@@ -535,6 +524,9 @@ into any clients."
 
 (defun elim-connection-state (proc name id status args)
   (elim-account-info-cache proc name id status args :account-connection))
+
+(defun elim-file-transfer-status (proc name id status args);
+  (elim-update-process-data proc :xfers (elim-avalue "xfer-uid" args) args))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon to client request handlers (requests are calls that require a
@@ -682,6 +674,10 @@ into any clients."
           secret    (elim-avalue "secret"  args)
           buf-name  (concat "* " prompt " *")
           field-buf (generate-new-buffer buf-name))
+    (cond ((eq name 'elim-request-file) 
+           (if (elim-avalue "savep" args)
+               (setq prompt (concat prompt "\nSave File: "))
+             (setq prompt (concat prompt "\nChoose File: "))) ))
     (with-current-buffer field-buf
       (elim-init-ui-buffer)
       (setq elim-form-ui-args (list :process proc 
@@ -699,8 +695,8 @@ into any clients."
                                               (cons "label"   prompt )
                                               (cons "masked"  secret ))))
             (t (error "request type %S not implemented" name)))
-      (setq ok-label  (elim-avalue "ok-label"  args)
-            nok-label (elim-avalue "nok-label" args))
+      (setq ok-label  (or (elim-avalue "ok-label"  args) "Ok"    )
+            nok-label (or (elim-avalue "nok-label" args) "Cancel"))
       (elim-form-widget-create 'push-button
                                nil
                                :format (format "[%%[%s%%]]" nok-label)
