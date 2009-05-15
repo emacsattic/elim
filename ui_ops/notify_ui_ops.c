@@ -269,7 +269,7 @@ static void _elim_notify_track_images ( const char  *text ,
                 {
                     c = e;
                     e = NULL;
-                    (adjust_refcount)((int)id);
+                    (adjust_refcount)((long)id);
                     if( r ) r->image_ids = g_list_prepend( r->image_ids,id );
                 }
             }
@@ -331,7 +331,7 @@ void _elim_close_notify ( PurpleNotifyType type , void *ui_handle )
     {
         for( ; iids; iids = iids->next )
         {
-            int id = (int)( iids->data );
+            int id = (long)( iids->data );
             if( id > 0 ) purple_imgstore_unref_by_id( id );
         }
         g_list_free( resp->image_ids );
