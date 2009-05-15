@@ -1557,6 +1557,9 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (funcall elim-op garak-elim-process (car account-data))
       (format "/%s %s" cmd args)) ))
 
+(defun garak-cmd-prefs (args)
+  (garak-prefs) args)
+
 (defun garak-cmd-connect    (args)
   (garak-cmd-account-generic "connect"        'elim-connect        args))
 (defun garak-cmd-register   (args)
@@ -1581,6 +1584,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (join         . garak-cmd-join             )
     (leave        . garak-cmd-leave            )
     (msg          . garak-cmd-msg              )
+    (prefs        . garak-cmd-prefs            )
     (quit         . garak-cmd-quit             )
     (register     . garak-cmd-register         )
     (remove-acct  . garak-cmd-remove-account   )
@@ -1603,6 +1607,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
    ((string-match "\\(?:^\\|/\\)join\\(?:.\\S-+\\)?\\>" cmd) 'join        )
    ((string-match "\\(?:^\\|/\\)part\\>"                cmd) 'leave       )
    ((string-match "\\(?:^\\|/\\)leave\\>"               cmd) 'leave       )
+   ((string-match "\\(?:^\\|/\\)prefs\\>"               cmd) 'prefs       )
    ((string-match "\\(?:^\\|/\\)\\(?:priv\\)?msg\\>"    cmd) 'msg         )
    ((string-match "\\(?:^\\|/\\)register\\>"            cmd) 'register    )
    ((string-match "\\(?:^\\|/\\)remove.account\\>"      cmd) 'remove-acct )
@@ -1639,8 +1644,8 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 (defvar garak-commands
   '( "/add-account"    "/add-buddy"    "/configure-account" "/connect"
      "/disconnect"     "/login"        "/logoff"            "/logout"
-     "/msg"            "/quit"         "/register"          "/status"
-     "/remove-account" "/remove-buddy" ))
+     "/msg"            "/prefs"        "/quit"              "/register"
+     "/remove-account" "/remove-buddy" "/status" ))
 
 (defvar garak-command-completers
   '((add-account . garak-comp-add-account)
