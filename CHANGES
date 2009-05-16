@@ -1,5 +1,7 @@
 2009-05-15  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* make/elim-func-handlers-c.sh: echo -n not portable (OSX, maybe others)
+
 	* ui_ops/notify_ui_ops.c:
 	(_elim_notify_track_images, _elim_close_notify): 64 bit size warning.
 
