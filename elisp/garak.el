@@ -204,6 +204,9 @@ substitute these characters for the basic ascii ones:\n
     (remove-account              . garak-account-update      )
     ;; prefs
     (get-prefs                   . garak-setup-prefs-buffer  )
+    ;; file transfers
+    (elim-file-transfer-status   . garak-transfer-status     )
+    (elim-file-transfer-percent  . garak-transfer-percent    )
     ;; notify
     (elim-notify-message         . garak-notify-message      )
     (elim-notify-formatted       . garak-notify-formatted    )
@@ -840,7 +843,138 @@ substitute these characters for the basic ascii ones:\n
         (widget-setup) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; buddy list
+;; file transfers
+(defun garak-ui-ft-create-buffer (proc)
+  (let ((old-buffer (elim-fetch-process-data proc :ft-buffer)) 
+        (icons      (copy-sequence garak-icons))
+        ft-buffer)
+    ;; make sure we have a ui buffer
+    (setq ft-buffer (or old-buffer (get-buffer "*garak file transfers*")))
+    (when (not (garak-buffer-reusable proc ft-buffer))
+      (setq ft-buffer (generate-new-buffer "*garak file transfers*")))
+    (when (not (eq old-buffer ft-buffer))
+      (with-current-buffer ft-buffer
+        (elim-init-ui-buffer)
+        (garak-init-local-storage)
+        (setq garak-elim-process proc)
+        ;; initialise tree-widget support in this buffer
+        (tree-widget-set-theme)
+        ;; add our icons into the whatever tree-widget theme we got:
+        (setq icons (nconc icons (aref tree-widget--theme 3)))
+        (aset tree-widget--theme 3 icons)
+        ;; done with icons
+        (use-local-map widget-keymap)
+        (elim-store-process-data proc :ft-buffer ft-buffer)))
+    ft-buffer))
+
+(defun garak-transfer-status (proc name id status args)
+  (let ((uid (elim-avalue "xfer-uid" args)) buf)
+    (with-current-buffer (setq buf (garak-ui-ft-create-buffer proc))
+      (when (eq (garak-ui-ft-update-display proc args) :created)
+        (let ((display-buffer-reuse-frames t)) 
+          (display-buffer buf)) )) ))
+
+(defun garak-transfer-percent (proc name id status args)
+  ;;(when nil
+  (let ((uid      (elim-avalue "xfer-uid"     args)) 
+        (progress (elim-avalue "xfer-percent" args)) 
+        (buf      (elim-fetch-process-data proc :ft-buffer)))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (garak-ui-ft-update-progress uid progress))) ))
+;;)
+
+(defun garak-ui-ft-locate (uid)
+  (let ((start  nil)
+        (end    nil)
+        (pos   (point-min)) 
+        (sprop 'garak-xfer-start)
+        (eprop 'garak-xfer-end  ))
+    (save-excursion
+      (when (equal (get-text-property pos sprop) uid)
+        (setq start pos))
+      (while (and (not start) (< pos (point-max))
+                  (setq pos (next-single-char-property-change pos sprop nil)))
+        (when (equal (get-text-property pos sprop) uid) (setq start pos)))
+      (while (and (not end) (< pos (point-max))
+                  (setq pos (next-single-char-property-change pos eprop nil)))
+        (when (equal (get-text-property pos eprop) uid) (setq end pos))))
+    (when (and start end) (cons start end)) ))
+
+(defun garak-ui-ft-update-progress (uid progress)
+  (let (ft-region)
+    (setq progress   (if (numberp progress) progress 0.0)
+        ;;progress   (make-string (round (/ progress 10.0)) ?*)
+          progress   (propertize (format "%05.1f" progress) 'ft-progress uid))
+    (when (setq ft-region (garak-ui-ft-locate uid))
+      (let ((start (car ft-region))
+            (end   (cdr ft-region))
+            (inhibit-redisplay   t))
+          (setq pos (next-single-char-property-change start 'ft-progress))
+          (save-excursion
+            (replace-regexp ".\\{5\\}" progress nil pos (+ 5 pos))) )) ))
+
+(defun garak-ui-ft-update-display (proc xfer)
+  (let ((uid (elim-avalue "xfer-uid" xfer)) 
+        ft-region ft-display other-user icon-name ft-state  s-label
+        file      size       p-icon     p-label   direction pos pos2)
+    (setq progress   (or (elim-avalue "xfer-progress" xfer) 0.0)
+        ;;progress   (make-string (round (/ progress 10.0)) ?*)
+          progress   (propertize (format "%05.1f" progress) 'ft-progress uid)
+          ft-state   (elim-avalue "xfer-status" xfer)
+          ft-icon    (cond ((equal (elim-avalue "xfer-progress" xfer) 100.0)
+                                                         ":on"         )
+                           ((eq :not-started   ft-state) ":away"       )
+                           ((eq :accepted      ft-state) ":available"  )
+                           ((eq :started       ft-state) ":available"  )
+                           ((eq :done          ft-state) ":on"         )
+                           ((eq :cancel-local  ft-state) ":off"        )
+                           ((eq :cancel-remote ft-state) ":unavailable")
+                           (t                            ":offline"    ))
+          s-label    (elim-avalue ft-icon garak-icon-tags)
+          ft-icon    (tree-widget-find-image ft-icon))
+    (when (and (display-images-p) ft-icon)
+      (setq s-label (propertize s-label 'display  ft-icon 'ft-state uid)))
+    (if (setq ft-region (garak-ui-ft-locate uid))
+        ;; update existing xfer
+        (let ((start (car ft-region)) 
+              (end   (cdr ft-region)) 
+              (inhibit-redisplay   t))
+          (message "updating existing widget %S [%s]" uid progress)
+          (message "                         %s"      ft-state    )
+          (setq pos (next-single-char-property-change start 'ft-progress))
+          (replace-regexp ".\\{5\\}" progress nil pos (+ 5 pos))
+          (save-excursion
+            (when ft-icon
+              (setq pos  (next-single-char-property-change start 'ft-state)
+                    pos2 (next-single-char-property-change pos   'ft-state))
+              (when (and pos pos2 (< pos pos2))
+                (delete-region pos pos2)
+                (goto-char pos)
+                (widget-insert s-label)) )) :updated)
+      (message "creating new widget %S" uid)
+      (setq icon-name  (format ":%s" (elim-avalue "im-protocol" xfer))
+            file       (elim-avalue "xfer-local-file"  xfer)
+            size       (elim-avalue "xfer-size"        xfer)
+            other-user (elim-avalue "xfer-remote-user" xfer)
+            direction  (elim-avalue "xfer-type"        xfer)
+            direction  (if (eq :receive direction) "->" "<-")
+            p-icon     (tree-widget-find-image icon-name)
+            p-label    (elim-avalue icon-name garak-icon-tags)
+            p-label    (format "[%s]" (or p-label "----")))
+      (when (and (display-images-p) p-icon)
+        (setq p-label (propertize p-label 'display p-icon)))
+      (setq ft-display
+            (format "%s%15s: %s %s %s [%5s%%] %d Bytes"
+                    p-label other-user direction s-label file progress size))
+      (save-excursion
+        (end-of-buffer)
+        (widget-insert (propertize " "  'garak-xfer-start uid)
+                       ft-display
+                       (propertize "\n" 'garak-xfer-end   uid))) :created)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; buddy list & account list ui
 (defun garak-ui-create-widget-buffer (proc)
   (when (tree-widget-use-image-p) (garak-load-icons))
   (let ((blist   (elim-buddy-list proc))

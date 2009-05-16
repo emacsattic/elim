@@ -526,7 +526,10 @@ into any clients."
   (elim-account-info-cache proc name id status args :account-connection))
 
 (defun elim-file-transfer-status (proc name id status args);
-  (elim-update-process-data proc :xfers (elim-avalue "xfer-uid" args) args))
+  (elim-update-process-data proc :xfers (elim-avalue "xfer-uid" args) args)
+  (elim-call-client-handler proc name id status args))
+
+;; elim-file-transfer-percent  - let the default handler fall through to client
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon to client request handlers (requests are calls that require a

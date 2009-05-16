@@ -26,14 +26,16 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #define PAG( what, acct ) purple_account_get_ ## what( acct )
 
 #define XSIG( instance, io, ev ) \
-    purple_signal_connect( instance             ,                  \
-                           "file-" #io "-" #ev  ,                  \
-                           &handle              ,                  \
-                           PURPLE_CALLBACK(_elim_signal_ft_file) , \
-                           NULL                 );
+     purple_signal_connect( instance             ,              \
+                            "file-" #io "-" #ev  ,              \
+                            &handle              ,              \
+                            PURPLE_CALLBACK(_elim_signal_ft) ,  \
+                            NULL                 );
 static int  handle;
+static long xfer_id = 0;
 
-static void _elim_signal_ft_file   ( PurpleXfer *x , gpointer ignored );
+static void _elim_signal_ft        ( PurpleXfer *x , gpointer ignored );
+
 static void _elim_ft_ui_op_create  ( PurpleXfer *x );
 static void _elim_ft_ui_op_destroy ( PurpleXfer *x );
 static void _elim_ft_ui_op_add     ( PurpleXfer *x );
@@ -68,10 +70,14 @@ void elim_ft_signals_init (void)
 // these four can remain stubroutines for now, I think: we maintain no
 // ui data structures since that all happens in the client, which is 
 // in a different process to us:
-static void _elim_ft_ui_op_create  ( PurpleXfer *x ){ return; }
-static void _elim_ft_ui_op_destroy ( PurpleXfer *x ){ return; }
-static void _elim_ft_ui_op_add     ( PurpleXfer *x ){ return; }
-static void _elim_ft_ui_op_cancel  ( PurpleXfer *x ){ return; }
+static void _elim_ft_ui_op_create  ( PurpleXfer *x )
+{
+    x->ui_data = (gpointer)(++xfer_id);
+    return;
+}
+static void _elim_ft_ui_op_destroy( PurpleXfer *x ){ _elim_signal_ft(x, NULL); }
+static void _elim_ft_ui_op_add    ( PurpleXfer *x ){ _elim_signal_ft(x, NULL); }
+static void _elim_ft_ui_op_cancel ( PurpleXfer *x ){ _elim_signal_ft(x, NULL); }
 
 // here we should prod the client with some update info:
 static void _elim_ft_ui_op_update  ( PurpleXfer *x , double p )
@@ -79,22 +85,22 @@ static void _elim_ft_ui_op_update  ( PurpleXfer *x , double p )
     xmlnode *alist = xnode_new( "alist" );
     char    *ID    = new_elim_id();
     
-    AL_PTR( alist, "xfer-uid"    , x );
-    AL_NUM( alist, "xfer-percent", p * 100 );
+    AL_PTR( alist, "xfer-uid"    , x->ui_data );
+    AL_NUM( alist, "xfer-percent", p * 100    );
     
     xmlnode *mcall = func_call( "elim-file-transfer-percent", ID, alist );
     g_free( ID );
     add_outbound_sexp( mcall );    
 }
 
-static void _elim_signal_ft_file (PurpleXfer *x, gpointer ignored )
+static void _elim_signal_ft (PurpleXfer *x, gpointer ignored )
 {
     xmlnode       *alist = xnode_new( "alist" );
     char          *ID    = new_elim_id();
     PurpleAccount *acct  = PXG( account, x );
 
-    AL_PTR ( alist, "xfer-uid"        , x    );
-    AL_PTR ( alist, "account-uid"     , acct );
+    AL_PTR ( alist, "xfer-uid"        , x->ui_data );
+    AL_PTR ( alist, "account-uid"     , acct       );
     AL_STR ( alist, "account-name"    , PAG( username   , acct ) );
     AL_STR ( alist, "im-protocol"     , PAG( protocol_id, acct ) );
     AL_ENUM( alist, "xfer-type"       , PXG( type  , x ), ":xfer-type"        );
