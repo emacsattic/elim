@@ -1,5 +1,7 @@
 2009-05-16  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* handlers/send_file.c (_h_elim_send_file): support sending files
+
 	* signals/file_transfers.c (_elim_ft_ui_op_create): allocate unique uid
 	(_elim_ft_ui_op_destroy): emit transfer-status call
 	(_elim_ft_ui_op_add)    : emit transfer-status call
