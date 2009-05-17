@@ -33,8 +33,9 @@ xmlnode * _h_elim_init ( const char *name ,
 {
     ASSERT_ALISTP( args, id, name );
 
-    char *dir = ALIST_VAL_STRING( args, "dot-dir" );
-    char *ui  = ALIST_VAL_STRING( args, "ui-id"   );
+    char    *dir = ALIST_VAL_STRING( args, "dot-dir" );
+    char    *ui  = ALIST_VAL_STRING( args, "ui-id"   );
+    gboolean dbg = ALIST_VAL_BOOL  ( args, "debug"   );
 
     if( !ui ) { ui = "elim"; }
 
@@ -54,14 +55,20 @@ xmlnode * _h_elim_init ( const char *name ,
     // load any data for init:    
     if( purple_get_core() == NULL )
     {
-        purple_core_init( ui );
-        purple_set_blist( purple_blist_new() );
+        // purple debug goes to stdout if we don't divert it here:
+        g_set_print_handler( (GPrintFunc)_h_elim_warning );
+        // look for plugins in user specified directory tree:
+        char *ppath = g_build_filename( purple_user_dir(), "plugins", NULL );
+        purple_plugins_add_search_path ( ppath );
+        purple_debug_set_enabled( dbg );
+        purple_core_init ( ui );
+        purple_set_blist ( purple_blist_new() );
         purple_prefs_load();
         purple_blist_load();
-        g_set_print_handler( (GPrintFunc)_h_elim_warning );
-        purple_debug_set_enabled( FALSE );
         // glib signal initialisation:
         elim_ft_signals_init();
+        // tidy up:
+        g_free( ppath );
     }
     else
     {

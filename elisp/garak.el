@@ -1114,11 +1114,13 @@ substitute these characters for the basic ascii ones:\n
           (t (elim-debug "UI Account Operation `%S' not implemented" value))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid menu type name mtail plabel blabel auid aicon)
+  (let (kids uid menu type name mtail plabel blabel auid aicon alias)
     (setq uid   (elim-avalue "bnode-uid"   bnode)
+          alias (elim-avalue "bnode-alias" bnode)
           name  (elim-avalue "bnode-name"  bnode)
           type  (elim-avalue "bnode-type"  bnode)
           auid  (elim-avalue "account-uid" bnode)
+          name  (if (< 0 (length alias)) alias name)
           mtail (list (garak-choice-item "Remove"  (cons :del  uid)))
           kids  (mapcar
                  (lambda (N) (garak-buddy-list-node-widget proc N))

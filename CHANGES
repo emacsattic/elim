@@ -1,5 +1,10 @@
 2009-05-17  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* handlers/init.c (_h_elim_init): user can set debug on init
+	                                  set plugin path to include user dir
+
+	* elisp/garak.el (garak-buddy-list-node-widget): prefer alias in blist
+
 	* signals/file_transfers.c (XSIG, _elim_signal_ft): show ft event origin
 
 	* elisp/garak.el: 
