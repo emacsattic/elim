@@ -1,3 +1,20 @@
+2009-05-17  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* signals/file_transfers.c (XSIG, _elim_signal_ft): show ft event origin
+
+	* elisp/garak.el: 
+	(garak-ui-ft-update-progress)  : set ft status here too
+	(garak-ui-ft-update-display)   : check for done w byte count as well
+	(garak-buddy-list-node-command): ui menu send file op done
+	(garak-cmd-send-file)          : cli send file function
+	(garak-command-handlers, garak-command-match)
+	(garak-command-completers)     : ditto 
+
+	* elisp/elim.el: 
+	(elim-request-field-string): distinguish file/string/dir
+	(elim-request-item)        : ditto
+	(elim-send-file)           : initiate file transfer
+
 2009-05-16  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/send_file.c (_h_elim_send_file): support sending files

@@ -26,11 +26,11 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #define PAG( what, acct ) purple_account_get_ ## what( acct )
 
 #define XSIG( instance, io, ev ) \
-     purple_signal_connect( instance             ,              \
-                            "file-" #io "-" #ev  ,              \
-                            &handle              ,              \
-                            PURPLE_CALLBACK(_elim_signal_ft) ,  \
-                            NULL                 );
+     purple_signal_connect( instance                         , \
+                            "file-" #io "-" #ev              , \
+                            &handle                          , \
+                            PURPLE_CALLBACK(_elim_signal_ft) , \
+                            "" #io "." #ev                   );
 static int  handle;
 static long xfer_id = 0;
 
@@ -93,13 +93,15 @@ static void _elim_ft_ui_op_update  ( PurpleXfer *x , double p )
     add_outbound_sexp( mcall );    
 }
 
-static void _elim_signal_ft (PurpleXfer *x, gpointer ignored )
+static void _elim_signal_ft (PurpleXfer *x, gpointer thing )
 {
     xmlnode       *alist = xnode_new( "alist" );
     char          *ID    = new_elim_id();
     PurpleAccount *acct  = PXG( account, x );
+    const char    *what  = (const char *)thing;
 
     AL_PTR ( alist, "xfer-uid"        , x->ui_data );
+    AL_STR ( alist, "event"           , what       );
     AL_PTR ( alist, "account-uid"     , acct       );
     AL_STR ( alist, "account-name"    , PAG( username   , acct ) );
     AL_STR ( alist, "im-protocol"     , PAG( protocol_id, acct ) );

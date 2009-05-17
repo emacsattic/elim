@@ -909,21 +909,39 @@ substitute these characters for the basic ascii ones:\n
     (when (setq ft-region (garak-ui-ft-locate uid))
       (let ((start (car ft-region))
             (end   (cdr ft-region))
+            (pos    nil)
+            (icon  (tree-widget-find-image ":available"))
+            (label (elim-avalue ":available" garak-icon-tags))
             (inhibit-redisplay   t))
           (setq pos (next-single-char-property-change start 'ft-progress))
           (save-excursion
-            (replace-regexp ".\\{5\\}" progress nil pos (+ 5 pos))) )) ))
+            (delete-region pos (+ 5 pos))
+            (goto-char pos)
+            (insert progress)
+            (when (and (display-images-p) ft-icon)
+              (setq pos  (next-single-char-property-change start 'ft-state)
+                    pos2 (next-single-char-property-change pos   'ft-state))
+              (when (and pos pos2 (< pos pos2))
+                (goto-char pos)
+                (when (not (looking-at (regexp-quote label)))
+                  (delete-region pos pos2)
+                  (insert (propertize label 
+                                      'display  icon 
+                                      'ft-state uid ))) ))) t)) ))
 
 (defun garak-ui-ft-update-display (proc xfer)
   (let ((uid (elim-avalue "xfer-uid" xfer)) 
-        ft-region ft-display other-user icon-name ft-state  s-label
-        file      size       p-icon     p-label   direction pos pos2)
+        (inhibit-read-only          t)
+        (inhibit-point-motion-hooks t)
+        (inhibit-modification-hooks t)
+        ft-region ft-display other-user icon-name ft-state  s-label complete
+        file      size       p-icon     p-label   direction pos     pos2)
     (setq progress   (or (elim-avalue "xfer-progress" xfer) 0.0)
+          complete   (eql progress 100.0)
         ;;progress   (make-string (round (/ progress 10.0)) ?*)
           progress   (propertize (format "%05.1f" progress) 'ft-progress uid)
           ft-state   (elim-avalue "xfer-status" xfer)
-          ft-icon    (cond ((equal (elim-avalue "xfer-progress" xfer) 100.0)
-                                                         ":on"         )
+          ft-icon    (cond (complete                     ":on"         )
                            ((eq :not-started   ft-state) ":away"       )
                            ((eq :accepted      ft-state) ":available"  )
                            ((eq :started       ft-state) ":available"  )
@@ -934,25 +952,29 @@ substitute these characters for the basic ascii ones:\n
           s-label    (elim-avalue ft-icon garak-icon-tags)
           ft-icon    (tree-widget-find-image ft-icon))
     (when (and (display-images-p) ft-icon)
-      (setq s-label (propertize s-label 'display  ft-icon 'ft-state uid)))
+      ;;(message "propertising label %S <-\n%S" s-label ft-icon)
+      (setq s-label (propertize s-label 'display ft-icon 'ft-state uid)))
     (if (setq ft-region (garak-ui-ft-locate uid))
         ;; update existing xfer
         (let ((start (car ft-region)) 
               (end   (cdr ft-region)) 
               (inhibit-redisplay   t))
-          (message "updating existing widget %S [%s]" uid progress)
-          (message "                         %s"      ft-state    )
+          ;;(message "updating existing widget %S [%s]" uid progress)
           (setq pos (next-single-char-property-change start 'ft-progress))
-          (replace-regexp ".\\{5\\}" progress nil pos (+ 5 pos))
+          (delete-region pos (+ 5 pos))
+          ;;(replace-regexp ".\\{5\\}" progress nil pos (+ 5 pos))
           (save-excursion
+            (goto-char pos)
+            (insert progress)
             (when ft-icon
               (setq pos  (next-single-char-property-change start 'ft-state)
                     pos2 (next-single-char-property-change pos   'ft-state))
               (when (and pos pos2 (< pos pos2))
                 (delete-region pos pos2)
+                ;;(message "updating icon %s" s-label)
                 (goto-char pos)
-                (widget-insert s-label)) )) :updated)
-      (message "creating new widget %S" uid)
+                (insert s-label)) )) :updated)
+      ;;(message "creating new widget %S" uid)
       (setq icon-name  (format ":%s" (elim-avalue "im-protocol" xfer))
             file       (elim-avalue "xfer-local-file"  xfer)
             size       (elim-avalue "xfer-size"        xfer)
@@ -969,9 +991,9 @@ substitute these characters for the basic ascii ones:\n
                     p-label other-user direction s-label file progress size))
       (save-excursion
         (end-of-buffer)
-        (widget-insert (propertize " "  'garak-xfer-start uid)
-                       ft-display
-                       (propertize "\n" 'garak-xfer-end   uid))) :created)))
+        (insert (propertize " "  'garak-xfer-start uid)
+                ft-display
+                (propertize "\n" 'garak-xfer-end   uid))) :created)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list & account list ui
@@ -1059,6 +1081,7 @@ substitute these characters for the basic ascii ones:\n
     (cond ((eq op :del ) (elim-remove-buddy proc nil  buid))
           ((eq op :join) (elim-join-chat    proc auid buid))
           ((eq op :info) (elim-buddy-info   proc auid buid))
+          ((eq op :xfer) (elim-send-file    proc auid buid))
           ((eq op :menu)
            (lexical-let ((m-event event))
              (setq menu-cb 
@@ -1105,9 +1128,11 @@ substitute these characters for the basic ascii ones:\n
                       ((eq type :buddy-node)
                        (setq plabel (if (elim-avalue "allowed" bnode)
                                         "Block" "Unblock"))
-                       (list (garak-choice-item "Get Info" (cons :info uid))
-                             (garak-choice-item "Send IM"  (cons :msg  uid))
-                             (garak-choice-item plabel     (cons :priv uid)))) )
+                       (list 
+                        (garak-choice-item "Get Info"  (cons :info uid))
+                        (garak-choice-item "Send IM"   (cons :msg  uid))
+                        (garak-choice-item "Send File" (cons :xfer uid))
+                        (garak-choice-item plabel      (cons :priv uid)))) )
           menu  (cons (garak-choice-item "---------" '(noop))
                       (nconc menu mtail)))
     (when (memq type '(:chat-node :buddy-node))
@@ -1598,6 +1623,15 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
           (format "/add-buddy %s %s" buddy group))
         (error "Could not add buddy: %S" errval)) ))
 
+(defun garak-cmd-send-file (args)
+  (let (items account proto buddy adata file)
+    (setq account
+          (garak-cmd-strip-account-arg garak-elim-process items args adata)
+          buddy (car  items)
+          file  (cadr items))
+    (elim-send-file garak-elim-process account buddy file)
+    (format "/send %s" args) ))
+
 (defun garak-cmd-remove-buddy (args)
   (let (items account account-uid)
     (setq account-uid
@@ -1723,6 +1757,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (register     . garak-cmd-register         )
     (remove-acct  . garak-cmd-remove-account   )
     (remove-buddy . garak-cmd-remove-buddy     )
+    (send-file    . garak-cmd-send-file        )
     (status       . garak-cmd-status           )
     (unregister   . garak-cmd-unregister       ) ))
 
@@ -1746,6 +1781,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
    ((string-match "\\(?:^\\|/\\)register\\>"            cmd) 'register    )
    ((string-match "\\(?:^\\|/\\)remove.account\\>"      cmd) 'remove-acct )
    ((string-match "\\(?:^\\|/\\)remove.buddy\\>"        cmd) 'remove-buddy)
+   ((string-match "\\(?:^\\|/\\)send\\>"                cmd) 'send-file   )
    ((string-match "\\(?:^\\|/\\)status\\>"              cmd) 'status      )
    ((string-match "\\(?:^\\|/\\)quit\\>"                cmd) 'quit        )
    ((string-match "\\(?:^\\|/\\)unregister\\>"          cmd) 'unregister  ) ))
@@ -1779,7 +1815,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   '( "/add-account"    "/add-buddy"    "/configure-account" "/connect"
      "/disconnect"     "/login"        "/logoff"            "/logout"
      "/msg"            "/prefs"        "/quit"              "/register"
-     "/remove-account" "/remove-buddy" "/status" ))
+     "/remove-account" "/remove-buddy" "/send"              "/status" ))
 
 (defvar garak-command-completers
   '((add-account . garak-comp-add-account)
@@ -1790,6 +1826,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (disconnect  . garak-comp-account    )
     (register    . garak-comp-account    )
     (remove-acct . garak-comp-account    )
+    (send-file   . garak-comp-account    )
     (status      . garak-comp-status     )
     (help        . garak-comp-help       )
     (join        . garak-comp-join       )))

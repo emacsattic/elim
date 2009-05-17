@@ -304,7 +304,7 @@ and return an s-expression suitable for making a call to an elim daemon."
 (defun elim-handle-call (proc name attr args)
   (let ( (handler (elim-get-call-handler-by-name proc name))
          (id      (cdr (assq 'id attr))) )
-    (elim-debug "elim call handler: %S (%S)" handler (functionp handler))
+    ;;(elim-debug "elim call handler: %S (%S)" handler (functionp handler))
     (if (functionp handler)
         (funcall handler proc name id 0 args)
       (elim-debug "elim-handle-call %s -> client" name)
@@ -406,7 +406,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (elim-debug "(elim-call-client-handler %S %S %s ...)" name id status)
     ;;(message "retrieved client handler : %S" handler)
     (when (functionp handler)
-      (elim-debug "calling client handler: %S" handler)
+      ;;(elim-debug "calling client handler: %S" handler)
       (funcall handler proc name id status args)) ))
 
 (defun elim-default-response-handler (proc name id attr args)
@@ -601,14 +601,19 @@ into any clients."
     widget))
 
 (defun elim-request-field-string (id data)
-  (elim-form-widget-create 'string 
-                           id
-                           :notify 'elim-form-ui-handle-event
-                           :tag    (or (elim-avalue "label" data) id)
-                           :size   20
-                           :secret (and (elim-avalue "masked" data) ?*)
-                           (or (elim-avalue "value"   data)
-                               (elim-avalue "default" data) "")))
+  (let (r-type w-type)
+    (setq r-type (elim-avalue "r-type" data)
+          w-type (cond ((eq r-type 'elim-request-file     ) 'file     )
+                       ((eq r-type 'elim-request-directory) 'directory)
+                       (t                                   'string   )))
+    (elim-form-widget-create w-type
+                             id
+                             :notify 'elim-form-ui-handle-event
+                             :tag    (or (elim-avalue "label" data) id)
+                             :size   20
+                             :secret (and (elim-avalue "masked" data) ?*)
+                             (or (elim-avalue "value"   data)
+                                 (elim-avalue "default" data) "")) ))
 
 (defun elim-request-field-choice (id data)
   (let ((idx 0) (item nil))
@@ -694,7 +699,8 @@ into any clients."
                           elim-request-file 
                           elim-request-directory)) 
              (elim-request-field-string "value" 
-                                        (list (cons "default" default)
+                                        (list (cons "r-type"  name   )
+                                              (cons "default" default)
                                               (cons "label"   prompt )
                                               (cons "masked"  secret ))))
             (t (error "request type %S not implemented" name)))
@@ -771,10 +777,14 @@ into any clients."
       (apply 'elim-form-widget-create 
              'choice
              "value"
+             :format "%t: %[%v%]\n"
              :notify 'elim-form-ui-handle-event
-             :tag    "Action:"
+             :tag    "Action"
              :value  default
-             (mapcar (lambda (A) (list 'const :tag (car A) (cdr A))) actions))
+             (mapcar 
+              (lambda (A) 
+                (list 'choice-item :format "%[%t%]" :tag (car A) (cdr A))) 
+              actions))
       (elim-form-widget-create 'push-button
                                nil
                                :format (format "[%%[%s%%]]" "Cancel")
@@ -1102,6 +1112,20 @@ OPTIONS (\"key\" \"value\" ...)."
     (elim-process-send process 
     ;;(elim-debug "%S"
                        (elim-daemon-call 'remove-buddy nil arglist)) ))
+
+(defun elim-send-file (process account buddy &optional file callback) 
+  (let (bdata arglist)
+    (setq bdata   (elim-buddy-data process buddy account)
+          buddy   (or (elim-avalue "bnode-name" bdata) buddy)
+          account (or account (elim-avalue "account-uid" (cdr bdata)))
+          arglist (elim-account-proto-items process account)
+          arglist (nconc (list 'alist nil 
+                               (elim-atom-to-item "recipient" buddy)
+                               (elim-atom-to-item "filename"  file ))
+                         arglist))
+    (elim-process-send process 
+    ;;(elim-debug "%S"
+                       (elim-daemon-call 'send-file nil arglist)) ))
 
 (defun elim-add-buddy (process account buddy &optional group)
   "Given an elim PROCESS an ACCOUNT name or uid and a BUDDY (im screen name),
