@@ -1206,8 +1206,11 @@ substitute these characters for the basic ascii ones:\n
           aname (elim-avalue :name  adata)
           proto (elim-avalue :proto adata)
           iname (format ":%s" proto)
-          alt   (format "[%-4s] " (or (elim-avalue iname garak-icon-tags) "??"))
-          icon  (tree-widget-find-image iname))
+          alt   (format "[%-4s] " 
+                        (or (elim-avalue iname garak-icon-tags) " ?? "))
+          icon  (or (tree-widget-find-image iname)
+                    (tree-widget-find-image ":prpl-generic")))
+          
     ;;(message "garak-account-list-node-widget: %S" account)
     (setq label (if (and icon (tree-widget-use-image-p))
                     (concat (propertize alt 'display icon) aname)
@@ -1938,7 +1941,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (garak-mode))
     (setq lui-input-function 'garak-input-handler)
     (lui-insert "starting elim" t)
-    (setq garak-elim-process (elim-start "garak" nil garak-callbacks))
+    (setq garak-elim-process (elim-start "(elim . garak)" nil garak-callbacks))
     (let ((display-buffer-reuse-frames t))
       (display-buffer (garak-ui-create-widget-buffer garak-elim-process)))
     (end-of-buffer)))

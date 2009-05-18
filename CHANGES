@@ -1,3 +1,11 @@
+2009-05-18  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el (garak-account-list-node-widget): use fallback icon
+	(garak): pass in app name when starting elim
+
+	* ui_ops/core_ui_ops.c (_elim_get_ui_info): set app name and version
+	(_elim_quit): free up ui info (app name and version) on exit.
+
 2009-05-17  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/init.c (_h_elim_init): user can set debug on init

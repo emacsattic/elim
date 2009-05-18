@@ -40,10 +40,26 @@ PurpleCoreUiOps elim_core_ui_ops =
     NULL
 };
 
+static GHashTable *info = NULL;
 
 // most of these are unnecessary
 static void        _elim_ui_prefs_init ( void ){}
 static void        _elim_debug_ui_init ( void ){} 
 static void        _elim_ui_init       ( void ){}
-static void        _elim_quit          ( void ){}
-static GHashTable* _elim_get_ui_info   ( void ){ return NULL; }
+static void        _elim_quit          ( void )
+{
+    if( info ) g_hash_table_destroy( info );
+}
+static GHashTable* _elim_get_ui_info   ( void )
+{
+    if( !info )
+    {
+        const char *ui  = purple_core_get_ui     ();
+        const char *ver = purple_core_get_version();
+        info = g_hash_table_new( g_str_hash, g_str_equal );
+        g_hash_table_insert( info, "name"   , (char *)ui  );
+        g_hash_table_insert( info, "version", (char *)ver );
+    }
+
+    return info;
+}
