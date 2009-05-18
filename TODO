@@ -11,7 +11,8 @@
 ** DONE add protocol icon/tag to account entry
 ** DONE log in/out menu items from account entry
 ** DONE dynamic account menus for connected accounts
-** TODO remove account (CLI and GUI)
+** DONE remove account (CLI)
+** TODO remove account (GUI)
 ** TODO roomlist
 * buddy list
 ** DONE display groups created after intial ui setup
@@ -29,9 +30,10 @@
 *** DONE hide when offline at login-time
 *** TODO hide when they go offline after you log in
 * misc stuff
+** TODO pump command failures/warnings etc into the *garak* buffer.
 ** TODO set buddy icon
 ** TODO update docs to cover new client-to-daemon commands
-** DONE can dynamic submenus be generated at parent invocation time?
+** DONE can dynamic submenus be generated at invocation time? [not easily]
 *** not easily enough. on hold for now.
 ** TODO notify ui ops
 *** DONE email
