@@ -52,7 +52,7 @@ static guint    input_add           ( int                  fd        ,
                                       PurpleInputFunction  func      ,
                                       gpointer             user_data );
 static gboolean input_remove        ( guint handle );
-static int      input_get_error     ( int   fd, int *error );
+//static int      input_get_error     ( int   fd, int *error );
 static guint    timeout_add_seconds ( guint       interval ,
                                       GSourceFunc function ,
                                       gpointer data        );
@@ -81,7 +81,8 @@ PurpleEventLoopUiOps elim_eventloop_ui_ops =
     timeout_remove      ,
     input_add           ,
     input_remove        ,
-    input_get_error     ,
+//  input_get_error     ,
+    NULL                ,
     timeout_add_seconds ,
     NULL                ,
     NULL                ,
@@ -133,7 +134,7 @@ static gboolean input_remove ( guint handle )
     return g_source_remove( handle );
 }
 
-static int input_get_error ( int fd, int *error ) { return 0; }
+// static int input_get_error ( int fd, int *error ) { return 0; }
 
 static guint timeout_add_seconds ( guint       interval ,
                                    GSourceFunc function ,

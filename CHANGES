@@ -1,3 +1,7 @@
+2009-05-20  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* ui_ops/eventloop_ui_ops.c: remove input_get_error, harmful ui op defun
+
 2009-05-19  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* Makefile (OLD_GLIB): more old glib version detect-and-kludge work
