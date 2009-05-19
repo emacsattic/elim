@@ -124,7 +124,7 @@ New garak buffers should turn up in the tracking block in the mode line:
 
   [#emacs,#elim,etc]
 
-You can clock on the buffer names in the mode line or switch to them in the 
+You can click on the buffer names in the mode line or switch to them in the 
 usual way.
 
 That's all that's implemented for now, it's all only just been written so 
