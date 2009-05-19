@@ -141,6 +141,12 @@ is present.
 To recreate the *Garak* buffer, M-x garak-gui RET in the *garak*
 buffer or any conversation buffer.
 
+To set garak's own options and preferences:
+
+M-x customize-group RET garak RET 
+
+To set libpurple's preferences, issue the /prefs command.
+
 -- 
 fledermaus <vivek@etla.org>
 
