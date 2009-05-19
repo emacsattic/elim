@@ -217,7 +217,7 @@ int main ( int argc, char **argv )
 #endif
 
     // ***********************************************************************
-    g_queue_init( &out_queue );
+    ELIM_G_QUEUE_INIT( &out_queue );
 
     // ***********************************************************************
     flags  = g_io_channel_get_flags( in );

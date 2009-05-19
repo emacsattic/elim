@@ -23,7 +23,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "set_prefs.h"
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
-
+#include "../elim-glibcompat.h"
 xmlnode * _h_elim_set_prefs ( const char *name , 
                               const char *id   ,
                               SEXP_VALUE *args , 
@@ -43,7 +43,7 @@ xmlnode * _h_elim_set_prefs ( const char *name ,
     if( prefs )
     {
         GList *key  = NULL;
-        GList *keys = g_hash_table_get_keys( prefs );
+        GList *keys = ELIM_G_HASH_TABLE_GET_KEYS( prefs );
 
         fprintf( stderr, "keys: %p", keys );
 

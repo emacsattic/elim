@@ -1,3 +1,16 @@
+2009-05-19  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* Makefile (OLD_GLIB): more old glib version detect-and-kludge work
+
+	* elim-glibcompat.h: define macros for pre-2.14 glib support.
+
+	* elim-glibcompat.c (elim_g_queue_init)
+	(elim_g_hash_table_get_keys): pre-2.14 glib substitute functions
+
+	* elim-client.c (main): use macro in case we're on a pre-2.14 glib
+
+	* handlers/set_prefs.c (_h_elim_set_prefs): ditto
+
 2009-05-18  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el (garak-account-list-node-widget): use fallback icon

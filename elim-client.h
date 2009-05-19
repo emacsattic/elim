@@ -32,6 +32,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include <purple.h>
 
 #include "elim-client-queue.h"
+#include "elim-glibcompat.h"
 #include "elim-func-handlers.h"
 #include "xnode/xnode.h"
 #include "sexp/sexp-xml.h"

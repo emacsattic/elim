@@ -30,15 +30,13 @@ INSTALLED = $(if $(shell pkg-config $(subst $s,$S,$(1)) --exists || echo t ),\
 PACKAGES    := glib-2.0..\>=..2.0.12 libxml-2.0 purple
 $(foreach P, $(PACKAGES), $(call INSTALLED, $P))
 ############################################################################
-DEFINES     := -D_GNU_SOURCE \
-               $(shell                                                      \
+OLD_GLIB    := $(shell                                                      \
                  if pkg-config glib-2.0 --atleast-version 2.14 2>/dev/null; \
-                 then                                                       \
-                     echo '-D';                                             \
-                 else                                                       \
-                     echo '-U';                                             \
-                 fi;)GLIB_HAS_ADD_SECONDS
-
+                 then echo '-D'; else echo '-U'; fi;                        )
+DEFINES     := -D_GNU_SOURCE                 \
+                $(OLD_GLIB)HAS_ADD_SECONDS   \
+                $(OLD_GLIB)HAS_QUEUE_INIT    \
+                $(OLD_GLIB)HAS_GET_HASH_KEYS
 CFLAGS      += -Wall -std=c99 $(DEFINES)
 CFLAGS      += $(foreach P, $(PACKAGES), \
                          $(shell pkg-config --cflags $(subst $s,$S,$P))) 
@@ -65,7 +63,7 @@ TAR_FLAGS   := --exclude .git -czvf
 ############################################################################
 .PHONY: clean diag distclean check-libdeps signed-tar tar
 
-all: $(BINARIES)
+all: $(BINARIES) TAGS
 
 ############################################################################
 # test scripts/utils etc, such as there are:
@@ -85,6 +83,8 @@ $(HANDLER_OBJ): ui_ops/ops.h prpl/util.h elim-rpc.h
 $(SIGNAL_OBJ): prpl/util.h elim-rpc.h
 
 handlers/init.o: signals/sigs.h
+
+handlers/set_prefs.o: elim-glibcompat.h
 
 ############################################################################
 # generated source files:
@@ -119,14 +119,14 @@ clean:
 	          handler-list.h           \
 	          ui_ops/ops.h             \
 	          signals/sigs.h 	   \
-	          elim-func-handlers.c     \
-	          TAGS                     );
+	          elim-func-handlers.c     );
 
 TAGS: $(CH_FILES)
 	@if [ x"$(TVER)" != x ]; then etags --recurse; fi
 
 distclean: clean
 	@find . -type f -name *~ -exec rm {} \;
+	@rm -fv TAGS
 
 
 ############################################################################
