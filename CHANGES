@@ -1,5 +1,11 @@
 2009-05-20  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* elisp/garak.el (garak-error-handler): try to show async errors to user
+
+	* elisp/elim.el (elim-debug): no undo info in debug buffer
+	(elim-default-fail-handler): errors to default fail handler if available
+	(elim-call-client-handler) : ibid
+
 	* ui_ops/eventloop_ui_ops.c: remove input_get_error, harmful ui op defun
 
 2009-05-19  Vivek Dasmohapatra  <vivek@etla.org>

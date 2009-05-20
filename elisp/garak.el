@@ -221,8 +221,27 @@ substitute these characters for the basic ascii ones:\n
     (elim-conv-write-im          . garak-user-message        )
     (elim-conv-write-sys         . garak-misc-message        )
     ;; process related
-    (elim-exit                   . garak-elim-exit           ))
+    (elim-exit                   . garak-elim-exit           )
+    ;; failsafe error handler     
+    (error                       . garak-error-handler       ))
   "Alist of elim callbacks and their corresponding handlers")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; error handling
+(defun garak-error-handler (proc name id status error)
+  (let ((message (elim-add-face 
+                  (format "%S: %s" name error) 'garak-warning-face))
+        (target  (window-buffer))
+        (buf      nil)
+        (mode    'garak-mode)
+        buffers)
+    (if (and (eq mode major-mode)
+             (eq (buffer-local-value 'garak-elim-process target) proc))
+        (lui-insert message)
+      (when (and (setq target (elim-fetch-process-data proc :cli-buffer))
+                 (eq mode major-mode)
+                 (eq (buffer-local-value 'garak-elim-process target) proc))
+        (with-current-buffer target (lui-insert message)) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffer management infrastructure
@@ -479,7 +498,7 @@ substitute these characters for the basic ascii ones:\n
     (if buffer
       (with-current-buffer buffer
         (if (not (zerop status))
-            (lui-insert (elim-add-face args 'garak-warning-face))
+            (garak-error-handler process call call-id status args)
           (setq cmd     (elim-avalue "command-line"   args)
                 cstatus (elim-avalue "command-status" args)
                 err     (or (elim-avalue "command-error"  args)
@@ -1936,12 +1955,13 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   (let ((buffer (get-buffer "*garak*")))
     (if (garak-buffer-reusable nil buffer)
         (switch-to-buffer buffer)
-      (switch-to-buffer (generate-new-buffer "*garak*"))
+      (switch-to-buffer (setq buffer (generate-new-buffer "*garak*")))
       (make-local-variable 'garak-elim-process)
       (garak-mode))
     (setq lui-input-function 'garak-input-handler)
     (lui-insert "starting elim" t)
     (setq garak-elim-process (elim-start "(elim . garak)" nil garak-callbacks))
+    (elim-store-process-data garak-elim-process :cli-buffer buffer)
     (let ((display-buffer-reuse-frames t))
       (display-buffer (garak-ui-create-widget-buffer garak-elim-process)))
     (end-of-buffer)))

@@ -249,10 +249,13 @@ and return an s-expression suitable for making a call to an elim daemon."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 (defun elim-debug (&rest args)
-  (with-current-buffer (get-buffer-create "*elim-debug*")
-    (beginning-of-buffer)
-    (insert (apply 'format args) "\n\n")))
-
+  (let ((buffer (get-buffer "*elim-debug*")))
+    (when (not buffer)
+      (buffer-disable-undo (setq buffer (get-buffer-create "*elim-debug*"))))
+    (with-current-buffer buffer
+      (beginning-of-buffer)
+      (insert (apply 'format args) "\n\n"))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; daemon i/o loop
 (defun elim-handle-sexp (proc sexp)
@@ -297,7 +300,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     ;; if told to use a handler but it hasn't been defined/loaded/implemented:
     (when (or (not handler) (and handler (not (functionp handler))))
       (setq handler 'elim-default-response-handler))
-    (elim-debug "handler for %s.%s: %S" name id handler)
+    ;; (elim-debug "handler for %s.%s: %S" name id handler)
     ;; finally, we must have a valid handler symbol to proceed:
     (when handler (funcall handler proc name id attr args)) ))
 
@@ -384,7 +387,10 @@ and return an s-expression suitable for making a call to an elim daemon."
           (t raw-args)) ))
 
 (defun elim-default-fail-handler (proc name id status message)
-  (warn "%s<%s> failed (%S)" name id status message))
+  (let ((handler (elim-client-handler proc 'error)))
+    (if (functionp handler)
+        (funcall handler proc name id status message)
+      (warn "%s<%s> failed (%S)" name id status message)) ))
 
 (defun elim-client-handler (proc name)
   (cdr (assq name (elim-fetch-process-data proc :client-ops))))
@@ -405,15 +411,18 @@ and return an s-expression suitable for making a call to an elim daemon."
   (let ( (handler (elim-client-handler proc name)) )
     (elim-debug "(elim-call-client-handler %S %S %s ...)" name id status)
     ;;(message "retrieved client handler : %S" handler)
-    (when (functionp handler)
-      ;;(elim-debug "calling client handler: %S" handler)
-      (funcall handler proc name id status args)) ))
+    (if (functionp handler)
+        (funcall handler proc name id status args)
+      (when (and (not (zerop status))
+                 (setq handler (elim-client-handler proc 'error)))
+        (when (functionp handler) 
+          (funcall handler proc name id status args)) )) ))
 
 (defun elim-default-response-handler (proc name id attr args)
   (let ((status (elim-avalue "status" args)) call-arg)
     (setq call-arg (elim-unwrap-resp-args status args))
-    (if (equal status 0)
-        (elim-debug "%s<%s> successful %S" name id call-arg)
+    (if (equal status 0) ;; 
+        nil ;; (elim-debug "%s<%s> successful %S" name id call-arg)
       (elim-default-fail-handler proc name id status call-arg))
     (elim-call-client-handler proc name id status call-arg) ))
 
