@@ -184,15 +184,23 @@ a straightforward elisp s-expression."
           (list 'int attr (match-string 1 val))
         (list 'float attr val))) ))
 
+(defun elim-data-to-proto (x &optional n)
+  (list 'data (if n (list (cons 'name n)) nil)
+        (base64-encode-string (string-as-unibyte x)) ))
+
+(defun elim-binp (x)
+  (and (stringp x) (string-match "\0" x)))
+
 (defun elim-unprop (s) (set-text-properties 0 (length s) nil s) s)
 (defun elim-atom-to-proto (x &optional n)
   "Return an elim protocol sexp representing X (a number, string or t or nil)."
   (let ((attr (if n (list (cons 'name n)) 'nil)))
     ;;(message "(elim-atom-to-proto %S)" x)
-    (cond ((stringp  x) (list 'string attr (elim-unprop x)))
-          ((numberp  x) (elim-number-to-proto       x attr))
-          ((booleanp x) (list  'bool  attr  (if x "1" "0")))
-          ((symbolp  x) (list 'string attr (symbol-name x))) )))
+    (cond ((elim-binp x) (elim-data-to-proto x n))
+          ((stringp   x) (list 'string attr (elim-unprop x)))
+          ((numberp   x) (elim-number-to-proto       x attr))
+          ((booleanp  x) (list  'bool  attr  (if x "1" "0")))
+          ((symbolp   x) (list 'string attr (symbol-name x))) )))
 
 (defun elim-atom-to-item (k v)
   "Take a number, t, nil or string V and prepare an elim protocol alist
