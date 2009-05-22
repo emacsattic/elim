@@ -1112,6 +1112,11 @@ substitute these characters for the basic ascii ones:\n
                                        (read-string (format "IM %s>" bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
+(defun garak-maybe-remove-account (account)
+  (let ((aname (elim-avalue :name account)))
+    (when (y-or-n-p (format "remove %s? " aname))
+      (garak-cmd-remove-account (car account)) )))
+
 (defun garak-account-list-node-command (&optional widget child event &rest x)
   (let (value op proc acct auid ccb menu-cb)
     (setq proc  garak-elim-process
@@ -1123,6 +1128,7 @@ substitute these characters for the basic ascii ones:\n
     (cond ((eq op :login ) (elim-connect         proc auid))
           ((eq op :logout) (elim-disconnect      proc auid))
           ((eq op :config) (elim-account-options proc auid ccb))
+          ((eq op :remove) (garak-maybe-remove-account acct))
           ((eq op :menu  )
            (lexical-let ((m-event event))
              (setq menu-cb
@@ -1247,6 +1253,7 @@ substitute these characters for the basic ascii ones:\n
                     :notify            'garak-account-list-node-command
                     (garak-choice-item "Log In"        (cons :login  uid))
                     (garak-choice-item "Log Out"       (cons :logout uid))
+                    (garak-choice-item "Remove"        (cons :remove uid))
                     (garak-choice-item "Configure"     (cons :config uid))
                     (garak-choice-item "Extended Menu" (cons :menu   uid))) ))
 

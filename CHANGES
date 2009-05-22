@@ -1,3 +1,9 @@
+2009-05-22  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el (garak-maybe-remove-account): new acct menu command
+	(garak-account-list-node-command): new account menu command handled
+	(garak-buddy-list-node-widget)   : implement new gui command
+
 2009-05-20  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el (garak-error-handler): try to show async errors to user
