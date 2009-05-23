@@ -24,13 +24,6 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
-#define FETCH_ACCOUNT(s,i,n,aptr,uid)                                \
-     if( !(aptr = find_acct_by_uid( uid ) ) )                        \
-         BUDDY_INFO_FAIL( (s), (i), (n), ENXIO, "unknown account" );
-
-#define BUDDY_INFO_FAIL( s, i, n, c, r ) \
-     { sexp_val_free( s ); return response_error( c, i, n, r ); }
-
 xmlnode * _h_elim_buddy_info ( const char *name ,
                                const char *id   ,
                                SEXP_VALUE *args ,
@@ -46,7 +39,7 @@ xmlnode * _h_elim_buddy_info ( const char *name ,
     PurpleBlistNodeType  bt = PURPLE_BLIST_OTHER_NODE;
 
     if( !bnode )
-        BUDDY_INFO_FAIL( args, id, name, ENOENT, "no such buddy" );
+        HANDLER_FAIL( args, id, name, ENOENT, "no such buddy" );
 
     bt = purple_blist_node_get_type( bnode );
     switch( bt )
@@ -55,7 +48,7 @@ xmlnode * _h_elim_buddy_info ( const char *name ,
         a_uid = purple_buddy_get_account( (PurpleBuddy *)bnode );
         break;
       default:
-        BUDDY_INFO_FAIL( args, id, name, EINVAL, "unsupported buddy type" );
+        HANDLER_FAIL( args, id, name, EINVAL, "unsupported buddy type" );
         break;
     }
 
@@ -64,7 +57,7 @@ xmlnode * _h_elim_buddy_info ( const char *name ,
     conn = purple_account_get_connection( acct  );
 
     if( !conn )
-        BUDDY_INFO_FAIL( args, id, name, ENXIO, "account disconnected" );
+        HANDLER_FAIL( args, id, name, ENXIO, "account disconnected" );
 
     xmlnode *rval = xnode_new( "alist" );
     AL_PTR ( rval, "bnode-uid"   , bnode );

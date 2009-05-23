@@ -1,3 +1,23 @@
+2009-05-23  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elim-rpc.h: consolidate definition of utility macros
+	(FETCH_ACCOUNT)      : fetch account by uid
+	(FIND_ACCOUNT)       : account by uid or name+proto
+	(BNODE_ACCOUNT_CHECK): buddy account/supplied account match
+	(HANDLER_FAIL)       : generic free args and bail out of handler
+
+	* handlers/remove_buddy.c (_h_elim_remove_buddy) : new macros
+
+	* handlers/buddy_menu_action.c (_h_elim_buddy_menu_action)    : ibid
+
+	* handlers/buddy_menu.c (_h_elim_buddy_menu)                  : ibid
+
+	* handlers/buddy_info.c (_h_elim_buddy_info)                  : ibid
+
+	* handlers/account_menu_action.c (_h_elim_account_menu_action): ibid
+
+	* handlers/account_menu.c (_h_elim_account_menu)              : ibid
+
 2009-05-22  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/elim.el (elim-data-to-proto): binary data protocol serialiser

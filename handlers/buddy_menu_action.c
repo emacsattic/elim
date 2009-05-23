@@ -24,13 +24,6 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
-#define FETCH_ACCOUNT(s,i,n,aptr,uid)                                \
-     if( !(aptr = find_acct_by_uid( uid ) ) )                        \
-         BUDDY_MENU_FAIL( (s), (i), (n), ENXIO, "unknown account" );
-
-#define BUDDY_MENU_FAIL( s, i, n, c, r ) \
-     { sexp_val_free( s ); return response_error( c, i, n, r ); }
-
 static PurpleMenuAction * 
 _check_menu_entry( PurpleMenuAction *entry, gpointer cb_uid )
 {
@@ -85,7 +78,7 @@ xmlnode * _h_elim_buddy_menu_action ( const char *name ,
     PurplePluginProtocolInfo *pppi = NULL;
 
     if( !bnode )
-        BUDDY_MENU_FAIL( args, id, name, ENOENT, "no such buddy" );
+        HANDLER_FAIL( args, id, name, ENOENT, "no such buddy" );
 
     bt = purple_blist_node_get_type( bnode );
     switch( bt )
@@ -106,7 +99,7 @@ xmlnode * _h_elim_buddy_menu_action ( const char *name ,
     prpl  = find_plugin_by_protocol       ( proto );
     pppi  = PURPLE_PLUGIN_PROTOCOL_INFO   ( prpl  );
     if( !pppi )
-        BUDDY_MENU_FAIL( args, id, name, EINVAL, "bad protocol plugin" );
+        HANDLER_FAIL( args, id, name, EINVAL, "bad protocol plugin" );
 
     xmlnode *rval = xnode_new( "alist" );
     AL_PTR ( rval, "bnode-uid"   , bnode );

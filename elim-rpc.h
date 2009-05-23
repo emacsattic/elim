@@ -32,6 +32,22 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "sexp/sexp-util.h"
 
 // ==========================================================================
+#define HANDLER_FAIL( s, i, n, c, r ) \
+     { sexp_val_free( s ); return response_error( c, i, n, r ); }
+
+#define FETCH_ACCOUNT( s, i, n, aptr, uid )                             \
+     if( !(aptr = find_acct_by_uid( uid ) ) )                           \
+         HANDLER_FAIL( (s), (i), (n), ENXIO, "unknown account" );
+
+#define FIND_ACCOUNT( s, i, n, aptr, uid, name, proto ) \
+     aptr = uid ? find_acct_by_uid(uid) : purple_accounts_find( name, proto ); \
+     if( !aptr ) HANDLER_FAIL( (s), (i), (n), ENXIO, "unknown account" );
+
+#define BNODE_ACCOUNT_CHECK( type , ptr, aptr, s, i, n )                \
+     if( purple_ ## type ## _get_account(ptr) != aptr )                 \
+         HANDLER_FAIL( (s), (i), (n), EINVAL, "account/buddy mismatch" );
+
+// ==========================================================================
 
 #define ASSERT_ALISTP(s,i,n)                                                   \
     if( !(s) ) return response_error( EINVAL, (i), (n), "no args received" );  \

@@ -24,9 +24,6 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
-#define ACCOUNT_MENU_FAIL( s, i, n, c, r ) \
-     { sexp_val_free( s ); return response_error( c, i, n, r ); }
-
 xmlnode * _h_elim_account_menu ( const char *name ,
                                  const char *id   ,
                                  SEXP_VALUE *args ,
@@ -46,7 +43,7 @@ xmlnode * _h_elim_account_menu ( const char *name ,
     else if( aname && proto ) acct  = purple_accounts_find( aname, proto );
 
     if( !acct ) 
-        ACCOUNT_MENU_FAIL( args, id, name, ENOENT, "no such account" );
+        HANDLER_FAIL( args, id, name, ENOENT, "no such account" );
     
     fprintf( stderr, "(account-menu : found account %p)\n", acct );
 

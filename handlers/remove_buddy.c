@@ -24,22 +24,6 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../prpl/util.h"
 #include "../ui_ops/ops.h"
 
-#define FETCH_ACCOUNT(s,i,n,aptr,uid,name,proto) \
-     aptr =                                                               \
-       uid ? find_acct_by_uid(uid) : purple_accounts_find( name, proto ); \
-     if( !aptr )                                                          \
-     {                                                                    \
-         sexp_val_free( s );                                              \
-         return response_error( ENXIO, (i), (n), "unknown account" );     \
-     }
-
-#define BNODE_ACCOUNT_CHECK( type , ptr, aptr, s, i, n ) \
-     if( purple_ ## type ## _get_account(ptr) != aptr )                   \
-     {                                                                    \
-         sexp_val_free( s );                                              \
-         return response_error( EINVAL, i, n, "account/buddy mismatch" ); \
-     }                                                                    \
-
 xmlnode * _h_elim_remove_buddy ( const char *name ,
                                  const char *id   ,
                                  SEXP_VALUE *args ,
@@ -98,14 +82,14 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
             gone = TRUE;
             break;
           case PURPLE_BLIST_CHAT_NODE   :
-            FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
+            FIND_ACCOUNT( args, id, name, acct, auid, aname, proto );
             BNODE_ACCOUNT_CHECK(chat,(PurpleChat *)node, acct, args, id, name);
             purple_blist_remove_chat   ( (PurpleChat    *)node );
             gone = TRUE;
             break;
           case PURPLE_BLIST_BUDDY_NODE  :
             buddy = (PurpleBuddy *)node;
-            FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
+            FIND_ACCOUNT( args, id, name, acct, auid, aname, proto );
             BNODE_ACCOUNT_CHECK( buddy, buddy, acct, args, id, name );
             b_arg = purple_buddy_get_name( buddy );
             bname = purple_normalize( acct, b_arg );
@@ -136,7 +120,7 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
     {
         fprintf( stderr, "(elim-remove-buddy:04b)\n" );
         b_arg = ALIST_VAL_STRING( args, "bnode-name" );
-        FETCH_ACCOUNT( args, id, name, acct, auid, aname, proto );
+        FIND_ACCOUNT( args, id, name, acct, auid, aname, proto );
         fprintf( stderr, "(elim-remove-buddy:04b0 %s)\n", b_arg );
         if( b_arg )
         {
@@ -174,7 +158,7 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
         // this way round, as noted above: account buddy removal won't 
         // happen if the buddy is not in the blist when we try:
         if( !group ) group = purple_buddy_get_group( buddy );
-        // is this correct? what if we have more than one copy pf said buddy?
+        // is this correct? what if we have more than one copy of said buddy?
         // potentially confusing. dunno what the right thing to do is here.
         purple_account_remove_buddy( acct, buddy, group );
         purple_blist_remove_buddy( buddy );
