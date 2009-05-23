@@ -74,6 +74,7 @@
           (t raw)) ))
 (defcustom garak-icon-tags '((":available"      . "[i]")
                              (":away"           . "[_]")
+                             (":blocked"        . "(X)")
                              (":busy"           . "(/)")
                              (":chat"           . "ii ")
                              (":connecting"     . " * ")
@@ -108,6 +109,7 @@ images are unavailable. When in a unicode-capable text environment, I like to
 substitute these characters for the basic ascii ones:\n
   :available       ♝
   :away            ∠
+  :blocked         ⊗
   :busy            ⊘
   :chat            ♗♝
   :connecting      ≔
@@ -128,13 +130,14 @@ substitute these characters for the basic ascii ones:\n
               (list (list 'string :value k :size 20 :format "Icon: %v ")
                     (list 'string :size  6 :format "Tag: %v\n"
                           :value-get 'garak-tag-widget-value)))
-            '(":available"      ":away" ":busy"       ":chat"    ":connecting"
-              ":extended-away"  ":garak" ":invisible" ":log-in"  ":log-out"
-              ":offline"        ":off"   ":on"        ":person"  ":unavailable"
-              ":prpl-aim"       ":prpl-bonjour"       ":prpl-gg" ":prpl-icq"
-              ":prpl-irc"       ":prpl-jabber" ":prpl-meanwhile" ":prpl-msn"
-              ":prpl-novell"    ":prpl-qq"     ":prpl-silc"      ":prpl-simple"
-              ":prpl-yahoo"     ":prpl-zephyr"))
+            '(":available"   ":away"         ":busy"           ":blocked"
+              ":chat"        ":connecting"   ":extended-away"  ":garak"
+              ":invisible"   ":log-in"       ":log-out"        ":offline"
+              ":off"         ":on"           ":person"         ":unavailable"
+              ":prpl-aim"    ":prpl-bonjour" ":prpl-gg"        ":prpl-icq"    
+              ":prpl-irc"    ":prpl-jabber"  ":prpl-meanwhile" ":prpl-msn"  
+              ":prpl-novell" ":prpl-qq"      ":prpl-silc"      ":prpl-simple"
+              ":prpl-yahoo"  ":prpl-zephyr"))
   :type     '(alist :key-type   (string :format "Icon: %v " :size 20)
                     :value-type (string :format "Tag: %v\n" :size  6)))
 
@@ -1101,6 +1104,7 @@ substitute these characters for the basic ascii ones:\n
           ((eq op :join) (elim-join-chat    proc auid buid))
           ((eq op :info) (elim-buddy-info   proc auid buid))
           ((eq op :xfer) (elim-send-file    proc auid buid))
+          ((eq op :priv) (elim-toggle-user-blocked proc buid auid))
           ((eq op :menu)
            (lexical-let ((m-event event))
              (setq menu-cb 
@@ -1153,13 +1157,11 @@ substitute these characters for the basic ascii ones:\n
           menu  (cond ((eq type :chat-node )
                        (list (garak-choice-item "Join" (cons :join uid))))
                       ((eq type :buddy-node)
-                       (setq plabel (if (elim-avalue "allowed" bnode)
-                                        "Block" "Unblock"))
                        (list 
                         (garak-choice-item "Get Info"  (cons :info uid))
                         (garak-choice-item "Send IM"   (cons :msg  uid))
                         (garak-choice-item "Send File" (cons :xfer uid))
-                        (garak-choice-item plabel      (cons :priv uid)))) )
+                        (garak-choice-item "[Un]Block" (cons :priv uid)))) )
           menu  (cons (garak-choice-item "---------" '(noop))
                       (nconc menu mtail)))
     (when (memq type '(:chat-node :buddy-node))
@@ -1540,8 +1542,9 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
               (delete-char -1)) )) )) ))
 
 (defun garak-buddy-list-choose-icon (widget buddy)
-  (let ((class (when (consp widget) (car widget) widget)) type)
-    (setq type (elim-avalue "bnode-type" buddy))
+  (let ((class (when (consp widget) (car widget) widget)) type blocked)
+    (setq type    (elim-avalue "bnode-type" buddy)
+          allowed (elim-avalue "allowed"    buddy))
     (cond ((eq class 'tree-widget-empty-icon) ":invisible")
           ((eq type :chat-node              ) ":chat"     )
           ((eq type :group-node             ) ":group"    )
@@ -1549,7 +1552,8 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
            (setq online (elim-avalue "contact-online-buddies" buddy))
            (if (and online (< 0 online)) ":person" ":off"))
           ((eq type :buddy-node             )
-           (symbol-name (elim-avalue "status-type" buddy)))) ))
+           (if (not allowed) ":blocked"
+             (symbol-name (elim-avalue "status-type" buddy))) )) ))
 
 (defun garak-account-list-choose-icon (conn-data status-data)
   (let ((status (elim-avalue "status-type" status-data))

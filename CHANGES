@@ -1,5 +1,15 @@
 2009-05-23  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* icons/blocked.png: new icon.
+
+	* elisp/elim.el (elim-toggle-user-blocked): implement toggle privacy op
+
+	* elisp/garak.el (garak-icon-tags): new icon and tag
+	(garak-buddy-list-node-command): implement toggle privacy menu op
+	(garak-buddy-list-choose-icon): prioritise blocked icon over status icon
+
+	* handlers/buddy_privacy.c (_h_elim_buddy_privacy): toggle/set blocked
+
 	* handlers/add_buddy.c (_h_elim_add_buddy): zap clones in blist
 
 	* elim-rpc.h: consolidate definition of utility macros
