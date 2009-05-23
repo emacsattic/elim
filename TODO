@@ -20,12 +20,12 @@
 ** DONE add protocol icon to buddy entries
 ** DONE extended buddy list menu actions
 ** DONE buddy info action, inc display buddy icon
-** TODO make blocking/unblocking work
+** DONE make blocking/unblocking work
 ** TODO remove buddy from CLI as well as GUI
 ** TODO distinguish homonymous entries by account
 ** TODO rename/alias buddy
-** TODO move buddy to a new group
-** TODO fix buddy add so only one entry per buddy in blist (no clones)
+** DONE move buddy to a new group
+** DONE fix buddy add so only one entry per buddy in blist (no clones)
 ** TODO offline buddies (when option set)
 *** DONE hide when offline at login-time
 *** TODO hide when they go offline after you log in
