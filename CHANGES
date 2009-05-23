@@ -1,5 +1,7 @@
 2009-05-23  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* handlers/add_buddy.c (_h_elim_add_buddy): zap clones in blist
+
 	* elim-rpc.h: consolidate definition of utility macros
 	(FETCH_ACCOUNT)      : fetch account by uid
 	(FIND_ACCOUNT)       : account by uid or name+proto
