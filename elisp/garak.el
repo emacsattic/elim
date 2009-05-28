@@ -1113,7 +1113,7 @@ substitute these characters for the basic ascii ones:\n
                       proc name id attr args m-event)))
              (elim-buddy-menu proc buid menu-cb) ))
           ((eq op :msg ) (elim-message proc auid bname
-                                       (read-string (format "IM %s>" bname))))
+                                       (read-string (format "IM %s> " bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
 (defun garak-maybe-remove-account (account)
@@ -1213,9 +1213,6 @@ substitute these characters for the basic ascii ones:\n
   (cond
    ((and garak-hide-offline-buddies
          (eq (elim-avalue "contact-online-buddies" bnode) 0)) 
-    ;;(message "discarding node %S %S" 
-    ;;         (assoc "bnode-type" bnode)
-    ;;         (assoc "bnode-name" bnode)) 
     nil)
    ((eq (elim-avalue "contact-size" bnode) 1)
     (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode))
@@ -1288,9 +1285,11 @@ substitute these characters for the basic ascii ones:\n
     (delq nil kids)))
 
 (defun garak-insert-buddy-list-top (proc bnode)
-  (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids)
+  (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids alias)
     (setq ;remove (garak-choice-item "Delete All" (cons :del uid))
-          name   (elim-avalue "bnode-name" bnode)
+          name   (elim-avalue "bnode-name"  bnode)
+          alias  (elim-avalue "bnode-alias" bnode)
+          name   (if (> (length alias) 0) alias name)
           kids   (mapcar
                   (lambda (N)
                     (let ((node (garak-buddy-list-skip proc N)))
@@ -1942,10 +1941,38 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-derived-mode garak-mode lui-mode "Garak"
   "An IM mode based on elim"
+  :group 'garak
   (setq lui-input-function 'garak-input-handler)
   (set (make-local-variable 'lui-possible-completions-function)
        'garak-complete)
   (lui-set-prompt (concat (propertize "garak>" 'face 'mode-line) " ")))
+
+(defun garak-toggle-offline-buddies ()
+  (interactive)
+  (setq garak-hide-offline-buddies (not garak-hide-offline-buddies))
+  (garak-gui))
+
+(defun garak-deactivate ()
+  (interactive)
+  (cond (garak-conv-uid    (garak-cmd-leave        nil))
+        (garak-account-uid (garak-cmd-disconnect   nil))
+        (t                 (garak-cmd-status "offline")) ))
+
+(defun garak-activate ()
+  (interactive)
+  (cond (garak-conv-uid     (message "Cannot reactivate conversations"))
+        (garak-account-name (garak-cmd-connect garak-account-name))
+        (t                  (garak-cmd-status "available")
+                            (garak-cmd-status "available")) ))
+
+(defvar garak-mode-map 
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-o") 'garak-toggle-offline-buddies)
+    (define-key map (kbd "C-c C-c") 'garak-deactivate)
+    (define-key map (kbd "C-c C-j") 'garak-activate)
+    (define-key map (kbd "C-c C-g") 'garak-gui)
+    map))
+
 
 (defun garak-gui ()
   "Create and display the garak buddy and account list widget buffer"

@@ -1,3 +1,11 @@
+2009-05-28  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el (garak-mode-map): start to define garak keymap
+	(garak-activate)  : connect account(s) associated with buffer
+	(garak-deactivate): disconnect account(s) or leave conversation
+	(garak-toggle-offline-buddies): hide/show offline buddies
+	(garak-mode): add `:group' to mode definition to allow customisation
+
 2009-05-23  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* icons/blocked.png: new icon.
