@@ -1939,6 +1939,14 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (funcall completer prefix garak-im-protocol)) )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defvar garak-mode-map 
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-o") 'garak-toggle-offline-buddies)
+    (define-key map (kbd "C-c C-c") 'garak-deactivate)
+    (define-key map (kbd "C-c C-j") 'garak-activate)
+    (define-key map (kbd "C-c C-g") 'garak-gui)
+    map))
+
 (define-derived-mode garak-mode lui-mode "Garak"
   "An IM mode based on elim"
   :group 'garak
@@ -1964,15 +1972,6 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (garak-account-name (garak-cmd-connect garak-account-name))
         (t                  (garak-cmd-status "available")
                             (garak-cmd-status "available")) ))
-
-(defvar garak-mode-map 
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-o") 'garak-toggle-offline-buddies)
-    (define-key map (kbd "C-c C-c") 'garak-deactivate)
-    (define-key map (kbd "C-c C-j") 'garak-activate)
-    (define-key map (kbd "C-c C-g") 'garak-gui)
-    map))
-
 
 (defun garak-gui ()
   "Create and display the garak buddy and account list widget buffer"
