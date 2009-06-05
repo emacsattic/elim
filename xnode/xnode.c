@@ -927,6 +927,18 @@ xnode_get_next_twin( xmlnode *node )
 
 // ==========================================================================
 
+#define _LIST_ITEM(thing,type) thing = xnode_new( type );
+
+xmlnode * xnode_list_item_string(const char *value)
+{
+    xmlnode *item;
+    _LIST_ITEM( item, "string" );
+    xnode_insert_data( item, value ? value : "", -1 );
+    return item;
+}
+
+// ==========================================================================
+
 #define _ALIST_ITEM(thing,type,name)       \
     thing = xnode_new( type );             \
     xnode_set_attrib ( thing, "name", name );

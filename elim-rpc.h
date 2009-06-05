@@ -57,6 +57,12 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
         return response_error( EINVAL, (i), (n), "arg value is not an alist" );\
     }
 
+#define LS_STR(l,v) \
+     xnode_insert_child( (l), xnode_list_item_string(v) )
+
+#define LS_NODE(l,v) \
+     xnode_insert_child( (l), (v) );
+
 #define AL_STR(a,n,v)    \
      xnode_insert_child( (a), xnode_alist_item_string ( (n), (v) ) )
 
@@ -84,8 +90,19 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 // ==========================================================================
 
 typedef xmlnode *(*CB_FUNC)(gpointer data, SEXP_VALUE *args);
-typedef struct _CB_HANDLER CB_HANDLER;
-struct _CB_HANDLER { CB_FUNC func; gpointer data; };
+typedef enum   _cb_t { CB_TYPE_GENERIC = 0, CB_TYPE_NOTIFY_SEARCH } cb_type;
+typedef struct _CB_H { CB_FUNC func; gpointer data; cb_type type; } CB_HANDLER;
+
+// this is needed by both notify_ui_ops.c and notify_search_callback.c:
+typedef struct _NOTIFY_RESP
+{
+    char            *id       ; // elim call id
+    PurpleNotifyType type     ;
+    GList           *image_ids;
+    gpointer         user_data;
+    PurpleNotifySearchResults *sres;
+} NOTIFY_RESP;
+
 
 // ==========================================================================
 
@@ -106,6 +123,6 @@ char * new_elim_id ();
 
 gboolean store_cb_data( char *key, gpointer value );
 gpointer fetch_cb_data( const char *key );
-
+gpointer check_cb_data( const char *key );
 
 #endif

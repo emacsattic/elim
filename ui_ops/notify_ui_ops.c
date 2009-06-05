@@ -53,7 +53,7 @@ void *_elim_notify_search     ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 gpointer user_data                 );
 
-void _elim_notify_search_more ( PurpleConnection *gc               ,
+void _elim_notify_search_rows ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         );
 
@@ -73,7 +73,7 @@ PurpleNotifyUiOps elim_notify_ui_ops =
     _elim_notify_emails      ,
     _elim_notify_formatted   ,
     _elim_notify_search      ,
-    _elim_notify_search_more ,
+    _elim_notify_search_rows ,
     _elim_notify_userinfo    ,
     _elim_notify_uri         ,
     _elim_close_notify       ,
@@ -83,30 +83,29 @@ PurpleNotifyUiOps elim_notify_ui_ops =
     NULL
 };
 
-typedef struct _NOTIFY_RESP
-{
-    char            *id       ; // elim call id
-    PurpleNotifyType type     ;
-    GList           *image_ids;
-} NOTIFY_RESP;
-
-
 #define NOTIFY_START_FUNC \
     CB_HANDLER  *handle = g_new0( CB_HANDLER , 1 );  \
     NOTIFY_RESP *resp   = g_new0( NOTIFY_RESP, 1 );  \
     xmlnode     *alist  = xnode_new( "alist" );      \
     char        *ID     = new_elim_id()
 
-#define NOTIFY_CLOSE_FUNC(NTYPE,NAME) \
-    resp  ->id        = ID;                                         \
-    resp  ->type      = PURPLE_NOTIFY_ ## NTYPE;                    \
+#define NOTIFY_CLOSE_FUNC_A(NTYPE,NAME) \
+    resp  ->id   = ID;                                              \
+    resp  ->type = PURPLE_NOTIFY_ ## NTYPE;                         \
+    resp  ->sres = NULL;                                            \
+    handle->type = CB_TYPE_GENERIC;                                 \
     handle->func = _elim_notify_cb;                                 \
     handle->data = resp;                                            \
     store_cb_data( ID, handle );                                    \
     xmlnode *mcall = func_call( "elim-notify-" # NAME, ID, alist ); \
-    add_outbound_sexp( mcall );                                     \
-    return handle;
+    add_outbound_sexp( mcall )
 
+#define NOTIFY_CLOSE_FUNC_B \
+    return handle
+
+#define NOTIFY_CLOSE_FUNC(NTYPE,NAME) \
+    NOTIFY_CLOSE_FUNC_A(NTYPE,NAME); \
+    NOTIFY_CLOSE_FUNC_B
 
 // *************************************************************************
 static const char const * _nlabel( PurpleNotifyType type )
@@ -143,7 +142,6 @@ void *_elim_notify_message ( PurpleNotifyMsgType type ,
                              const char *secondary    )
 {
     NOTIFY_START_FUNC;
-
     AL_STR ( alist, "title"       , title     );
     AL_STR ( alist, "primary"     , primary   );
     AL_STR ( alist, "secondary"   , secondary );
@@ -235,15 +233,80 @@ void *_elim_notify_search ( PurpleConnection *gc               ,
                             PurpleNotifySearchResults *results ,
                             gpointer user_data                 )
 {
-    //NOTIFY_START_FUNC;
-    //NOTIFY_CLOSE_FUNC( SEARCHRESULTS, search );
-    return NULL;
+    GList   *x       = NULL;
+    xmlnode *columns = NULL;
+    xmlnode *buttons = NULL; 
+    NOTIFY_START_FUNC;
+    AL_STR ( alist, "search-id" , ID );
+    AL_STR ( alist, "title"     , title     ? title     : "Search Results");
+    AL_STR ( alist, "primary"   , primary   ? primary   : "" );
+    AL_STR ( alist, "secondary" , secondary ? secondary : "" );
+    AL_NODE( alist, "columns"   , columns = xnode_new( "list"  ) );
+    AL_NODE( alist, "buttons"   , buttons = xnode_new( "alist" ) );
+    for( x = results->columns; x; x = x->next )
+    {
+        PurpleNotifySearchColumn *sc = x->data;
+        LS_STR( columns, ( sc && sc->title ) ? sc->title : "-" );
+    }
+
+    for( x = results->buttons; x; x = x->next )
+    {
+        PurpleNotifySearchButton *sb = x->data;
+        xmlnode    *button = xnode_new( "alist" );
+        const char *label  = " - ";
+
+        switch( sb->type )
+        {
+          case PURPLE_NOTIFY_BUTTON_LABELED  : label = sb->label  ; break;
+          case PURPLE_NOTIFY_BUTTON_CONTINUE : label = "Continue" ; break;
+          case PURPLE_NOTIFY_BUTTON_ADD      : label = "Add"      ; break;
+          case PURPLE_NOTIFY_BUTTON_INFO     : label = "Info"     ; break;
+          case PURPLE_NOTIFY_BUTTON_IM       : label = "Send IM"  ; break;
+          case PURPLE_NOTIFY_BUTTON_JOIN     : label = "Join"     ; break;
+          case PURPLE_NOTIFY_BUTTON_INVITE   : label = "Invite"   ; break;
+        }
+        if( !label ) label = " + ";
+
+        AL_ENUM( button , "type"  , sb->type, ":notify-search-button-type" );
+        AL_PTR ( button , "action", sb->callback );
+        AL_NODE( buttons, label   , button       );
+    }
+
+    NOTIFY_CLOSE_FUNC_A( SEARCHRESULTS, search );
+    handle->type    = CB_TYPE_NOTIFY_SEARCH;
+    resp->user_data = user_data;
+    resp->sres      = results;
+    _elim_notify_search_rows( gc, results, handle );
+    NOTIFY_CLOSE_FUNC_B;
 }
 
-void _elim_notify_search_more ( PurpleConnection *gc               ,
+void _elim_notify_search_rows ( PurpleConnection *gc               ,
                                 PurpleNotifySearchResults *results ,
                                 void *data                         )
 {
+    GList       *row     = NULL;
+    GList       *cell    = NULL;
+    char        *ID      = new_elim_id();
+    CB_HANDLER  *handle  = data;
+    NOTIFY_RESP *resp    = handle->data;
+    char        *srch_id = resp->id;
+    xmlnode     *alist   = xnode_new( "alist" );
+    xmlnode     *rows    = xnode_new( "list"  );
+
+    AL_STR ( alist, "search-id", srch_id );
+    AL_NODE( alist, "results"  , rows    );
+
+    for( row = results->rows; row; row = row->next )
+    {
+        xmlnode *cells = xnode_new( "list" );
+        for( cell = row->data; cell; cell = cell->next )
+            LS_STR( cells, cell->data );
+        LS_NODE( rows, cells );
+    }
+    
+    xmlnode *mcall = func_call( "elim-notify-search-rows", ID, alist );
+    add_outbound_sexp( mcall );
+    g_free( ID );
     return;
 }
 
@@ -336,6 +399,10 @@ void _elim_close_notify ( PurpleNotifyType type , void *ui_handle )
         }
         g_list_free( resp->image_ids );
     }
+
+    if( resp && (resp->type == PURPLE_NOTIFY_SEARCHRESULTS) )
+        purple_notify_searchresults_free( resp->sres );
+    
     g_free( resp   );
     g_free( handle );
 }

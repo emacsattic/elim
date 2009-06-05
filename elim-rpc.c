@@ -113,3 +113,9 @@ gpointer fetch_cb_data( const char *key )
     g_hash_table_remove( cb_data, key );
     return value;
 }
+
+gpointer check_cb_data( const char *key )
+{
+    if( !cb_data ) { return NULL; }
+    return g_hash_table_lookup( cb_data, key );
+}

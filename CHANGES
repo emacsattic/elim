@@ -1,3 +1,22 @@
+2009-06-05  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* handlers/notify_search_callback.c: search callbacks (add, join etc)
+	(_h_elim_notify_search_callback): handle search result action "buttons"
+
+	* ui_ops/notify_ui_ops.c: search results 
+	(_elim_notify_search): notification to send search meta-data
+	(_elim_notify_search_rows): sub-notification to sends search results
+
+	* xnode/xnode.c (xnode_list_item_string): add strimg item to sexp list
+
+	* elim-rpc.h (LS_STR): add string to sexp list structure
+	(LS_NODE): add generic node to sexp list structure
+	(NOTIFY_RESP): move typedef so it is visible to ui_ops _and_ handlers
+	(CB_HANDLER): add 'type' member to struct
+	(NOTIFY_RESP): add user_data and sres members
+
+	* elim-rpc.c (check_cb_data): peek at cb data without removing it
+
 2009-05-28  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el (garak-mode-map): start to define garak keymap

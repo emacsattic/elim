@@ -191,6 +191,7 @@ static void *_elim_request_authorise ( PurpleAccount *account      ,
     resp->id   = ID;
     resp->data = user_data;
     cbh ->func = _elim_request_authorise_cb;
+    cbh ->type = CB_TYPE_GENERIC;
     cbh ->data = resp;
     store_cb_data( ID, cbh );
     xmlnode *mcall = func_call( "elim-account-request-auth", ID, alist );
