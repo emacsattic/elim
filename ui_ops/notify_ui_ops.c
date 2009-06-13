@@ -237,12 +237,14 @@ void *_elim_notify_search ( PurpleConnection *gc               ,
     xmlnode *columns = NULL;
     xmlnode *buttons = NULL; 
     NOTIFY_START_FUNC;
-    AL_STR ( alist, "search-id" , ID );
-    AL_STR ( alist, "title"     , title     ? title     : "Search Results");
-    AL_STR ( alist, "primary"   , primary   ? primary   : "" );
-    AL_STR ( alist, "secondary" , secondary ? secondary : "" );
-    AL_NODE( alist, "columns"   , columns = xnode_new( "list"  ) );
-    AL_NODE( alist, "buttons"   , buttons = xnode_new( "alist" ) );
+    AL_STR ( alist, "search-id"  , ID );
+    AL_STR ( alist, "title"      , title     ? title     : "Search Results");
+    AL_STR ( alist, "primary"    , primary   ? primary   : "" );
+    AL_STR ( alist, "secondary"  , secondary ? secondary : "" );
+    AL_PTR ( alist, "account-uid", purple_connection_get_account(gc) );
+    AL_NODE( alist, "columns"    , columns = xnode_new( "list"  ) );
+    AL_NODE( alist, "buttons"    , buttons = xnode_new( "alist" ) );
+
     for( x = results->columns; x; x = x->next )
     {
         PurpleNotifySearchColumn *sc = x->data;
