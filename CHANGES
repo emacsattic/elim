@@ -1,5 +1,6 @@
 2009-06-13  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* elisp/garak.el: implement search reulst display/action UI.
 	* ui_ops/notify_ui_ops.c (_elim_notify_search): pass on the account uid
 
 2009-06-05  Vivek Dasmohapatra  <vivek@etla.org>
