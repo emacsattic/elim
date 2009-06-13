@@ -1,3 +1,7 @@
+2009-06-13  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* ui_ops/notify_ui_ops.c (_elim_notify_search): pass on the account uid
+
 2009-06-05  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/notify_search_callback.c: search callbacks (add, join etc)
