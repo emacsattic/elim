@@ -1,5 +1,8 @@
 2009-06-14  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* elisp/garak.el (garak-search-results-buffer): cache args in buffer
+	(garak-notify-search-callback): pass search id back in callback
+
 	* elim-rpc.c (check_cb_data): abort if no key passed in
 
 2009-06-13  Vivek Dasmohapatra  <vivek@etla.org>

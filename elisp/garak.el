@@ -507,6 +507,7 @@ substitute these characters for the basic ascii ones:\n
       (with-current-buffer sbuf
         (elim-init-ui-buffer)
         (garak-init-local-storage)
+        (setq elim-form-ui-args  args)
         (setq garak-elim-process proc)
         (setq garak-account-uid (elim-avalue "account-uid" args))
         (set (make-local-variable 'garak-search-button-menu)
@@ -539,7 +540,8 @@ substitute these characters for the basic ascii ones:\n
           row   (- (line-number-at-pos point) 
                    (line-number-at-pos start) 2)
           args  (elim-simple-list-to-proto-alist 
-                 (list "account-uid" garak-account-uid
+                 (list "search-id"   (elim-avalue "search-id" elim-form-ui-args)
+                       "account-uid" garak-account-uid
                        "row-index"   row
                        "callback"    action))
           call  (elim-daemon-call 'notify-search-callback nil args)) 
