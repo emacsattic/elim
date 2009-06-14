@@ -1,5 +1,5 @@
 /*
-Copyright © 2009 Vivek Dasmohapatra 
+Copyright © 2009 Vivek Dasmohapatra
 
 email : vivek@etla.org
 irc   : fledermaus on freenode, oftc
@@ -40,18 +40,18 @@ xmlnode * _h_elim_account_menu_action ( const char *name ,
     gpointer    auid  = ALIST_VAL_PTR( args, "account-uid"  );
     gpointer    action= ALIST_VAL_PTR( args, "menu-action"  );
 
-    if     ( auid           ) acct  = find_acct_by_uid( auid ); 
+    if     ( auid           ) acct  = find_acct_by_uid( auid );
     else if( aname && proto ) acct  = purple_accounts_find( aname, proto );
 
-    if( !acct ) 
+    if( !acct )
         HANDLER_FAIL( args, id, name, ENOENT, "no such account" );
-    
+
     fprintf( stderr, "(account-menu-action : found account %p)\n", acct );
 
     proto   = purple_account_get_protocol_id( acct  );
     prpl    = find_plugin_by_protocol       ( proto );
     gc      = purple_account_get_connection ( acct  );
-    
+
     fprintf( stderr, "(account-menu-action : found connection %p)\n", gc );
 
 
@@ -66,8 +66,8 @@ xmlnode * _h_elim_account_menu_action ( const char *name ,
         gboolean matched = FALSE;
         PurplePluginAction *item = (PurplePluginAction *)entry->data;
         if( !item ) continue;
-        fprintf( stderr, "(account-menu-action : action: %s )\n", item->label );
-        
+        fprintf( stderr, "(account-menu-action : action: %s\n", item->label );
+
         if( action && (action == item->callback) )
         {
             matched       = TRUE;
@@ -76,9 +76,10 @@ xmlnode * _h_elim_account_menu_action ( const char *name ,
             item->context = gc;
             (item->callback)( item );
         }
-        
+
         purple_plugin_action_free( item );
-        fprintf( stderr, "(account-menu-action : processed [%d] )\n", matched );
+        fprintf( stderr, "  %s [%d])\n", (matched ? "processed" : "skipped"),
+                 matched );
     }
 
     g_list_free( actions );
