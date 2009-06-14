@@ -1,5 +1,10 @@
 2009-06-14  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* handlers/notify_search_callback.c: 
+	(_h_elim_notify_search_callback): check gc, row & button are all valid
+	(_h_elim_notify_search_callback): get search cache with sid, not call id
+	(_h_elim_notify_search_callback): extract row data correctly
+
 	* elisp/garak.el (garak-search-results-buffer): cache args in buffer
 	(garak-notify-search-callback): pass search id back in callback
 

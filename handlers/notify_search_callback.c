@@ -37,9 +37,9 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
 {
     GList       *item = NULL;
     xmlnode     *rval = NULL;
-    CB_HANDLER  *cbh  = check_cb_data( id );
+    const char  *sid  = ALIST_VAL_STR( args, "search-id" );
+    CB_HANDLER  *cbh  = check_cb_data( sid );
     NOTIFY_RESP *resp = cbh ? cbh->data : NULL;
-
     if( ( (cbh ->type) == CB_TYPE_NOTIFY_SEARCH       ) &&
         ( (resp->type) == PURPLE_NOTIFY_SEARCHRESULTS )  )
     {
@@ -56,8 +56,8 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
         if( gc && res )
         {
             for( i = 0, item = res->rows; item; item = item->next, i++ )
-                if( i == ridx ) { row = item->data; break; }
-            
+                if( i == ridx ) { row = item; break; }
+
             for( item = res->buttons; item; item = item->next )
                 if( ((PNSB *)item->data)->callback == cbid )
                 {
@@ -66,7 +66,7 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
                 }
         }
         
-        if( row && btn )
+        if( gc && row && btn && btn->callback )
             ( btn->callback )( gc, row, resp->user_data );
     }
 
