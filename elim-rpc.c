@@ -117,5 +117,6 @@ gpointer fetch_cb_data( const char *key )
 gpointer check_cb_data( const char *key )
 {
     if( !cb_data ) { return NULL; }
+    if( !key     ) { return NULL; }
     return g_hash_table_lookup( cb_data, key );
 }

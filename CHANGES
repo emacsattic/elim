@@ -1,3 +1,7 @@
+2009-06-14  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elim-rpc.c (check_cb_data): abort if no key passed in
+
 2009-06-13  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el: implement search reulst display/action UI.
