@@ -245,8 +245,38 @@ static void _elim_bl_set_visible  ( PurpleBuddyList *list , gboolean show ) {}
 static void _elim_bl_request_add_buddy ( PurpleAccount *account  ,
                                          const char    *username ,
                                          const char    *group    ,
-                                         const char    *alias    ) {}
+                                         const char    *alias    ) 
+{
+    xmlnode *alist = xnode_new( "alist" );
+    char    *ID    = new_elim_id();
+    xmlnode *mcall = func_call( "elim-blist-request-add-buddy", ID, alist );
+
+    AL_PTR ( alist, "account-uid" , account );
+    AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR ( alist, "user-name"   , username );
+    AL_STR ( alist, "group"       , group    );
+    AL_STR ( alist, "alias"       , alias    );
+
+    g_free( ID );
+    add_outbound_sexp( mcall );
+}
+
 static void _elim_bl_request_add_chat  ( PurpleAccount *account  ,
                                          PurpleGroup   *group    ,
                                          const char    *alias    ,
-                                         const char    *name     ) {}
+                                         const char    *name     )
+{
+    xmlnode *alist = xnode_new( "alist" );
+    char    *ID    = new_elim_id();
+    xmlnode *mcall = func_call( "elim-blist-request-add-chat", ID, alist );
+
+    AL_PTR ( alist, "account-uid" , account );
+    AL_STR ( alist, "account-name", purple_account_get_username   ( account ) );
+    AL_STR ( alist, "im-protocol" , purple_account_get_protocol_id( account ) );
+    AL_STR ( alist, "group"       , purple_group_get_name         ( group   ) );
+    AL_STR ( alist, "chat-name"   , name );
+
+    g_free( ID );
+    add_outbound_sexp( mcall );    
+}
