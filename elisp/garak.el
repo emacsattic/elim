@@ -190,6 +190,7 @@ substitute these characters for the basic ascii ones:\n
     ;;(elim-blist-create-node                                )
     (elim-blist-update-node      . garak-update-buddy        )
     (elim-blist-remove-node      . garak-delete-buddy        )
+    (elim-blist-request-add-buddy . garak-request-add-buddy  )
     ;; connection ops
     (elim-connection-state       . garak-account-update      )
     (elim-connection-progress    . garak-connection-progress )
@@ -1710,7 +1711,37 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (when (setq tag (elim-avalue icon garak-icon-tags))
         (widget-put wicon :tag tag)) ) ))
 
-
+(defun garak-request-add-buddy (proc name id status args)
+  (let (buf buf-name user-name account-name group)
+    (setq user-name    (elim-avalue "user-name"    args)
+          account-name (elim-avalue "account-name" args)
+          group        (elim-avalue "group"        args)
+          buf-name     (format "*Add Buddy: %s*" user-name)
+          buf          (generate-new-buffer buf-name))
+    (with-current-buffer buf
+      (elim-init-ui-buffer)
+      (garak-init-local-storage)
+      (setq garak-elim-process proc
+            garak-account-uid  (elim-avalue "account-uid" args))
+      (widget-insert (format "Add Buddy to %s\n" account-name))
+      (elim-request-field-string "user-name" `(("label" . "User Name: ")
+                                               ("value" . ,user-name   )))
+      (elim-request-field-string "group"     `(("label" . "Group: ")
+                                               ("value" . ,group   )))
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Cancel")
+                               :notify 'garak-request-nok)
+      (widget-insert " ")
+      (elim-form-widget-create 'push-button
+                               nil
+                               :format (format "[%%[%s%%]]" "Add")
+                               :notify 'garak-request-ok)
+      (use-local-map widget-keymap)
+      (widget-setup)
+      (beginning-of-buffer)
+      (widget-forward 1))
+    (display-buffer buf)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commands
 (defun garak-read-username (proc proto)

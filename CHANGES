@@ -1,3 +1,9 @@
+2009-06-17  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el:
+	(garak-callbacks): elim-blist-request-add-buddy handler registered
+	(garak-request-add-buddy): handler for above elim call.
+
 2009-06-14  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/notify_search_callback.c: 
