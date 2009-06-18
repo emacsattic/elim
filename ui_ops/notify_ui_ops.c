@@ -278,7 +278,7 @@ void *_elim_notify_search ( PurpleConnection *gc               ,
     handle->type    = CB_TYPE_NOTIFY_SEARCH;
     resp->user_data = user_data;
     resp->sres      = results;
-    _elim_notify_search_rows( gc, results, handle );
+    purple_notify_searchresults_new_rows( gc, results, handle );
     NOTIFY_CLOSE_FUNC_B;
 }
 
@@ -298,12 +298,33 @@ void _elim_notify_search_rows ( PurpleConnection *gc               ,
     AL_STR ( alist, "search-id", srch_id );
     AL_NODE( alist, "results"  , rows    );
 
+    // free up any old rows we have from previous pages of results in the cache:
+    for( row = resp->rows; row; row = row->next )
+        for( cell = row->data; cell; cell = cell->next )
+            g_free( cell->data );
+
+    // (re)populate the cache with copies of the row data:
+    // and construct the return value of row data at the same time:
     for( row = results->rows; row; row = row->next )
     {
-        xmlnode *cells = xnode_new( "list" );
+        GList   *cached = NULL;
+        xmlnode *cells  = xnode_new( "list" );
         for( cell = row->data; cell; cell = cell->next )
+        {
             LS_STR( cells, cell->data );
+            cached = g_list_append( cached, g_strdup( cell->data ) );
+        }
         LS_NODE( rows, cells );
+        resp->rows = g_list_append( resp->rows, cached );
+    }
+
+    fprintf( stderr, "caching row data: %p\n", resp->rows );
+    for( row = resp->rows; row; row = row->next )
+    {
+        fprintf( stderr, "|" );
+        for( cell = row->data; cell; cell = cell->next )
+            fprintf( stderr, " %s |", (char *)cell->data );
+        fprintf( stderr, "\n" );
     }
     
     xmlnode *mcall = func_call( "elim-notify-search-rows", ID, alist );
@@ -403,8 +424,15 @@ void _elim_close_notify ( PurpleNotifyType type , void *ui_handle )
     }
 
     if( resp && (resp->type == PURPLE_NOTIFY_SEARCHRESULTS) )
+    {
+        GList *row  = NULL;
+        GList *cell = NULL;
         purple_notify_searchresults_free( resp->sres );
-    
+        for( row = resp->rows; row; row = row->next )
+            for( cell = row->data; cell; cell = cell->next )
+                g_free( cell->data );
+    }
+
     g_free( resp   );
     g_free( handle );
 }

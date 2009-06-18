@@ -101,6 +101,7 @@ typedef struct _NOTIFY_RESP
     GList           *image_ids;
     gpointer         user_data;
     PurpleNotifySearchResults *sres;
+    GList            *rows;
 } NOTIFY_RESP;
 
 

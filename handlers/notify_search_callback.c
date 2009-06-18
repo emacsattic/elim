@@ -46,6 +46,7 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
         GList *row  = NULL;
         PNSB  *btn  = NULL;
         PNSR  *res  = resp->sres;
+        GList *rows = resp->rows;
         PA    *auid = ALIST_VAL_PTR( args, "account-uid" );
         PNSRCB cbid = ALIST_VAL_PTR( args, "callback"    );
         gint   ridx = ALIST_VAL_INT( args, "row-index"   );
@@ -53,9 +54,19 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
         PC    *gc   = purple_account_get_connection( acct );
         gint   i;
 
-        if( gc && res )
+        fprintf( stderr, "cached row data: %p\n", rows );
+        for( item = rows; item; item = item->next )
         {
-            for( i = 0, item = res->rows; item; item = item->next, i++ )
+            GList *cell;
+            fprintf( stderr, "|" );
+            for( cell = item->data; cell; cell = cell->next )
+                fprintf( stderr, " %s |", (char *)cell->data );
+            fprintf( stderr, "\n" );
+        }
+
+        if( gc && rows )
+        {
+            for( i = 0, item = rows; item; item = item->next, i++ )
                 if( i == ridx ) { row = item; break; }
 
             for( item = res->buttons; item; item = item->next )
@@ -65,9 +76,11 @@ xmlnode * _h_elim_notify_search_callback ( const char *name ,
                     break;
                 }
         }
+
+        fprintf( stderr, "+ search-row: %s\n", (gchar *)row->data );
         
         if( gc && row && btn && btn->callback )
-            ( btn->callback )( gc, row, resp->user_data );
+            ( btn->callback )( gc, row->data, resp->user_data );
     }
 
     sexp_val_free( args );
