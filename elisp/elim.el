@@ -710,7 +710,7 @@ into any clients."
                                     :call-id id  ))
       (widget-insert (concat (or (elim-avalue "primary" args)
                                  (elim-avalue "title"   args)) "\n"
-                             (elim-avalue "secondary" args)))
+                             (elim-avalue "secondary" args) "\n"))
       ;; actually create the widget:
       (cond ((memq name '(elim-request-input 
                           elim-request-file 
