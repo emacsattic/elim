@@ -1713,6 +1713,20 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (when (setq tag (elim-avalue icon garak-icon-tags))
         (widget-put wicon :tag tag)) ) ))
 
+(defun garak-request-add-buddy-nok (&rest args)
+  (kill-buffer nil))
+
+(defun garak-request-add-buddy-ok (&rest args)
+  (let (values group user rbuf)
+    (setq values (mapcar 'elim-parse-proto-args
+                  (elim-form-proto-values elim-form-ui-data))
+          user   (elim-avalue "user-name" values)
+          group  (elim-avalue "group"     values)
+          rbuf   (current-buffer))
+    (if (= (length group) 0) (setq group nil))
+    (elim-add-buddy garak-elim-process garak-account-uid user group)
+    (kill-buffer rbuf)))
+
 (defun garak-request-add-buddy (proc name id status args)
   (let (buf buf-name user-name account-name group)
     (setq user-name    (elim-avalue "user-name"    args)
@@ -1728,17 +1742,19 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (widget-insert (format "Add Buddy to %s\n" account-name))
       (elim-request-field-string "user-name" `(("label" . "User Name: ")
                                                ("value" . ,user-name   )))
+      (widget-insert "\n")
       (elim-request-field-string "group"     `(("label" . "Group: ")
                                                ("value" . ,group   )))
+      (widget-insert "\n")
       (elim-form-widget-create 'push-button
                                nil
                                :format (format "[%%[%s%%]]" "Cancel")
-                               :notify 'garak-request-nok)
+                               :notify 'garak-request-add-buddy-nok)
       (widget-insert " ")
       (elim-form-widget-create 'push-button
                                nil
                                :format (format "[%%[%s%%]]" "Add")
-                               :notify 'garak-request-ok)
+                               :notify 'garak-request-add-buddy-ok)
       (use-local-map widget-keymap)
       (widget-setup)
       (beginning-of-buffer)

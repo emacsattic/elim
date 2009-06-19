@@ -1,8 +1,10 @@
 2009-06-19  Vivek Dasmohapatra  <vivek@etla.org>
 
-	* elisp/garak.el: 
+	* elisp/garak.el:
 	(garak-buddy-list-node-widget): prefer: alias > contact alias > name
-	
+	(garak-request-add-buddy): implement add buddy/cancel actions
+	reaulting from elim-request-add-buddy calls.
+
 2009-06-18  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/notify_search_callback.c (_h_elim_notify_search_callback): 
