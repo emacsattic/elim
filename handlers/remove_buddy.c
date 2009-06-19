@@ -40,33 +40,26 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
     gpointer       auid  = ALIST_VAL_PTR( args, "account-uid"  );
     PurpleAccount *acct  = NULL;
 
-    fprintf( stderr, "(elim-remove-buddy:02)\n" );
-
-    fprintf( stderr, "(elim-remove-buddy:03)\n" );
-
-    gpointer     b_uid = ALIST_VAL_PTR( args, "bnode-uid" );
-    const char  *b_arg = NULL;
-    const char  *bname = NULL;
-    const char  *gname = NULL; 
-    PurpleGroup *group = NULL; 
-    PurpleBuddy *buddy = NULL;
-    gboolean     gone  = FALSE;
-
-    fprintf( stderr, "(elim-remove-buddy:04)\n" );
+    gpointer       b_uid = ALIST_VAL_PTR( args, "bnode-uid" );
+    const char    *b_arg = NULL;
+    const char    *bname = NULL;
+    const char    *gname = NULL; 
+    PurpleGroup   *group = NULL; 
+    PurpleBuddy   *buddy = NULL;
+    gboolean       gone  = FALSE;
 
     if( b_uid )
     {
-        fprintf( stderr, "(elim-remove-buddy:04a)\n" );
         PurpleBlistNodeType type = PURPLE_BLIST_OTHER_NODE;
         PurpleBlistNode    *node = find_blist_node_by_uid( b_uid , TRUE );
-        fprintf( stderr, "(elim-remove-buddy:04a0)\n" );
+
         if( !node )
         {
             sexp_val_free( args );
             return response_error( EINVAL, id, name, "rogue buddy pointer" );
         }
         type = purple_blist_node_get_type( node );
-        fprintf( stderr, "(elim-remove-buddy:04a1)\n" );
+
         // ===========================================================
         // groups, contacts and chats can safely be removed here:
         // buddies should instead be noted for removal in the next
@@ -99,7 +92,7 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
             return response_error( EINVAL, id, name, 
                                    "Unknown buddy list node type" );
         }
-        fprintf( stderr, "(elim-remove-buddy:04a2)\n" );
+
         if( gone )
         {
             xmlnode *rval = xnode_new( "alist" );
@@ -111,38 +104,33 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
             }
             AL_PTR ( rval, "bnode-uid" , buddy );
             AL_ENUM( rval, "bnode-type", type  , ":blist-node-type" );
-            fprintf( stderr, "(elim-remove-buddy:04a3)\n" );
+
             sexp_val_free( args );
             return response_value( 0, id, name, rval );
         }
     }
     else
     {
-        fprintf( stderr, "(elim-remove-buddy:04b)\n" );
         b_arg = ALIST_VAL_STRING( args, "bnode-name" );
         FIND_ACCOUNT( args, id, name, acct, auid, aname, proto );
-        fprintf( stderr, "(elim-remove-buddy:04b0 %s)\n", b_arg );
+
         if( b_arg )
         {
-            fprintf( stderr, "(elim-remove-buddy:04b1 %s)\n", bname );
             bname = purple_normalize( acct, b_arg   );
             gname = ALIST_VAL_STRING( args, "group" );
-            fprintf( stderr, "(elim-remove-buddy:04b2)\n" );
             group = ( gname && *gname ) ? purple_find_group( gname ) : NULL;
             buddy = ( group ?
                       purple_find_buddy_in_group( acct, bname, group ) :
                       purple_find_buddy         ( acct, bname        ) );
-            fprintf( stderr, "(elim-remove-buddy:04b3)\n" );
         }
     }
-    fprintf( stderr, "(elim-remove-buddy:05)\n" );
 
     if( !b_arg || !*b_arg )
     {
         sexp_val_free( args );
         return response_error( EINVAL, id, name, "buddy not specified" );
     }
-    fprintf( stderr, "(elim-remove-buddy:06)\n" );
+
     // buddy must be in our local list or libpurple won't remove it from the
     // server list ( determined empirically, confirmed by inspecting code ):
     if( !buddy )
@@ -150,10 +138,9 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
         buddy = purple_buddy_new( acct, bname, bname );
         purple_blist_add_buddy  ( buddy, NULL, NULL, NULL );
     }
-    fprintf( stderr, "(elim-remove-buddy:07)\n" );
+
     if( buddy )
     {
-        fprintf( stderr, "(elim-remove-buddy:07a)\n" );
         // the order of the remove operations is important: it has to be
         // this way round, as noted above: account buddy removal won't 
         // happen if the buddy is not in the blist when we try:
@@ -162,23 +149,19 @@ xmlnode * _h_elim_remove_buddy ( const char *name ,
         // potentially confusing. dunno what the right thing to do is here.
         purple_account_remove_buddy( acct, buddy, group );
         purple_blist_remove_buddy( buddy );
-        fprintf( stderr, "(elim-remove-buddy:07a0)\n" );
     }
     else 
     {
-        fprintf( stderr, "(elim-remove-buddy:07b)\n" );
         sexp_val_free( args );
         return response_error( ENXIO, id, name, "no such buddy" );
     }
     
-    fprintf( stderr, "(elim-remove-buddy:08)\n" );
     xmlnode *rval = xnode_new( "alist" );
     AL_STR ( rval, "account-name", purple_account_get_username   ( acct ) );
     AL_STR ( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
     AL_PTR ( rval, "account-uid" , acct  );
     AL_PTR ( rval, "bnode-uid"   , buddy );
     AL_ENUM( rval, "bnode-type", PURPLE_BLIST_BUDDY_NODE, ":blist-node-type" );
-    fprintf( stderr, "(elim-remove-buddy:09)\n" );
     sexp_val_free( args );
     return response_value( 0, id, name, rval );
 }
