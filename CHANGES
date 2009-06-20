@@ -1,5 +1,8 @@
 2009-06-20  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* elisp/elim.el (elim-get-buddies): add util func to get buddies
+	based on user-defined filters.
+
 	* handlers/alias_bnode.h (_h_elim_alias_bnode): buddy aliasing support.
 	* handlers/alias_bnode.c (_h_elim_alias_bnode): buddy aliasing support.
 
