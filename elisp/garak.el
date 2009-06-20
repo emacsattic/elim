@@ -2048,7 +2048,28 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   (garak-comp-add-buddy prefix))
 
 (defun garak-comp-msg (prefix &optional protocol)
-  (garak-comp-add-buddy prefix))
+  (let (acct args available buddy filter)
+    (setq args      (split-string prefix split-string-default-separators nil)
+          acct      (or (nth 1 args) "")
+          buddy     (or (nth 2 args) ""))
+    (cond ((and garak-account-uid (= (length args) 2))
+           (setq filter    (list (cons "account-uid" garak-account-uid))
+                 available (nconc
+                            (mapcar (lambda (A) (cdr (assq :name (cdr A))))
+                                    (elim-account-alist garak-elim-process))
+                            (elim-get-buddies garak-elim-process filter 
+                                              "bnode-name")) ))
+          ((= (length args) 2)
+           (setq available (mapcar (lambda (A) (cdr (assq :name (cdr A))))
+                                   (elim-account-alist garak-elim-process))))
+          ((= (length args) 3)
+           (setq filter    (list (cons "account-name" acct))
+                 available (elim-get-buddies garak-elim-process
+                                           filter "bnode-name")) ))
+    (cond ((and (= (length args) 2) (not (member acct available)))
+           (all-completions acct available))
+          ((and (= (length args) 3) (not (member acct available)))
+           (all-completions buddy available))) ))
 
 (defun garak-comp-help (prefix &optional protocol)
   (let (cmd args)

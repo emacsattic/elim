@@ -1,5 +1,7 @@
 2009-06-20  Vivek Dasmohapatra  <vivek@etla.org>
 
+	* elisp/garak.el (garak-comp-msg): tab completion of buddies for /msg
+
 	* elisp/elim.el (elim-get-buddies): add util func to get buddies
 	based on user-defined filters.
 
