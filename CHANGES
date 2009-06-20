@@ -1,3 +1,8 @@
+2009-06-20  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* handlers/alias_bnode.h (_h_elim_alias_bnode): buddy aliasing support.
+	* handlers/alias_bnode.c (_h_elim_alias_bnode): buddy aliasing support.
+
 2009-06-19  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el:
