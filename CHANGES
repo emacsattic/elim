@@ -1,3 +1,7 @@
+2009-06-21  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/elim.el (elim-alias-bnode): support daemon buddy node aliasing
+
 2009-06-20  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el (garak-comp-msg): tab completion of buddies for /msg

@@ -1265,6 +1265,20 @@ may be started if none by that name exists."
                            (elim-daemon-call 'message nil arglist))
         (error "No such account: %S" account)) ))
 
+(defun elim-alias-bnode (process buddy alias &optional account)
+  (message "(elim-alias-bnode %S %S %S %S)" 
+           process buddy alias account)
+  (let (acct-args bdata arglist buid)
+    (when account (setq acct-args (elim-account-proto-items process account)))
+    (setq bdata   (elim-buddy-data process buddy account)
+          buid    (car bdata)
+          arglist (nconc (list 'alist nil
+                               (elim-atom-to-item "bnode-uid" buid)
+                               (elim-atom-to-item "alias"    alias))
+                         acct-args))
+    (elim-process-send process
+                       (elim-daemon-call 'alias-bnode nil arglist)) ))
+
 (defun elim-toggle-user-blocked (process buddy &optional account)
   (let (acct-data buddy-data auid buid call arglist)
     (setq acct-data  (elim-account-data process account)
