@@ -1500,7 +1500,8 @@ substitute these characters for the basic ascii ones:\n
 
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
-  (let (buid buddy where-widget point widget icon-name icon buffer tag other)
+  (let ((inhibit-redisplay t)
+        buid buddy where-widget point widget icon-name icon buffer tag other)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
@@ -1540,7 +1541,9 @@ substitute these characters for the basic ascii ones:\n
                   icon-name (garak-buddy-list-choose-icon widget buddy)
                   tag       (elim-avalue icon-name garak-icon-tags)
                   icon      (tree-widget-find-image icon-name))
-            (let ((inhibit-read-only t) (old))
+            (let ((inhibit-read-only t) 
+                  (inhibit-modification-hooks t)
+                  name alias old old-label new-label label)
               (setq widget (widget-at point)
                     old    (widget-get widget :tag))
               (widget-put widget :tag tag)
@@ -1548,13 +1551,26 @@ substitute these characters for the basic ascii ones:\n
                   (put-text-property point end 'display icon)
                 (when tag
                   (setq end (+ point (length old)))
-                  ;;(message "REPLACE %S with %S in %S - %S"
-                  ;;         old tag point end)
                   (save-excursion
                     (goto-char point)
                     (setq old (make-string (length old) ?.))
                     (when (search-forward-regexp old end t)
-                      (replace-match tag nil t)) )) )) )) )) ))
+                      (replace-match tag nil t)) )) )
+              ;; update the label in the widget and the buffer itself:
+              (save-excursion
+                (goto-char point)
+                (widget-forward 1)
+                (setq name      (elim-avalue "bnode-name"  buddy)
+                      alias     (elim-avalue "bnode-alias" buddy)
+                      label     (if (> (length alias) 0) alias name)
+                      old-label (widget-get (widget-at) :tag)
+                      new-label (replace-regexp-in-string 
+                                 "^ \\(.*\\)" label old-label nil nil 1))
+                (when (not (equal label old-label))
+                  (widget-put (widget-at) :tag new-label)
+                  (replace-regexp ".*" label nil 
+                                  (1+ (point)) 
+                                  (+ (point) (length old-label)) )) )) )) )) ))
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
@@ -1836,7 +1852,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
             (car items)) ))
 
 (defun garak-cmd-msg (args)
-  (let (items account account-data proto buddy a-end message rval)
+  (let (items account account-data proto buddy message rval)
     (setq rval (format "INVALID: /msg %s" args))
     (setq account
           (garak-cmd-strip-account-arg garak-elim-process
@@ -1846,6 +1862,19 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
             message (substring args (match-end 0)))
         (elim-message garak-elim-process account buddy message)
         (setq rval (format "/msg %s" args)) )
+    rval))
+
+(defun garak-cmd-alias-buddy (args)
+  (let (items account account-data proto buddy alias rval)
+    (setq rval (format "INVALID: /alias %s" args))
+    (setq account
+          (garak-cmd-strip-account-arg garak-elim-process
+                                       items args account-data))
+    (when (string-match "\\s-*\\(\\S-+\\)\\s-+" args)
+      (setq buddy (match-string 1 args)
+            alias (substring args (match-end 0)))
+      (elim-alias-bnode garak-elim-process buddy alias account)
+      (setq rval (format "/alias %s" args)) )
     rval))
 
 (defun garak-read-join-parameters (spec items)
@@ -1940,6 +1969,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 (defvar garak-command-handlers
   '((add-account  . garak-cmd-add-account      )
     (add-buddy    . garak-cmd-add-buddy        )
+    (alias-buddy  . garak-cmd-alias-buddy      )
     (config-acct  . garak-cmd-configure-account)
     (connect      . garak-cmd-connect          )
     (disconnect   . garak-cmd-disconnect       )
@@ -1960,6 +1990,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   (cond
    ((string-match "\\(?:^\\|/\\)add.account\\>"         cmd) 'add-account )
    ((string-match "\\(?:^\\|/\\)add.buddy\\>"           cmd) 'add-buddy   )
+   ((string-match "\\(?:^\\|/\\)alias\\>"               cmd) 'alias-buddy )
    ((string-match "\\(?:^\\|/\\)configure.account\\>"   cmd) 'config-acct )
    ((string-match "\\(?:^\\|/\\)configure\\>"           cmd) 'config-acct )
    ((string-match "\\(?:^\\|/\\)connect\\>"             cmd) 'connect     )
@@ -2007,14 +2038,16 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; completion:
 (defvar garak-commands
-  '( "/add-account"    "/add-buddy"    "/configure-account" "/connect"
-     "/disconnect"     "/login"        "/logoff"            "/logout"
-     "/msg"            "/prefs"        "/quit"              "/register"
-     "/remove-account" "/remove-buddy" "/send"              "/status" ))
+  '( "/add-account" "/add-buddy"      "/alias"        "/configure-account"
+     "/connect"     "/disconnect"     "/login"        "/logoff"
+     "/logout"      "/msg"            "/prefs"        "/quit"
+     "/register"    "/remove-account" "/remove-buddy" "/send"       
+     "/status" ))
 
 (defvar garak-command-completers
   '((add-account . garak-comp-add-account)
     (add-buddy   . garak-comp-add-buddy  )
+    (alias-buddy . garak-comp-msg        )
     (msg         . garak-comp-msg        )
     (connect     . garak-comp-account    )
     (config-acct . garak-comp-account    )

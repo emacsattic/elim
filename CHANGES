@@ -1,6 +1,14 @@
 2009-06-21  Vivek Dasmohapatra  <vivek@etla.org>
 
-	* elisp/elim.el (elim-alias-bnode): support daemon buddy node aliasing
+	* elisp/garak.el: 
+	(garak-update-buddy): update label when buddy alias/name changes.
+	(garak-cmd-alias-buddy): cli command interpreter for /alias
+	(garak-command-handlers): register /alias handler
+	(garak-command-match): /alias command regexp
+	(garak-commands): /alias command added to list
+	(garak-command-completers): register tab completion handler for /alias
+
+	* elisp/elim.el (elim-alias-bnode): support daemon buddy node aliasing.
 
 2009-06-20  Vivek Dasmohapatra  <vivek@etla.org>
 
