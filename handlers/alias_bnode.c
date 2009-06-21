@@ -1,5 +1,5 @@
 /*
-Copyright © 2009 Vivek Dasmohapatra 
+Copyright © 2009 Vivek Dasmohapatra
 
 email : vivek@etla.org
 irc   : fledermaus on freenode, oftc
@@ -25,15 +25,15 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "../ui_ops/ops.h"
 
 xmlnode * _h_elim_alias_bnode ( const char *name ,
-                                 const char *id   ,
-                                 SEXP_VALUE *args ,
-                                 gpointer data    )
+                                const char *id   ,
+                                SEXP_VALUE *args ,
+                                gpointer data    )
 {
     ASSERT_ALISTP( args, id, name );
 
     fprintf( stderr, "(elim-alias-bnode)\n" );
     elim_ping();
-    
+
     const char    *aname = ALIST_VAL_STR( args, "account-name" );
     const char    *proto = ALIST_VAL_STR( args, "im-protocol"  );
     gpointer       auid  = ALIST_VAL_PTR( args, "account-uid"  );
@@ -42,7 +42,7 @@ xmlnode * _h_elim_alias_bnode ( const char *name ,
     PurpleAccount *acct  = NULL;
     const char    *b_arg = NULL;
     const char    *bname = NULL;
-    const char    *gname = NULL; 
+    const char    *gname = NULL;
     PurpleGroup   *group = NULL;
     PurpleBuddy   *buddy = NULL;
     gboolean       done  = FALSE;
@@ -127,12 +127,12 @@ xmlnode * _h_elim_alias_bnode ( const char *name ,
     }
 
     if( buddy ) { purple_blist_alias_buddy( buddy, alias ); }
-    else 
+    else
     {
         sexp_val_free( args );
         return response_error( ENXIO, id, name, "no such buddy" );
     }
-    
+
     xmlnode *rval = xnode_new( "alist" );
     AL_STR ( rval, "account-name", purple_account_get_username   ( acct ) );
     AL_STR ( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
