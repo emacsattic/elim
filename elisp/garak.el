@@ -1557,20 +1557,22 @@ substitute these characters for the basic ascii ones:\n
                     (when (search-forward-regexp old end t)
                       (replace-match tag nil t)) )) )
               ;; update the label in the widget and the buffer itself:
-              (save-excursion
-                (goto-char point)
-                (widget-forward 1)
-                (setq name      (elim-avalue "bnode-name"  buddy)
-                      alias     (elim-avalue "bnode-alias" buddy)
-                      label     (if (> (length alias) 0) alias name)
-                      old-label (widget-get (widget-at) :tag)
-                      new-label (replace-regexp-in-string 
-                                 "^ \\(.*\\)" label old-label nil nil 1))
-                (when (not (equal label old-label))
-                  (widget-put (widget-at) :tag new-label)
-                  (replace-regexp ".*" label nil 
-                                  (1+ (point)) 
-                                  (+ (point) (length old-label)) )) )) )) )) ))
+              (when (memq (elim-avalue "bnode-type" buddy) 
+                          '(:buddy-node :chat-node :contact-mode))
+                (save-excursion
+                  (goto-char point)
+                  (widget-forward 1)
+                  (setq name      (elim-avalue "bnode-name"  buddy)
+                        alias     (elim-avalue "bnode-alias" buddy)
+                        label     (if (> (length alias) 0) alias name)
+                        old-label (widget-get (widget-at) :tag)
+                        new-label (replace-regexp-in-string 
+                                   "^ \\(.*\\)" label old-label nil nil 1))
+                  (when (not (equal label old-label))
+                    (widget-put (widget-at) :tag new-label)
+                    (replace-regexp ".*" label nil 
+                                    (1+ (point)) 
+                                    (+ (point) (length old-label)))) )))) ))) ))
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
