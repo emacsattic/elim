@@ -658,7 +658,7 @@ substitute these characters for the basic ascii ones:\n
     (when (not buffer)
       (setq buffer (garak-new-conversation process call call-id status args)))
     (with-current-buffer buffer
-      (setq text (cdr (assoc "text" args))
+      (setq text (or (elim-avalue "text" args) "")
             who  (or (cdr (assoc "alias" args))
                      (cdr (assoc "who"   args))
                      (garak-abbreviate-nick garak-account-name) ))
