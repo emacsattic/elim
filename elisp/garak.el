@@ -67,6 +67,11 @@
   :type  '(boolean)
   :group 'garak)
 
+(defcustom garak-display-splash t
+  "Whether to display the garak splash logo while initialising the elim daemon"
+  :type '(boolean)
+  :group 'garak)
+
 (defun garak-tag-widget-value (w)
   (let ((raw (widget-field-value-get w)))
     (cond ((eq (length raw) 2)         (concat     raw " "))
@@ -179,6 +184,14 @@ substitute these characters for the basic ascii ones:\n
 (defvar garak-icons nil
   "Alist of names and icons \(images, see `create-image'\) to use in the gui")
 
+(defvar garak-logo nil
+  "The garak logo for the splash screen")
+
+(defun garak-load-logo ()
+  (let ((file (expand-file-name
+               (concat garak-icon-directory "/../graphics/garak.png"))))
+    (when (and garak-display-splash (not garak-logo) (file-readable-p file))
+      (setq garak-logo (create-image file))) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
 (defvar garak-callbacks
@@ -2206,10 +2219,18 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 
 (defun garak ()
   (interactive)
-  (let ((buffer (get-buffer "*garak*")) proc)
+  (let ((display-buffer-reuse-frames t)
+        (buffer (get-buffer "*garak*")) proc point)
     (if (garak-buffer-reusable nil buffer)
         (switch-to-buffer buffer)
       (switch-to-buffer (setq buffer (generate-new-buffer "*garak*")))
+      (setq point (point))
+      (garak-load-logo)
+      (when (and garak-display-splash garak-logo)
+        (insert-image garak-logo "GARAK") 
+        (insert "\n")
+        (display-buffer buffer) 
+        (sit-for 0))
       (garak-mode)
       (garak-init-local-storage))
     (setq lui-input-function 'garak-input-handler)
@@ -2218,8 +2239,10 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
           (elim-start "(elim . garak)" nil garak-callbacks))
     (with-current-buffer buffer (setq garak-elim-process proc))
     (elim-store-process-data garak-elim-process :cli-buffer buffer)
-    (let ((display-buffer-reuse-frames t))
-      (display-buffer (garak-ui-create-widget-buffer garak-elim-process)))
+    (display-buffer (garak-ui-create-widget-buffer garak-elim-process))
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (delete-region point (+ point 6))))
     (end-of-buffer)))
 
 (provide 'garak)
