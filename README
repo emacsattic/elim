@@ -96,7 +96,7 @@ OR (in an account specific buffer)
 
   /msg BUDDY-NAME
 
-OR us the context menu from the buddy list in *Garak*
+OR as the context menu from the buddy list in *Garak*
 
 To leave a conversation:
 
@@ -117,8 +117,13 @@ To set your status:
   /status invisible
   /status do-not-disturb OR /status unavailable
 
-Completion for this command isn't done yet, so these are the only useful ways 
-to call it. It will be extended to allow user defined statuses later.
+To set your icon/avatar/what-have-you:
+
+  /set-icon USERNAME /path/to/icon/image
+
+OR (in an account specific buffer)
+
+  /set-icon /path/to/icon/image
 
 New garak buffers should turn up in the tracking block in the mode line:
 
