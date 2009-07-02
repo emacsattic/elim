@@ -1892,6 +1892,18 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (setq rval (format "/alias %s" args)) )
     rval))
 
+(defun garak-cmd-set-icon (args)
+  (let (items account account-data proto file rval)
+    (setq rval (format "INVALID: /set-icon %s" args))
+    (setq account
+          (garak-cmd-strip-account-arg garak-elim-process
+                                       items args account-data))
+    (when (string-match "\\s-*\\(\\S-+\\)\\s-*" args)
+      (setq file (expand-file-name (match-string 1 args))))
+    (elim-set-account-icon garak-elim-process account file)
+    (setq rval (format "/set-icon %s" args))
+    rval))
+
 (defun garak-read-join-parameters (spec items)
   (let (options secret value key required)
     (while spec
@@ -1998,6 +2010,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (remove-acct  . garak-cmd-remove-account   )
     (remove-buddy . garak-cmd-remove-buddy     )
     (send-file    . garak-cmd-send-file        )
+    (set-icon     . garak-cmd-set-icon         )
     (status       . garak-cmd-status           )
     (unregister   . garak-cmd-unregister       ) ))
 
@@ -2023,6 +2036,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
    ((string-match "\\(?:^\\|/\\)remove.account\\>"      cmd) 'remove-acct )
    ((string-match "\\(?:^\\|/\\)remove.buddy\\>"        cmd) 'remove-buddy)
    ((string-match "\\(?:^\\|/\\)send\\>"                cmd) 'send-file   )
+   ((string-match "\\(?:^\\|/\\)set-icon"               cmd) 'set-icon    )
    ((string-match "\\(?:^\\|/\\)status\\>"              cmd) 'status      )
    ((string-match "\\(?:^\\|/\\)quit\\>"                cmd) 'quit        )
    ((string-match "\\(?:^\\|/\\)unregister\\>"          cmd) 'unregister  ) ))
@@ -2070,6 +2084,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (register    . garak-comp-account    )
     (remove-acct . garak-comp-account    )
     (send-file   . garak-comp-account    )
+    (set-icon    . garak-comp-account-file)
     (status      . garak-comp-status     )
     (help        . garak-comp-help       )
     (join        . garak-comp-join       )))
@@ -2094,6 +2109,33 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 
 (defun garak-comp-account (prefix &optional protocol)
   (garak-comp-add-buddy prefix))
+
+(defun garak-comp-account-file (prefix &optional protocol)
+  (let (acct args available file filter dir pattern)
+    (setq args      (split-string prefix split-string-default-separators nil)
+          acct      (or (nth 1 args) "")
+          file      (or (nth 2 args) ""))
+    (when (= (length file) 0) (setq file default-directory))
+    (if (file-directory-p file) 
+        (setq dir file pattern nil)
+      (setq dir     (file-name-directory file) 
+            pattern (file-name-nondirectory file)
+            pattern (concat "^" (regexp-quote pattern))))
+    (cond ((and garak-account-uid (= (length args) 2))
+           (setq available (nconc
+                            (mapcar (lambda (A) (cdr (assq :name (cdr A))))
+                                    (elim-account-alist garak-elim-process))
+                            (directory-files dir nil pattern)) ))
+          ((= (length args) 2)
+           (setq available (mapcar (lambda (A) (cdr (assq :name (cdr A))))
+                                   (elim-account-alist garak-elim-process))))
+          ((= (length args) 3)
+           (setq available (directory-files dir nil pattern)) ))
+    (setq available (mapcar (lambda (f) (concat dir f)) available))
+    (cond ((and (= (length args) 2) (not (member acct available)))
+           (all-completions acct available))
+          ((and (= (length args) 3) (not (member acct available)))
+           (all-completions file available))) ))
 
 (defun garak-comp-msg (prefix &optional protocol)
   (let (acct args available buddy filter)

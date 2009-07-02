@@ -41,6 +41,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
     ({ SEXP_VALUE *v;                \
        (v = ALIST_VAL( (s), (k) )) ? \
          ( ( v->type == SEXP_STRING ) ? v->x.string : NULL ) : NULL; })
+#define ALIST_VAL_DATA(s,k) ALIST_VAL_GSTRING(s,k)
 
 #define ALIST_VAL_INT(s,k)           \
     ({ SEXP_VALUE *v;                \

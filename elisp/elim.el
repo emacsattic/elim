@@ -1279,6 +1279,13 @@ may be started if none by that name exists."
     (elim-process-send process
                        (elim-daemon-call 'alias-bnode nil arglist)) ))
 
+(defun elim-set-account-icon (process account &optional icon)
+  (let (acct-args icon-file arglist)
+    (setq acct-args (elim-account-proto-items process account)
+          icon-file (elim-atom-to-item "icon-file" icon)
+          arglist   (nconc (list 'alist nil icon-file) acct-args))
+    (elim-process-send process (elim-daemon-call 'set-icon nil arglist)) ))
+
 (defun elim-toggle-user-blocked (process buddy &optional account)
   (let (acct-data buddy-data auid buid call arglist)
     (setq acct-data  (elim-account-data process account)
