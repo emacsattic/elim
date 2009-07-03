@@ -23,7 +23,7 @@
 ** DONE make blocking/unblocking work
 ** TODO remove buddy from CLI as well as GUI
 ** TODO distinguish homonymous entries by account
-** TODO rename/alias buddy
+** DONE alias buddy
 ** DONE move buddy to a new group
 ** DONE fix buddy add so only one entry per buddy in blist (no clones)
 ** TODO offline buddies (when option set)
