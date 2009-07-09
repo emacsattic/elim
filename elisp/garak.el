@@ -665,7 +665,9 @@ substitute these characters for the basic ascii ones:\n
 
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer  (garak-conversation-buffer process args t))
-         (flags   (cdr (assoc "flags" args)))
+         (flags   (elim-avalue "flags"      args))
+         (ctype   (elim-avalue "conv-type"  args))
+         (title   (elim-avalue "conv-title" args))
          (mformat "<%s> %s")
          text who nick-face title when stamp)
     (when (not buffer)
@@ -675,6 +677,10 @@ substitute these characters for the basic ascii ones:\n
             who  (or (cdr (assoc "alias" args))
                      (cdr (assoc "who"   args))
                      (garak-abbreviate-nick garak-account-name) ))
+      (when (and (eq :im ctype) 
+                 (string-match "^[0-9]+$" who) 
+                 (> (length title) 0))
+        (setq who title))
       (if (memq :system  flags)
           (lui-insert
            (elim-add-face (format "* %s *" (elim-interpret-markup text))
