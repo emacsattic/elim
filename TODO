@@ -23,7 +23,7 @@
 ** DONE make blocking/unblocking work
 ** TODO remove buddy from CLI as well as GUI
 ** TODO distinguish homonymous entries by account
-** TODO rename/alias buddy
+** DONE rename/alias buddy
 ** DONE move buddy to a new group
 ** DONE fix buddy add so only one entry per buddy in blist (no clones)
 ** TODO offline buddies (when option set)
@@ -31,7 +31,7 @@
 *** TODO hide when they go offline after you log in
 * misc stuff
 ** DONE pump command failures/warnings etc into the *garak* buffer.
-** TODO set buddy icon
+** DONE set (account) buddy icon
 ** TODO update docs to cover new client-to-daemon commands
 ** DONE can dynamic submenus be generated at invocation time? [not easily]
 *** not easily enough. on hold for now.
@@ -41,7 +41,7 @@
 *** DONE url
 *** DONE generic message
 *** DONE user info
-*** TODO search results
+*** DONE search results
 * preferences
 ** DONE fetch preferences list and display it in editable widget form
 ** DONE add specialised preference widgets for those that need it
