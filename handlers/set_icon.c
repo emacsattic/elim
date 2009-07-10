@@ -67,7 +67,7 @@ xmlnode * _h_elim_set_icon ( const char *name ,
     AL_PTR ( rval, "account-uid" , acct );
     AL_STR ( rval, "account-name", purple_account_get_username   ( acct ) );
     AL_STR ( rval, "im-protocol" , purple_account_get_protocol_id( acct ) );
-    AL_BOOL( rval, "has-icon"    , (gboolean)set );
+    AL_BOOL( rval, "has-icon"    , set ? TRUE : FALSE );
 
     sexp_val_free( args );
     return response_value( 0, id, name, rval );
