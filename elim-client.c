@@ -22,6 +22,10 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "elim-client.h"
 
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #define IO_IN  ( G_IO_IN  | G_IO_PRI )
 #define IO_ERR ( G_IO_ERR | G_IO_HUP | G_IO_NVAL )
 #define IO_OUT   G_IO_OUT
@@ -197,6 +201,18 @@ static gboolean quit_handler(GIOChannel *in, GIOCondition cond, gpointer data)
     return FALSE;
 }
 
+static void reap_child (int sig) { int s; waitpid( -1, &s, WNOHANG ); }
+
+static void set_signal_handlers ()
+{
+    struct sigaction sig_child;
+
+    sigemptyset( &sig_child.sa_mask );
+    sig_child.sa_handler = reap_child;
+    sig_child.sa_flags   = SA_NOCLDSTOP | SA_NOCLDWAIT;
+    sigaction( SIGCHLD, &sig_child, NULL );
+}
+
 int main ( int argc, char **argv )
 {
     int         ifd    = fileno( stdin  );
@@ -206,6 +222,8 @@ int main ( int argc, char **argv )
     GIOChannel *in     ;
     GIOFlags    flags  ;
     GIOStatus   status ;
+
+    set_signal_handlers();
 
 #ifdef G_PLATFORM_WIN32
     // no idea if this works or not.
