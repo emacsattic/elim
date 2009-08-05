@@ -34,6 +34,7 @@ OLD_GLIB    := $(shell                                                      \
                  if pkg-config glib-2.0 --atleast-version 2.14 2>/dev/null; \
                  then echo '-D'; else echo '-U'; fi;                        )
 DEFINES     := -D_GNU_SOURCE                 \
+               -UWIN32                       \
                 $(OLD_GLIB)HAS_ADD_SECONDS   \
                 $(OLD_GLIB)HAS_QUEUE_INIT    \
                 $(OLD_GLIB)HAS_GET_HASH_KEYS
@@ -60,6 +61,9 @@ UTIL_OBJ    := sexp/sexp-xml.o xnode/xnode.o
 CLIENT_OBJ  := $(patsubst %.c, %.o, $(wildcard handlers/*.c))
 TAR_FLAGS   := --exclude .git -czvf
 
+OTR_SRC     := $(wildcard plugins/otr/otr*.c)
+OTR_OBJ     := $(patsubst %.c, %.o, $(OTR_SRC))
+
 ############################################################################
 .PHONY: clean diag distclean check-libdeps signed-tar tar
 
@@ -85,6 +89,14 @@ $(SIGNAL_OBJ): prpl/util.h elim-rpc.h
 handlers/init.o: signals/sigs.h
 
 handlers/set_prefs.o: elim-glibcompat.h
+
+%.so:
+	$(LD) -shared -E $(LDFLAGS) -o $@ $^
+
+$(OTR_OBJ): %.o: %.c %.h
+plugins/otr.so: LDFLAGS += -lotr
+plugins/otr.so: CFLAGS += -I/usr/include/libotr -DPURPLE_PLUGINS
+plugins/otr.so: $(OTR_OBJ)
 
 ############################################################################
 # generated source files:
@@ -114,12 +126,16 @@ check-libdeps:
 	    $(if $(shell pkg-config $(subst $s,$S,$P) --exists && echo t ),\
 	         $(info  $(shell echo $(subst $s,$S,$P)) is installed OK)))
 
-clean:
+clean-plugins:
+	@( rm -fv plugins/*.so plugins/*/*.o );
+
+clean: clean-plugins
 	@( rm -fv $(BINARIES) $(OBJ_FILES) \
 	          handler-list.h           \
 	          ui_ops/ops.h             \
 	          signals/sigs.h 	   \
 	          elim-func-handlers.c     );
+
 
 TAGS: $(CH_FILES)
 	@if [ x"$(TVER)" != x ]; then etags --recurse; fi
