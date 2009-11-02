@@ -731,8 +731,13 @@ This is the value of Lui for `flyspell-generic-check-word-p'."
 ;;; Output ;;;
 ;;;;;;;;;;;;;;
 
+(defvar lui-insertion-delimiter "\n"
+  "String to insert after the argument passed to `lui-insert'")
+
 (defun lui-insert (str &optional not-tracked-p)
-  "Insert STR into the current Lui buffer."
+  "Insert STR into the current Lui buffer.
+The value of `lui-insertion-delimiter' is inserted directly after this,
+bind said variable in a (let ...) form if you need to alter this behaviour."
   (lui-save-undo-list
    (save-excursion
      (save-restriction
@@ -741,7 +746,7 @@ This is the value of Lui for `flyspell-generic-check-word-p'."
          (goto-char lui-output-marker)
          (let ((beg (point))
                (end nil))
-           (insert str "\n")
+           (insert str lui-insertion-delimiter)
            (setq end (point))
            (set-marker lui-output-marker (point))
            (narrow-to-region beg end))
