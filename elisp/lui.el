@@ -377,36 +377,37 @@ should never be called directly.
 
 It can be customized for an application by specifying a
 `lui-input-function', and possibly `lui-possible-completions-function'."
-  (kill-all-local-variables)
-  (setq major-mode 'lui-mode
-        mode-name "LUI")
-  (use-local-map lui-mode-map)
-  ;; Buffer-local variables
-  (setq lui-input-marker (make-marker)
-        lui-output-marker (make-marker)
-        lui-input-ring (make-ring lui-input-ring-size)
-        lui-input-ring-index nil
-        flyspell-generic-check-word-p 'lui-flyspell-verify)
-  (set-marker lui-input-marker (point-max))
-  (set-marker lui-output-marker (point-max))
-  (add-hook 'window-scroll-functions
-            'lui-scroll-to-bottom
-            nil t)
-  (when (fboundp 'make-local-hook)
-    ;; needed for xemacs, as it does not treat the LOCAL argument to
-    ;; `add-hook' the same as GNU Emacs. It's obsolete in GNU Emacs
-    ;; sind 21.1.
-    (make-local-hook 'change-major-mode-hook))
-  (add-hook 'change-major-mode-hook
-            'lui-change-major-mode
-            nil t)
-  (tracking-mode 1)
-  (when lui-flyspell-p
-    (require 'flyspell)
-    (lui-flyspell-change-dictionary))
-  (set (make-local-variable 'incomplete-function)
-       'lui-incomplete)
-  (run-hooks 'lui-mode-hook))
+  (let ((lui-activating-lui-mode t))
+    (kill-all-local-variables)
+    (setq major-mode 'lui-mode
+          mode-name "LUI")
+    (use-local-map lui-mode-map)
+    ;; Buffer-local variables
+    (setq lui-input-marker (make-marker)
+          lui-output-marker (make-marker)
+          lui-input-ring (make-ring lui-input-ring-size)
+          lui-input-ring-index nil
+          flyspell-generic-check-word-p 'lui-flyspell-verify)
+    (set-marker lui-input-marker (point-max))
+    (set-marker lui-output-marker (point-max))
+    (add-hook 'window-scroll-functions
+              'lui-scroll-to-bottom
+              nil t)
+    (when (fboundp 'make-local-hook)
+      ;; needed for xemacs, as it does not treat the LOCAL argument to
+      ;; `add-hook' the same as GNU Emacs. It's obsolete in GNU Emacs
+      ;; sind 21.1.
+      (make-local-hook 'change-major-mode-hook))
+    (add-hook 'change-major-mode-hook
+              'lui-change-major-mode
+              nil t)
+    (tracking-mode 1)
+    (when lui-flyspell-p
+      (require 'flyspell)
+      (lui-flyspell-change-dictionary))
+    (set (make-local-variable 'incomplete-function)
+         'lui-incomplete)
+    (run-hooks 'lui-mode-hook)))
 
 (defun lui-scroll-to-bottom (window display-start)
   "Scroll the input line to the bottom of the window."
@@ -432,7 +433,8 @@ It can be customized for an application by specifying a
 (defun lui-change-major-mode ()
   "Assure that the user really wants to change the major mode.
 This is a good value for a buffer-local `change-major-mode-hook'."
-  (when (not (y-or-n-p "Really change major mode in a Lui buffer? "))
+  (when (and (not lui-activating-lui-mode)
+             (not (y-or-n-p "Really change major mode in a Lui buffer? ")))
     (error "User disallowed mode change.")))
 
 
