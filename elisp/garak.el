@@ -548,7 +548,7 @@ substitute these characters for the basic ascii ones:\n
 
 (defvar garak-search-column-labels nil)
 (defun garak-notify-search-callback (point action)
-  (message "garak-notify-search-callback(%S %S)" point action)
+  ;; (message "garak-notify-search-callback(%S %S)" point action)
   (let ((row nil) (start point) (args nil))
     (setq start (next-single-char-property-change (point-min) 'result-start)
           row   (- (line-number-at-pos point) 
@@ -574,7 +574,7 @@ substitute these characters for the basic ascii ones:\n
          (elim-avalue "columns" args)) ))
 
 (defun garak-notify-search-rows (proc name id status args)
-  (message "garak-notify-search-rows(%s...)" id)
+  ;; (message "garak-notify-search-rows(%s...)" id)
   (let ((sid   (elim-avalue "search-id" args))
         (rows  (elim-avalue "results"   args))
         (titles nil)
@@ -951,7 +951,7 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-ui-prefs-process-widgets (&optional parent child event &rest stuff)
   (let ((actions (widget-value parent)) 
         (proc     garak-elim-process))
-    (message "UI Prefs Button: %S" actions)
+    ;; (message "UI Prefs Button: %S" actions)
     (when (memq 'save   actions) (elim-set-prefs proc (garak-ui-prefs-changed)))
     (when (memq 'reload actions) (garak-ui-create-prefs-buffer proc))
     (when (memq 'close  actions) (kill-buffer nil)) ))
@@ -1659,7 +1659,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (with-current-buffer buffer
         (setq buid (elim-avalue "bnode-uid"    args)
               puid (elim-avalue "bnode-parent" args))
-        (message "garak-delete-buddy: %S" puid)
+        ;; (message "garak-delete-buddy: %S" puid)
         (if puid
             (let (parent kfun kids)
               ;; if the parent is skippable, find a non-skippable ancestor:
@@ -1688,7 +1688,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
                            widget (widget-at point)
                            widget (garak-tree-widget-real-target widget)))
             (widget-children-value-delete widget)
-            (message "point AFTER deletion: %S" (point))
+            ;; (message "point AFTER deletion: %S" (point))
             (when (eq (car-safe (get-text-property (1- point) 'display)) 'space)
               (delete-char -1)) )) )) ))
 
@@ -2191,14 +2191,14 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (setq args (split-string prefix split-string-default-separators nil)
           type (or (nth 1 args) "")
           name (or (nth 2 args) ""))
-    (message "ARGS: %S" args)
+    ;; (message "ARGS: %S" args)
     (cond ((and (eq  (length args) 3)
                 (not (member name garak-standard-status-names))
                 (not (member type garak-standard-status-names)))
            (all-completions name garak-standard-status-names))
           ((and (eq  (length args) 2)
                 (not (member type garak-standard-status-things)))
-           (message "type: %S" type)
+           ;; (message "type: %S" type)
            (all-completions type garak-standard-status-things))) ))
 
 (defun garak-complete-commands (&optional prefix protocol)
