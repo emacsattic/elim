@@ -1593,9 +1593,10 @@ substitute these characters for the basic ascii ones:\n
                                    "^ \\(.*\\)" label old-label nil nil 1))
                   (when (not (equal label old-label))
                     (widget-put (widget-at) :tag new-label)
-                    (replace-regexp ".*" label nil 
-                                    (1+ (point)) 
-                                    (+ (point) (length old-label)))) )))) ))) ))
+                    (forward-char 1)
+                    (when (re-search-forward 
+                           ".+" (+ (point) -1 (length old-label)) t)
+                      (replace-match label t t))) )))) ))) ))
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
