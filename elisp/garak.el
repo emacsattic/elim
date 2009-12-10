@@ -1159,6 +1159,7 @@ substitute these characters for the basic ascii ones:\n
       (setq bbuffer (generate-new-buffer "*Garak*")))
     (elim-store-process-data proc :blist-buffer bbuffer)
     (with-current-buffer bbuffer
+      (setq buffer-undo-list t)
       (elim-init-ui-buffer)
       (garak-init-local-storage)
       (setq garak-elim-process proc)
