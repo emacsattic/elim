@@ -849,7 +849,7 @@ substitute these characters for the basic ascii ones:\n
                                    :notify 'garak-ui-account-options-ok-cb)
           (use-local-map widget-keymap)
           (widget-setup)
-          (beginning-of-buffer)
+          (goto-char (point-max))
           (widget-forward 1))
         (display-buffer ui-buffer) )) ))
 
@@ -903,7 +903,7 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-ui-pref-significant-widgets ()
   (let ((last-point -1) wlist widget)
     (save-excursion 
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (while (< last-point (point))
         (when (and (setq widget (widget-at)) 
                    (widget-get widget :garak-pref))
@@ -1140,7 +1140,7 @@ substitute these characters for the basic ascii ones:\n
             (format "%s%15s: %s %s %s [%5s%%] %d Bytes"
                     p-label other-user direction s-label file progress size))
       (save-excursion
-        (end-of-buffer)
+        (goto-char (point-max))
         (insert (propertize " "  'garak-xfer-start uid)
                 ft-display
                 (propertize "\n" 'garak-xfer-end   uid))) :created)))
@@ -1508,7 +1508,7 @@ substitute these characters for the basic ascii ones:\n
         (inhibit-point-motion-hooks t)
         (inhibit-redisplay          t))
     (save-excursion
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (while (and (not found) (< last-point (point)))
         (when (and (setq widget (widget-at))
                    (eql (garak-tree-widget-get (widget-at) type) uid))
@@ -1549,7 +1549,7 @@ substitute these characters for the basic ascii ones:\n
                           (widget-apply widget :action)
                           (widget-apply widget :action)) ))
                   (save-excursion
-                    (end-of-buffer)
+                    (goto-char (point-max))
                     (garak-insert-buddy-list-top proc
                                                  (elim-buddy-data proc puid)))))
             ;; the widget is currently visible. tweak it by hand
@@ -1794,7 +1794,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
                                :notify 'garak-request-add-buddy-ok)
       (use-local-map widget-keymap)
       (widget-setup)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (widget-forward 1))
     (display-buffer buf)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2291,6 +2291,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (with-current-buffer buffer
       (let ((inhibit-read-only t))
         (delete-region point (+ point 6))))
-    (end-of-buffer)))
+    (goto-char (point-max))
+    (push-mark nil t)))
 
 (provide 'garak)

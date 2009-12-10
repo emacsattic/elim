@@ -261,7 +261,7 @@ and return an s-expression suitable for making a call to an elim daemon."
     (when (not buffer)
       (buffer-disable-undo (setq buffer (get-buffer-create "*elim-debug*"))))
     (with-current-buffer buffer
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (insert (apply 'format args) "\n\n"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
