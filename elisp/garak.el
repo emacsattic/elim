@@ -1062,7 +1062,8 @@ substitute these characters for the basic ascii ones:\n
             (pos    nil)
             (icon  (tree-widget-find-image ":available"))
             (label (elim-avalue ":available" garak-icon-tags))
-            (inhibit-redisplay   t))
+            ;;(inhibit-redisplay   t)
+            )
           (setq pos (next-single-char-property-change start 'ft-progress))
           (save-excursion
             (delete-region pos (+ 5 pos))
@@ -1108,7 +1109,8 @@ substitute these characters for the basic ascii ones:\n
         ;; update existing xfer
         (let ((start (car ft-region)) 
               (end   (cdr ft-region)) 
-              (inhibit-redisplay   t))
+              ;;(inhibit-redisplay   t)
+              )
           ;;(message "updating existing widget %S [%s]" uid progress)
           (setq pos (next-single-char-property-change start 'ft-progress))
           (delete-region pos (+ 5 pos))
@@ -1506,7 +1508,8 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-ui-find-node (uid type)
   (let ((last-point -1) (found nil) (widget nil)
         (inhibit-point-motion-hooks t)
-        (inhibit-redisplay          t))
+        ;;(inhibit-redisplay          t)
+        )
     (save-excursion
       (goto-char (point-min))
       (while (and (not found) (< last-point (point)))
@@ -1519,7 +1522,7 @@ substitute these characters for the basic ascii ones:\n
 
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
-  (let ((inhibit-redisplay t)
+  (let (;;(inhibit-redisplay t)
         buid buddy where-widget point widget icon-name icon buffer tag other)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
     (when (buffer-live-p buffer)
