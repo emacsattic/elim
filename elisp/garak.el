@@ -1916,19 +1916,19 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     rval))
 
 (defun garak-read-join-parameters (spec items)
-  (let (options secret value key required)
+  (let (options secret value key required help)
     (while spec
       (setq value    (car items)
             key      (caar spec)
             secret   (cdr (assoc "secret"   (cdar spec)))
             required (cdr (assoc "required" (cdar spec))))
-      (when (or (and (or (not value) (equal value "-")) required)
-                (and (equal value "-") secret))
-        (setq value
-              (if secret
-                  (read-passwd (concat key ": "))
-                (read-string (concat key ": ") nil nil nil t))))
-      (when value (setq options (cons value (cons key options))))
+      (when (member value '(nil "-"))
+        (setq help  (if required "" " (enter - to ignore)")
+              value (if secret
+                        (read-passwd (concat key help ": "))
+                      (read-string (concat key help ": ") nil nil nil t))))
+      (when (not (member value '("-" nil)))
+        (setq options (cons value (cons key options))))
       (setq spec  (cdr  spec)
             items (cdr items)))
     (nreverse options)))
