@@ -1605,7 +1605,8 @@ substitute these characters for the basic ascii ones:\n
   "This function handles updating the garak ui when the state of one of your
 accounts changes. Typically this is as a result of elim-account-status-changed
 elim-connection-state or elim-connection-progress, but any call can be handled as long as an \"account-uid\" entry is present in the ARGS alist."
-  (let (buffer auid where-widget point end icon-name icon conn kids node tag)
+  (let (buffer auid where-widget point end icon-name
+        icon conn kids node tag proto iname alt atag aname)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
           status nil)
     (elim-debug "(garak-account-update.%S ...)" name)
@@ -1643,21 +1644,28 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
           ;; updating node icon:
           (setq point (car where-widget)
                 end   (next-single-char-property-change point 'display)
-                tag   (elim-avalue icon-name garak-icon-tags)
+                tag   (or (elim-avalue icon-name garak-icon-tags) "")
+                adata (elim-account-data proc auid)
+                proto (elim-avalue :proto adata)
+                aname (elim-avalue :name  adata)
+                iname (format ":%s" proto)
+                atag  (or (elim-avalue iname garak-icon-tags) " ?? ")
+                alt   (format "[%-4s]%s%s" atag tag aname)
                 icon  (tree-widget-find-image icon-name))
           (let ((inhibit-read-only t) old)
             (setq widget (widget-at point)
                   old    (widget-get widget :tag))
-            (widget-put widget :tag tag)
+            (widget-put widget :tag alt)
             (if (and icon (tree-widget-use-image-p))
-                (put-text-property point end 'display icon)
+                (put-text-property point end 'display icon) ;; widgets w images
+              ;; text mode:
               (when tag
                 (setq end (+ (length old) point))
                 (save-excursion
                   (goto-char point)
                   (setq old (make-string (length old) ?.))
                   (when (search-forward-regexp old end t)
-                    (replace-match tag nil t)) )) )) )) )))
+                    (replace-match alt nil t)) )) )) )) )))
 
 (defun garak-delete-buddy (proc name id status args)
   (let ((inhibit-read-only t) buid puid where-widget point widget buffer dummy)
