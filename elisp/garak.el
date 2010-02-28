@@ -1647,7 +1647,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
           ;; updating node icon:
           (setq point (car where-widget)
                 end   (next-single-char-property-change point 'display)
-                tag   (or (elim-avalue icon-name garak-icon-tags) "")
+                tag   (elim-avalue icon-name garak-icon-tags)
                 adata (elim-account-data proc auid)
                 proto (elim-avalue :proto adata)
                 aname (elim-avalue :name  adata)
@@ -1658,17 +1658,20 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
           (let ((inhibit-read-only t) old)
             (setq widget (widget-at point)
                   old    (widget-get widget :tag))
-            (widget-put widget :tag alt)
+            (if (eq (cdr where-widget) 'menu-choice)
+                (widget-put widget :tag alt)
+              (widget-put widget :tag tag))
             (if (and icon (tree-widget-use-image-p))
                 (put-text-property point end 'display icon) ;; widgets w images
-              ;; text mode:
               (when tag
                 (setq end (+ (length old) point))
                 (save-excursion
                   (goto-char point)
                   (setq old (make-string (length old) ?.))
                   (when (search-forward-regexp old end t)
-                    (replace-match alt nil t)) )) )) )) )))
+                    (if (eq (cdr where-widget) 'menu-choice)
+                        (replace-match alt nil t)
+                      (replace-match tag nil t))) )) )) )) )))
 
 (defun garak-delete-buddy (proc name id status args)
   (let ((inhibit-read-only t) buid puid where-widget point widget buffer dummy)
