@@ -190,7 +190,10 @@ substitute these characters for the basic ascii ones:\n
 (defun garak-load-logo ()
   (let ((file (expand-file-name
                (concat garak-icon-directory "/../graphics/garak.png"))))
-    (when (and garak-display-splash (not garak-logo) (file-readable-p file))
+    (when (and (display-images-p)
+               garak-display-splash
+               (not garak-logo)
+               (file-readable-p file))
       (setq garak-logo (create-image file))) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; callback lookup:
