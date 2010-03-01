@@ -1594,14 +1594,20 @@ substitute these characters for the basic ascii ones:\n
                         alias     (elim-avalue "bnode-alias" buddy)
                         label     (if (> (length alias) 0) alias name)
                         old-label (widget-get (widget-at) :tag)
-                        new-label (replace-regexp-in-string 
-                                   "^ ?\\(.*\\)" label old-label nil nil 1))
-                  (when (not (equal label old-label))
+                        new-label (replace-regexp-in-string  
+                                   "^ ?.*" label old-label nil nil 0))
+                  ;; if there's not a tree-widget-leaf-icon, we need to kludge
+                  ;; that status icon tag into the label instead (this happens
+                  ;; when in a terminal or with a non-image-capable emacs)
+                  (if (not (eq (car where-widget) 'tree-widget-leaf-icon))
+                      (setq new-label (concat tag new-label)))
+                  ;; now write it into the buffer if it has changed:
+                  (message "new-label: %S\nicon-name: %S\ntag: %S"
+                           new-label icon-name tag)
+                  (when (not (equal new-label old-label))
                     (widget-put (widget-at) :tag new-label)
-                    (forward-char 1)
-                    (when (re-search-forward 
-                           ".+" (+ (point) -1 (length old-label)) t)
-                      (replace-match label t t))) )))) ))) ))
+                    (when (re-search-forward ".+" nil t)
+                      (replace-match new-label t t))) )))) ))) ))
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
