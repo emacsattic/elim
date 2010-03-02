@@ -1599,7 +1599,7 @@ substitute these characters for the basic ascii ones:\n
                   ;; if there's not a tree-widget-leaf-icon, we need to kludge
                   ;; that status icon tag into the label instead (this happens
                   ;; when in a terminal or with a non-image-capable emacs)
-                  (if (not (eq (car where-widget) 'tree-widget-leaf-icon))
+                  (if (not (eq (cdr where-widget) 'tree-widget-leaf-icon))
                       (setq new-label (concat tag new-label)))
                   ;; now write it into the buffer if it has changed:
                   (when (not (equal new-label old-label))
