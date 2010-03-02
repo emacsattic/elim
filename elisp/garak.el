@@ -1602,8 +1602,6 @@ substitute these characters for the basic ascii ones:\n
                   (if (not (eq (car where-widget) 'tree-widget-leaf-icon))
                       (setq new-label (concat tag new-label)))
                   ;; now write it into the buffer if it has changed:
-                  (message "new-label: %S\nicon-name: %S\ntag: %S"
-                           new-label icon-name tag)
                   (when (not (equal new-label old-label))
                     (widget-put (widget-at) :tag new-label)
                     (when (re-search-forward ".+" nil t)
