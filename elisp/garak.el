@@ -1878,7 +1878,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
         (progn
           (elim-add-buddy garak-elim-process account buddy group)
           (format "/add-buddy %s %s" buddy group))
-        (error "Could not add buddy: %S" errval)) ))
+      (error "Could not add buddy: %S" errval)) ))
 
 (defun garak-cmd-send-file (args)
   (let (items account proto buddy adata file)
