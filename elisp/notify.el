@@ -115,16 +115,15 @@ You do not need to specify optional arguments either."
                              notify-service nil notify-interface "Notify"
                              return-handler args))))
 
-(if nil
-    (notify-show-message :id       0
-                         ::action-handler 
-                         (lambda (&rest args) (message "AH%S" args))
-                         :body     "Time to Die."
-                         :icon     "/home/vivek/src/elim/icons/garak.png"
-                         :actions  '("foo" "bar")
-                         :hints    nil
-                         :timeout  30000
-                         :app-name "elim" 
-                         :summary  "wake up!"))
+;; (notify-show-message :id       0
+;;                      ::action-handler 
+;;                      (lambda (&rest args) (message "AH%S" args))
+;;                      :body     "Time to Die."
+;;                      :icon     "/home/vivek/src/elim/icons/garak.png"
+;;                      :actions  '("foo" "bar")
+;;                      :hints    nil
+;;                      :timeout  30000
+;;                      :app-name "elim" 
+;;                      :summary  "wake up!")
 
 (provide 'notify)
