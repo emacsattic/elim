@@ -110,7 +110,7 @@ You do not need to specify optional arguments either."
       (setq return-handler
             `(lambda (id)
                (setq notify-notifications
-                     (cons (cons id ,action-handler) notify-notifications))))
+                     (cons (cons id ',action-handler) notify-notifications))))
       (dbus-util-call-method :session
                              notify-service nil notify-interface "Notify"
                              return-handler args))))
