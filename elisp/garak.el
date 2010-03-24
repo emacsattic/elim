@@ -167,6 +167,7 @@ substitute these characters for the basic ascii ones:\n
 ;; buffer tracking data structures
 (defvar garak-conversation-buffers      nil)
 (defvar garak-dead-conversation-buffers nil)
+(defvar garak-recent-alerts             nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables local to a garak conversation buffer
@@ -694,7 +695,7 @@ TITLE   : the buffer title
 IS-NEW  : true if the buffer was just created (usually means a new conversation)
 TEXT    : the payload of the message
 ARGS    : The raw args passed to whatever function called garak-alert-user"
-  (let (alert icon)
+  (let (alert icon stamp uid)
     (or (and (memq :new garak-alert-when) is-new (setq alert :new))
         (and (memq :hidden garak-alert-when)
              (not (get-buffer-window buffer 'visible))
@@ -705,8 +706,19 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                      (functionp f)
                      (funcall f process buffer who title is-new text args)
                      (setq alert f))) garak-alert-when))
+    ;; conversation uid for throttling:
+    ;; don't spam the user, 30 second timeout per conversation
+    (and alert
+         (setq uid (buffer-local-value 'garak-conv-uid buffer))
+         (setq stamp (assoc uid garak-recent-alerts))
+         (numberp (cdr stamp))
+         (> (cdr stamp) (- (float-time) 30))
+         (setq alert nil))
     (when alert
-      (message "alert condition is: %S" alert)
+      (if stamp
+          (setcdr stamp (float-time))
+        (setq garak-recent-alerts
+              (cons (cons uid (float-time)) garak-recent-alerts)))
       (mapc 
        (lambda (how) 
          (cond ((stringp    how) (play-sound-file how))
