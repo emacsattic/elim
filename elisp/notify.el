@@ -23,7 +23,7 @@
 (defconst notify-service   "org.freedesktop.Notifications"
   "The dbus service providing user notifications.")
 (defconst notify-interface "org.freedesktop.Notifications"
-  "The dbus interface providing user notifications."))
+  "The dbus interface providing user notifications.")
 (defconst notify-path
   (replace-regexp-in-string "\\.\\|^" "/" notify-service)
   "The path at which we expect to find `notify-interface'")
