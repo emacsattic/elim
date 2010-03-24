@@ -24,6 +24,7 @@
 (require 'tree-widget)
 (require 'time-date  )
 (require 'image      )
+(require 'notify     )
 
 (let ((load-path (cons (file-name-directory
                         (or load-file-name buffer-file-name)) load-path)))
@@ -146,6 +147,21 @@ substitute these characters for the basic ascii ones:\n
   :type     '(alist :key-type   (string :format "Icon: %v " :size 20)
                     :value-type (string :format "Tag: %v\n" :size  6)))
 
+(defcustom garak-alert-when '(:new)
+  "When to generate an alert about an incoming message."
+  :group 'garak
+  :tag   "Alert when: "
+  :type  '(set (const :tag "a new conversation is created"        :new   )
+               (const :tag "a message appears in a hidden buffer" :hidden)
+               (function :tag "this function returns a non-nil value")))
+
+(defcustom garak-alert-methods nil
+  "The mechanism(s) to use when alerting a user."
+  :group 'garak
+  :tag "Alert by: "
+  :type '(set (file   :tag "Playing this sound")
+              (const  :tag "Sending a freedesktop.org notification" :notify)
+              (repeat :tag "Calling these functions" function)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffer tracking data structures
@@ -666,15 +682,58 @@ substitute these characters for the basic ascii ones:\n
     ;;(message "dlabel: %s" dlabel)
     (format "%s (%s ago)" absolute dlabel)))
 
+(defun garak-alert-user (process buffer who title is-new text &optional args)
+  "Potentially alert the user to a new message, depending on the
+content of `garak-alert-when'. The alert method(s) will depend on
+`garak-alert-sound', `garak-alert-desktop-notice' and `garak-alert-custom'.
+
+PROCESS : the elim process
+BUFFER  : the buffer we are raising an alert for
+WHO     : the name (or alias) of the message sender, as displayed in BUFFER
+TITLE   : the buffer title
+IS-NEW  : true if the buffer was just created (usually means a new conversation)
+TEXT    : the payload of the message
+ARGS    : The raw args passed to whatever function called garak-alert-user"
+  (let (alert icon)
+    (or (and (memq :new garak-alert-when) is-new (setq alert :new))
+        (and (memq :hidden garak-alert-when)
+             (not (get-buffer-window buffer 'visible))
+             (setq alert :hidden))
+        (mapc (lambda (f)
+                (and (not alert)
+                     (not (memq f '(:new :hidden)))
+                     (functionp f)
+                     (funcall f process buffer who title is-new text args)
+                     (setq alert f))) garak-alert-when))
+    (when alert
+      (message "alert condition is: %S" alert)
+      (mapc 
+       (lambda (how) 
+         (cond ((stringp    how) (play-sound-file how))
+               ((eq :notify how)
+                (setq icon 
+                      (or (cadr (memq :file (elim-avalue ":garak" garak-icons)))
+                          "/dev/null"))
+                (notify-show-message ::action-handler 'ignore
+                                     :id      0
+                                     :summary title
+                                     :body    who
+                                     :icon    icon
+                                     :actions '("-" "Ok")
+                                     :timeout -1
+                                     :app-name "garak")))) garak-alert-methods))
+    alert))
+
 (defun garak-chat-message (process call call-id status args)
   (let ( (buffer  (garak-conversation-buffer process args t))
          (flags   (elim-avalue "flags"      args))
          (ctype   (elim-avalue "conv-type"  args))
          (title   (elim-avalue "conv-title" args))
          (mformat "<%s> %s")
-         text who nick-face when stamp)
+         text who nick-face when stamp is-new)
     (when (not buffer)
-      (setq buffer (garak-new-conversation process call call-id status args)))
+      (setq buffer (garak-new-conversation process call call-id status args)
+            is-new t))
     (with-current-buffer buffer
       (setq text (or (elim-avalue "text" args) "")
             who  (or (cdr (assoc "alias" args))
@@ -706,7 +765,10 @@ substitute these characters for the basic ascii ones:\n
                 stamp (garak-time-since when))
           (lui-insert
            (elim-add-face (format "[%s]" stamp) 'garak-marker-face)))
-        (lui-insert (format mformat (elim-add-face who nick-face) text)) )) ))
+        (lui-insert (format mformat (elim-add-face who nick-face) text)) ))
+    ;; we never alert for sent messages.
+    (when (not (memq :send flags))
+      (garak-alert-user process buffer who title is-new text args)) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
