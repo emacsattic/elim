@@ -151,8 +151,9 @@ substitute these characters for the basic ascii ones:\n
   "When to generate an alert about an incoming message."
   :group 'garak
   :tag   "Alert when: "
-  :type  '(set (const :tag "a new conversation is created"        :new   )
-               (const :tag "a message appears in a hidden buffer" :hidden)
+  :type  '(set (const :tag "a new conversation is created"             :new   )
+               (const :tag "a message appears in a hidden IM buffer"   :hidden)
+               (const :tag "your nick appears in a hidden chat buffer" :chat  )
                (function :tag "this function returns a non-nil value")))
 
 (defcustom garak-alert-methods nil
@@ -683,7 +684,7 @@ substitute these characters for the basic ascii ones:\n
     ;;(message "dlabel: %s" dlabel)
     (format "%s (%s ago)" absolute dlabel)))
 
-(defun garak-alert-user (process buffer who title is-new text &optional args)
+(defun garak-alert-user (process buffer ctype flags who title is-new text args)
   "Potentially alert the user to a new message, depending on the
 content of `garak-alert-when'. The alert method(s) will depend on
 `garak-alert-sound', `garak-alert-desktop-notice' and `garak-alert-custom'.
@@ -695,14 +696,22 @@ TITLE   : the buffer title
 IS-NEW  : true if the buffer was just created (usually means a new conversation)
 TEXT    : the payload of the message
 ARGS    : The raw args passed to whatever function called garak-alert-user"
-  (let (alert icon stamp uid)
+  (let (alert icon stamp uid self)
+    (with-current-buffer buffer 
+      (setq self (garak-abbreviate-nick garak-account-name)))
     (or (and (memq :new garak-alert-when) is-new (setq alert :new))
         (and (memq :hidden garak-alert-when)
+             (eq :im ctype)
              (not (get-buffer-window buffer 'visible))
              (setq alert :hidden))
+        (and (memq :chat garak-alert-when)
+             (not (eq :im ctype))
+             (not (get-buffer-window buffer 'visible))
+             (string-match (concat "\\<" self "\\>") text)
+             (setq alert :chat))
         (mapc (lambda (f)
                 (and (not alert)
-                     (not (memq f '(:new :hidden)))
+                     (not (memq f '(:new :hidden :chat)))
                      (functionp f)
                      (funcall f process buffer who title is-new text args)
                      (setq alert f))) garak-alert-when))
@@ -780,7 +789,8 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
         (lui-insert (format mformat (elim-add-face who nick-face) text)) ))
     ;; we never alert for sent messages.
     (when (not (memq :send flags))
-      (garak-alert-user process buffer who title is-new text args)) ))
+      (garak-alert-user process buffer ctype flags
+                        who title is-new text args)) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
