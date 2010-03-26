@@ -1527,13 +1527,16 @@ substitute these characters for the basic ascii ones:\n
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
   (let (;;(inhibit-redisplay t)
-        buid buddy where-widget point widget icon-name icon buffer tag other)
+        buid buddy where-widget point widget icon-name icon buffer tag other
+        proto auid)
     (setq buffer (elim-fetch-process-data proc :blist-buffer))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq buid  (elim-avalue    "bnode-uid" args )
               buddy (elim-buddy-data       proc buid )
               other (garak-buddy-list-skip proc buddy))
+        (if (setq auid (elim-avalue "account-uid" buddy))
+            (setq proto (elim-avalue :proto (elim-account-data proc auid))))
         ;; if the bnode is not in the "ignored" class, buddy will eq other:
         (when (eq buddy other)
           (setq buid         (elim-avalue "bnode-uid"   args)
@@ -1601,6 +1604,13 @@ substitute these characters for the basic ascii ones:\n
                   ;; when in a terminal or with a non-image-capable emacs)
                   (if (not (eq (cdr where-widget) 'tree-widget-leaf-icon))
                       (setq new-label (concat tag new-label)))
+                  ;; reattach the protocol icon if we have one:
+                  (if (tree-widget-use-image-p) 
+                      (setq proto (tree-widget-find-image (concat ":" proto)))
+                    (setq proto nil))
+                  (if proto
+                      (setq new-label
+                            (concat (propertize " " 'display proto) new-label)))
                   ;; now write it into the buffer if it has changed:
                   (when (not (equal new-label old-label))
                     (widget-put (widget-at) :tag new-label)
