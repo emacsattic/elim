@@ -1,3 +1,19 @@
+2010-03-26  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el:
+	(garak-update-buddy): don't lose the proto icon from widgets on update
+
+	* elisp/notify.el: org.freedesktop.Notifications interface
+
+	* elisp/dbus-util.el: utility library for calling dbus methods
+
+	* elisp/garak.el:
+	(garak-alert-when): defcustom to pick when to alert the user
+	(garak-alert-methods): defcustom to pick how to issue alerts
+	(garak-recent-alerts): variable to track and throttle alerts
+	(garak-alert-user): handle actual logic of alerting the user
+	(garak-chat-message): hook up the alert function to the message handler
+
 2009-07-03  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* handlers/set_icon.c (_h_elim_set_icon): silence a warning.
