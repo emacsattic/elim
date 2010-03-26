@@ -1588,8 +1588,8 @@ substitute these characters for the basic ascii ones:\n
                           '(:buddy-node :chat-node :contact-mode))
                 (save-excursion
                   (goto-char point)
-                  (when (not (widget-get (widget-at) :buddy))
-                    (widget-forward 1))
+                  (if (not (widget-get (widget-at) :buddy))
+                      (widget-forward 1))
                   (setq name      (elim-avalue "bnode-name"  buddy)
                         alias     (elim-avalue "bnode-alias" buddy)
                         label     (if (> (length alias) 0) alias name)
