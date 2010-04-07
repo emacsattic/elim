@@ -161,7 +161,8 @@ a straightforward elisp s-expression."
          (value (cddr arg)) )
     (when attr (setq name (cdr (assq 'name attr))))
     (setq parsed
-          (cond ((eq type 'string) (identity                   (car value)))
+          (cond ((not arg) nil)
+                ((eq type 'string) (identity                   (car value)))
                 ((eq type 'int   ) (elim-string-to-number attr (car value)))
                 ((eq type 'float ) (string-to-number           (car value)))
                 ((eq type 'bool  ) (/= 0 (string-to-number    (car value))))
