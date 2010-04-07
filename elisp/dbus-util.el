@@ -65,14 +65,19 @@
           (xml-get-children if 'method))
     sig))
 
-(defun dbus-util-argspec-to-cons (arg)
+(defun dbus-util-argspec-to-cons (arg &optional name)
   (when (equal (xml-get-attribute-or-nil arg 'direction) "in")
-    (cons (xml-get-attribute arg 'name)
+    (cons (or (xml-get-attribute-or-nil arg 'name) name)
           (xml-get-attribute arg 'type))))
 
 (defun dbus-util-method-args-in (method)
-  (delq nil
-        (mapcar 'dbus-util-argspec-to-cons (xml-get-children method 'arg)) ))
+  (let ((idx 0) arg)
+    (delq nil
+          (mapcar 
+           (lambda (node)
+             (if (setq arg (dbus-util-argspec-to-cons node (format "%d" idx)))
+                 (setq idx (1+ idx))) arg)
+           (xml-get-children method 'arg))) ))
 
 (defun dbus-util-coerce-value (value type)
   "Coerce an elisp VALUE to an appropriate form for passing to dbus methods
