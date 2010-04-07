@@ -119,11 +119,36 @@ appropriate form for a dbus call to it."
         (dbus-util-coerce-value (cdr (assoc (car s) arg-assoc)) (cdr s)))
       spec))))
 
+(defun dbus-util-uglify-char (thing) (upcase (substring thing 1)))
+(defun dbus-util-uglify-name (name)
+  (setq name (replace-regexp-in-string "-\\(.\\)" 'dbus-util-uglify-char name))
+  (aset name 0 (upcase (aref name 0))) name)
+
+(defun dbus-util-deuglify-char (thing)
+  (concat (match-string 1 thing) "-"
+          (if (> (- (match-end 2) (match-beginning 2)) 1)
+              (match-string 2 thing)
+            (downcase (match-string 2 thing))) ))
+
+(defun dbus-util-deuglify-name (name)
+  (let ((case-fold-search nil)
+        (munge (lambda (x)
+                 (concat (match-string 1 x) "-"
+                         (downcase (match-string 2 x))))))
+    (setq name (replace-regexp-in-string "\\([a-z]\\)\\([A-Z]+\\)" 
+                                         'dbus-util-deuglify-char name t)
+          name (replace-regexp-in-string "\\(.\\)\\([A-Z][a-z]\\)"
+                                         munge name t))
+    (aset name 0 (downcase (aref name 0)))
+    name))
+
 (defun dbus-util-call-method (bus service path interface name handler
                               &optional args)
   "Call a dbus method specified by BUS (:session or :system),
 SERVICE, PATH, INTERFACE and NAME (all strings), calling HANDLER (a function)
 with the return value(s) when available.
+
+NAME can be an elisp-style-name rather than an UnReadableDBusStyleName.
 
 ARGS should be an even-sized list of :name appropriate-type-value pairs.
 
@@ -133,7 +158,8 @@ in the same order as the dbs signature.
 
 If duplicate :name entries are present, only the first is used."
   (let (method-spec arg-spec dbus-args)
-    (setq path        (or path (dbus-util-service-to-path service))
+    (setq name        (dbus-util-uglify-name name)
+          path        (or path (dbus-util-service-to-path service))
           method-spec (dbus-util-find-method service interface name path)
           arg-spec    (dbus-util-method-args-in method-spec)
           dbus-args   (dbus-util-coerce-args arg-spec args))
