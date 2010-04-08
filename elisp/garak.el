@@ -356,6 +356,31 @@ current buffer."
    (buffer-list)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; network events
+(defun garak-disconnected (proc name id status args)
+  (garak-account-update proc name id 0 args))
+
+(defun garak-network-down (proc name id status args)
+  (garak-mapbuffers
+   (lambda (&rest x)
+     (lui-insert
+      (elim-add-face "* network disconnected *" 'garak-warning-face))) ))
+
+(defun garak-network-up (proc name id status args)
+  (garak-mapbuffers
+   (lambda (&rest x)
+     (lui-insert
+      (elim-add-face "* network restored *" 'garak-system-message-face)))) 
+  (mapc
+   (lambda (uid &optional state)
+     (setq state (elim-avalue "status-type" (elim-account-status proc uid)))
+     (message "account %S is in state %S" uid state)
+     (when (not (memq state '(:offline :unset)))
+       (elim-disconnect proc uid)
+       (elim-connect    proc uid)))
+   (mapcar (lambda (A) (car A)) (elim-account-alist proc))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; notifications:
 (defun garak-notice-buffer (proc) 
   (let ((nbuf (elim-fetch-process-data proc :notice-buffer)))
