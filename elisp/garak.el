@@ -318,6 +318,26 @@ substitute these characters for the basic ascii ones:\n
                 (cons (cons uid buffer) garak-conversation-buffers)) ))
     buffer))
 
+(defun garak-mapbuffers (function &optional predicate &rest args)
+  "Call FUNCTION with ARGS for each garak buffer that matches PREDICATE.
+If PREDICATE is nil, all garak buffers are considered to match.
+Each time PREDICATE or FUNCTION is invoked, a garak buffer will be the
+current buffer."
+  (mapc
+   (lambda (buffer)
+     (with-current-buffer buffer
+       (when (and (eq 'garak-mode  major-mode)
+                  (eq garak-elim-process proc)
+                  (if predicate (funcall predicate buffer) t)) 
+         (apply function args)) ))
+   (buffer-list)))
+
+(defun garak-buffer-account-matches (uid &optional buf)
+  "Tests whether buffer BUF is associated with elim account id UID."
+  (if buf
+      (and uid (with-current-buffer buf (eql uid garak-account-uid)))
+    (eql uid garak-account-uid)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; process tracking and management
 
