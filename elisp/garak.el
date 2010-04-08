@@ -1480,7 +1480,11 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 (defun garak-buddy-list-skip (proc bnode)
   (cond
    ((and garak-hide-offline-buddies
-         (eq (elim-avalue "contact-online-buddies" bnode) 0)) 
+         (or (eq (elim-avalue "contact-online-buddies" bnode) 0)
+             ;; contact-online-buddies is not reliable, but it is cheap.
+             ;; double check: a contact with no children is really offline:
+             (and (eq (elim-avalue "bnode-type" bnode) :contact-node)
+                  (not (elim-buddy-children proc (car bnode)))) ))
     nil)
    ((eq (elim-avalue "contact-size" bnode) 1)
     (or (elim-buddy proc (elim-avalue "contact-main-child-uid" bnode)) bnode))
