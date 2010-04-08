@@ -322,7 +322,8 @@ substitute these characters for the basic ascii ones:\n
   "Call FUNCTION with ARGS for each garak buffer that matches PREDICATE.
 If PREDICATE is nil, all garak buffers are considered to match.
 Each time PREDICATE or FUNCTION is invoked, a garak buffer will be the
-current buffer."
+current buffer.
+In addition, PREDICATE will receive the buffer as its only argument."
   (mapc
    (lambda (buffer)
      (with-current-buffer buffer
