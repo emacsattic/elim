@@ -197,8 +197,8 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
 
     // used to think we needed this for deletes, but we no longer rely on the
     // child/sibling info being up to date. The parent contact has _already_
-    // been deleted by the time we ge there if we were its only child, so we
-    // can't prod an update for tha parent here as it may already be an invalid
+    // been deleted by the time we get here if we were its only child, so we
+    // can't prod an update for the parent here as it may already be an invalid
     // pointer: revist later if we need this data to be correct at the other
     // end:
     if( !delete && !secondary_update )
