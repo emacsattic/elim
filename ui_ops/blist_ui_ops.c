@@ -95,6 +95,8 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
 
     int         type    = PBLN_GET( type, b );
 
+    GHashTable       *opts = NULL;
+    PurpleChat       *chat = NULL;
     PurpleAccount    *acct = NULL;
     PurplePresence   *pres = NULL;
     PurpleStatus     *stat = NULL;
@@ -113,8 +115,11 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
         break;
       case PURPLE_BLIST_CHAT_NODE   :
         fprintf( stderr, "(_elim_blnode_to_xnode CHAT)\n" );
-        bname = purple_chat_get_name   ( (PurpleChat *)b );
-        acct  = purple_chat_get_account( (PurpleChat *)b );
+        chat  = (PurpleChat *)b;
+        bname = purple_chat_get_name      ( chat );
+        acct  = purple_chat_get_account   ( chat );
+        // opts is a borrowed GHashTable, don't free it.
+        opts  = purple_chat_get_components( chat );
         break;
       case PURPLE_BLIST_CONTACT_NODE:
         fprintf( stderr, "(_elim_blnode_to_xnode CONTACT\n" );
@@ -159,6 +164,20 @@ static xmlnode * _elim_blnode_to_xnode( PurpleBlistNode *b, gboolean delete )
     if((x = PBLN_GET(parent      , b))) AL_PTR( alist, "bnode-parent", x );
 
     AL_ENUM( alist, "bnode-flags" , PBLN_GET( flags, b ), ":blist-node-flags" );
+
+    if ( opts )
+    {
+        GHashTableIter each;
+        xmlnode *options = xnode_new( "alist" );
+        gpointer k;
+        gpointer v;
+
+        g_hash_table_iter_init( &each, opts );
+        while( g_hash_table_iter_next( &each, &k, &v ) )
+            AL_STR( options, k, v );
+
+        AL_NODE( alist, "options", options );
+    }
 
     if( contact && b )
     {
