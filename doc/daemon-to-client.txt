@@ -165,7 +165,7 @@ for those blist node types which do not support them:
 
 Some of the fields require clarification:
 
-bnode-type  : an integer specifying the type of node: see be,ow for details
+bnode-type  : an integer specifying the type of node: see below for details
 bnode-parent: if this node is contained within another node, the uid
               of the container is given here.
 bnode-child : if this node contains other nodes, the uid of the first child
@@ -219,14 +219,18 @@ A chat node (channel, room, etc):
      (alist nil
        (int    ((name . "bnode-uid"    )) "268435500")
        (int    ((name . "bnode-type"   )) "3"        )
-       (string ((name . "bnode-name"   )) "fsbot"    )
+       (string ((name . "bnode-name"   )) "#fsbot"   )
        (int    ((name . "account-uid"  )) "268435456")
        (string ((name . "account-name" )) "elim@irc.freenode.net")
-       (string ((name . "im-protocol"  )) "prpl-im"  )
+       (string ((name . "im-protocol"  )) "prpl-irc" )
        (string ((name . "bnode-prev"   )) "126346445")
        (string ((name . "bnode-next"   )) "126313246")
        (string ((name . "bnode-parent" )) "133313123")
        (string ((name . "bnode-child"  )) "216313141")
+       (alist  ((name . "options"      ))
+         (alist nil
+           (string ((name . "password")) "s3kr1t")
+           (string ((name . "channel" )) "#fsbot"))
        (string ((name . "bnode-flags"  )) "0"        )
        (bool   ((name . "allowed"      )) "1"        ) ))
 
