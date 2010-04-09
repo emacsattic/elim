@@ -1407,15 +1407,12 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           (t (elim-debug "UI Account Operation `%S' not implemented" value))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid menu type name mtail plabel blabel auid aicon alias cname)
+  (let (kids uid menu type name mtail plabel blabel auid aicon cname)
     (setq uid   (elim-avalue "bnode-uid"     bnode)
-          alias (elim-avalue "bnode-alias"   bnode)
           cname (elim-avalue "contact-alias" bnode)
-          name  (elim-avalue "bnode-name"    bnode)
           type  (elim-avalue "bnode-type"    bnode)
           auid  (elim-avalue "account-uid"   bnode)
-          name  (if (< 0 (length cname)) cname name)
-          name  (if (< 0 (length alias)) alias name)
+          name  (if (< 0 (length cname)) cname (garak-buddy-node-label bnode))
           mtail (list (garak-choice-item "--single-line")
                       (garak-choice-item "Remove" (cons :del uid))
                       (garak-choice-item "--single-line"))
@@ -1658,6 +1655,39 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
         (ignore-errors (widget-forward 1)) ))
     found))
 
+(defun garak-buddy-node-label (buddy)
+  "Given a buddy node entry BUDDY, return a suitable label - typically
+this is the alias, or the name if there is no alias - chat/muc/channel 
+nodes are a special case: Since they can't have aliases as such, a 
+descriptive label is constructed to help disambiguate them."
+  (let (type name alias opts proto k v)
+    (setq type  (elim-avalue "bnode-type"  buddy)
+          name  (elim-avalue "bnode-name"  buddy)
+          alias (elim-avalue "bnode-alias" buddy))
+    ;; use the alias if it is set, chat nodes are a special case if there is
+    ;; no alias and they have options, fall back to name in all other cases:
+    (cond (alias)
+          ((and (eq type :chat-node)
+                (setq opts (elim-avalue "options" buddy)))
+           (setq proto (elim-avalue "im-protocol" buddy))
+           (cond ((equal "prpl-jabber" proto)
+                  (setq alias (garak-abbreviate-nick
+                               (elim-avalue "account-name" buddy)))
+                  (format "%s > %s@%s | %s"
+                          (or (elim-avalue "handle" opts) alias) 
+                          (or (elim-avalue "room"   opts)  name)
+                          (or (elim-avalue "server" opts)   "-")
+                          (elim-avalue "account-name" buddy)))
+                 (t (setq alias name)
+                    (mapc (lambda (x) 
+                            (setq k (car x) v (cdr x))
+                            (if (string-match "user\\|nick\\|handle" k)
+                                (setq alias (concat v " > " alias)))) opts)
+                    (setq alias
+                          (concat alias " | "
+                                  (elim-avalue "account-name" buddy))) alias)))
+          (t name)) ))
+
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
   (let (;;(inhibit-redisplay t)
@@ -1727,9 +1757,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                   (goto-char point)
                   (if (not (widget-get (widget-at) :buddy))
                       (widget-forward 1))
-                  (setq name      (elim-avalue "bnode-name"  buddy)
-                        alias     (elim-avalue "bnode-alias" buddy)
-                        label     (if (> (length alias) 0) alias name)
+                  (setq label     (garak-buddy-node-label buddy)
                         old-label (widget-get (widget-at) :tag)
                         new-label (replace-regexp-in-string  
                                    "^ ?.*" label old-label nil nil 0))
