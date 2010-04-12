@@ -47,7 +47,7 @@ the mode line."
   :group 'tracking)
 
 (defcustom tracking-frame-behavior 'visible
-  "How to deal with frams to determine visibility of buffers.
+  "How to deal with frames to determine visibility of buffers.
 This is passed as the second argument to `get-buffer-window',
 see there for further explanation."
   :type '(choice (const :tag "All visible frames" visible)
