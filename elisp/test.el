@@ -14,7 +14,7 @@
 (elim-join-chat   eproc (concat uname "-elim@irc.freenode.net") "#elim" 
                   '("channel" "#elim"))
 
-;; you'll need to grab conbversation UIDs from *Messages*
+;; you'll need to grab conversation UIDs from *Messages*
 ;; accounts can be identified by either uid or name+protocol
 (elim-process-send eproc
   (elim-daemon-call 'message nil

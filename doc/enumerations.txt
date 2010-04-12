@@ -14,7 +14,7 @@ The following calls are provided:
 
 ############################################################################
 
-Fething defined enumerations:
+Fetching defined enumerations:
 
   (function-call nil (enumerations ((id . "666"))) (alist nil))
 

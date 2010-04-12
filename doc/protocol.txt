@@ -33,7 +33,7 @@ Some examples:
 ############################################################################
 The following atomic types are defined and handled:
 
-string   a string: may contain any character expect \0 
+string   a string: may contain any character except \0 
          \ characters should be escaped: \\
          " characters likewise:          \"
          no special \ sequences are recognised, any character 
