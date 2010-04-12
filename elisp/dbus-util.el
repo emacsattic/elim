@@ -86,6 +86,7 @@ Only simple cases are handled for now.\n
 Returns a data structure that dbus.el should be able to use for TYPE."
   (let ((sig0 (aref type 0))
         (sig1 (substring type 1)))
+    (if (stringp value) (setq value (encode-coding-string value 'utf-8)))
     (case sig0
       (?s (list :string value))
       (?u (list :uint32 value))
