@@ -66,7 +66,7 @@ see there for further explanation."
   'end
       At the end of the mode line"
   :type '(choice (const :tag "Before the Mode Indicators" before-modes)
-                 (const :tag "Afterthe Mode Indicators" after-modes)
+                 (const :tag "After the Mode Indicators" after-modes)
                  (const :tag "At the End of the Mode Line" end))
   :group 'tracking)
 
