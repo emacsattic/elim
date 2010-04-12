@@ -14,7 +14,7 @@ General Notes:
 *) Either an account-uid OR (an account-name AND an im-protocol) are 
    sufficient to identify an account: you need not supply all three.
 
-*) In general, objects should be idenitified to the daemon by their UIDs
+*) In general, objects should be identified to the daemon by their UIDs
    as their names are subject to asynchronous change, not necessarily
    triggered by you (the client), whereas UIDs are guaranteed to remain
    valid for the lifetime of an elim process.
@@ -29,7 +29,7 @@ General Notes:
    any remote actions (communication with an IM server, establishing
    an account connection etc) has completed: It only means that your 
    request appeared syntactically valid, to the extent that libpurple
-   was able to determine without actually communicating woth any remote
+   was able to determine without actually communicating with any remote
    systems. 
 
 *) Actual notification of successful completion is usually delivered 
@@ -229,7 +229,7 @@ If no conversation exists for this chat entry yet, the response will be:
         (string ((name . "im-protocol" )) "prpl-irc" )
         (string ((name . "chat-name"   )) "#emacs"   ))))
 
-If we already have aconversation:
+If we already have a conversation:
 
   (function-response mil
     (join-chat ((id . "106")))
@@ -252,7 +252,7 @@ NOTE: enumerations are covered in enumerations.txt
 
 ############################################################################
 
-List the protocol IDs and names supported by ths instance of elim:
+List the protocol IDs and names supported by this instance of elim:
 
   (function-call (list-protocols ((id . "107"))))
 

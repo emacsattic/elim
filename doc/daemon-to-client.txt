@@ -137,22 +137,22 @@ A "contact" is slightly different: a contact is a logical grouping of
             in a contact with the same name as the buddy if no other
             contact is specified.
 
-A "group"   Is a logical group into which you can place a buddy
+A "group"   is a logical group into which you can place a buddy
             or contact. Some protocols support groups on the server,
             others leave it entirely up to clients.
             The default group is "Buddies" for buddies and contacts
             And "Chats" for multi-user rooms/chats/channels/
 
 The main calls here (there are other but they are not implemented yet)
-Have very similar return structures: Some details are simple omitted 
+have very similar return structures: Some details are simply omitted 
 for those blist node types which do not support them:
 
 *) elim-blist-create-node
 
    This call informs you that a new node has been created. However,
-   investigation of the libpurple code reveaks that this means a 
+   investigation of the libpurple code reveals that this means a 
    new node has been allocated, but _not_ that it has been added to 
-   the buddy list... so in general you don;t have to do anything
+   the buddy list... so in general you don't have to do anything
    when you see this.
 
 *) elim-blist-update-node
@@ -268,7 +268,7 @@ A group node:
 
 Connection calls:
 
-These calls inform you connection/disconnection of accounts:
+These calls inform you of connection/disconnection of accounts:
 
 *) elim-connection-state
 
