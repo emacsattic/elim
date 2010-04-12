@@ -40,7 +40,7 @@
       ;;(message "deleting handler for %S after invocation" id)
       (setq notify-notifications (assq-delete-all id notify-notifications)) )))
 
-(defun notify-closed (id action)
+(defun notify-closed (id &rest ignored)
   (let ((handler (assq id notify-notifications)) callback)
     (when handler
       ;;(message "deleting handler for %S after close" id)
