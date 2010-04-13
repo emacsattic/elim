@@ -180,6 +180,27 @@ substitute these characters for the basic ascii ones:\n
 (defvar garak-conv-name    nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; misc utils
+(defun garak-summarise-text (text &optional size prefix postfix ellipsis)
+  "Cut a string TEXT down to SIZE characters (default 80).
+The summarised text is divided into PREFIX chars from the start followed 
+by \" ELLIPSIS \" followed by POSTFIX chars from the end.
+PREFIX and POSTFIX default to equal sized chunks based on SIZE by default.
+If TEXT is not greater than SIZE chars, it is returned verbatim.
+If PREFIX and POSTFIX are not consistent with SIZE, they take precedence
+over SIZE."
+  (or size (setq size  80))
+  (or prefix   (setq prefix (round (/ size 2))))
+  (or ellipsis (setq ellipsis "…"))
+  (or postfix  (setq postfix (round (- size 2 (length ellipsis) prefix))))
+  (setq size (+ prefix 2 (length ellipsis) postfix))
+  (if (<= (length text) size)
+      text
+    (concat (substring text 0 prefix) 
+            " " ellipsis " "
+            (substring text (- (length text) postfix))) ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; icons
 (defun garak-file-attr-to-icon (attr)
   (when (or (stringp (cadr attr))
