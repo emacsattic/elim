@@ -763,7 +763,7 @@ TITLE   : the buffer title
 IS-NEW  : true if the buffer was just created (usually means a new conversation)
 TEXT    : the payload of the message
 ARGS    : The raw args passed to whatever function called garak-alert-user"
-  (let (alert icon stamp uid self)
+  (let (alert icon stamp uid self summarised)
     (with-current-buffer buffer 
       (setq self (garak-abbreviate-nick garak-account-name)))
     (or (and (memq :new garak-alert-when) is-new (setq alert :new))
@@ -801,11 +801,12 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                ((eq :notify how)
                 (setq icon 
                       (or (cadr (memq :file (elim-avalue ":garak" garak-icons)))
-                          "/dev/null"))
+                          "/dev/null")
+                      summarised (garak-summarise-text text))
                 (notify-show-message ::action-handler 'ignore
                                      :id      0
                                      :summary title
-                                     :body    who
+                                     :body    summarised
                                      :icon    icon
                                      :actions '("-" "Ok")
                                      :timeout -1
