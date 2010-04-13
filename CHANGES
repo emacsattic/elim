@@ -1,3 +1,27 @@
+2010-04-13  Vivek Dasmohapatra  <vivek@etla.org>
+
+	* elisp/garak.el:
+	(garak-mapbuffers): apply action to all garak buffers
+	(garak-buffer-account-matches): helper to find buffers for given account
+	(garak-network-down): handle network down event
+	(garak-disconnected): handle accountt disconnected event
+	(garak-network-up): handle network up event (reconnect accounts)
+	(garak-buddy-list-skip): better offline-contact check, buddies that go
+	offline now disappear if offline buddy hiding is ocnfigured
+	(garak-summarise-text): text summarisation (mainly for alerts)
+	(garak-alert-user): put content of message into alert
+
+	* elisp/elim.el (elim-parse-proto-args): allow empty arglist
+
+	* elisp/dbus-util.el:
+	(dbus-util-method-args-in): handle unnamed args
+	(dbus-util-argspec-to-cons): ibid
+	(dbus-util-call-method): allow elisp-style-names for dbus functions
+	(dbus-util-deuglify-name): utilities to de-and-re uglify dbus names
+	(dbus-util-deuglify-char): ibid
+	(dbus-util-uglify-name): ibid
+	(dbus-util-uglify-char): ibid
+
 2010-03-26  Vivek Dasmohapatra  <vivek@etla.org>
 
 	* elisp/garak.el:
