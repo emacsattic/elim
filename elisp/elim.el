@@ -24,6 +24,11 @@
 (require 'warnings  )
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables & global state functions:
+(defgroup elim nil
+  "Multi-protocol IM (Instant Messaging) library"
+  :prefix "elim-"
+  :group  'external)
+
 (defcustom elim-executable
   (expand-file-name
    (concat
