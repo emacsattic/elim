@@ -53,6 +53,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user customisation
+(defgroup garak nil
+  "IM (Instant Messaging) Client based on elim"
+  :link   '(custom-group-link :tag "elim" elim)
+  :prefix "garak-"
+  :group  'applications)
+
 (defconst garak-icon-directory-internal
   (expand-file-name
    (concat (file-name-directory
