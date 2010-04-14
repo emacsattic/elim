@@ -360,6 +360,18 @@ In addition, PREDICATE will receive the buffer as its only argument."
          (apply function args)) ))
    (buffer-list)))
 
+(defun garak-processes ()
+  "Return a list of currently active garak processes"
+  (let (proclist proc)
+    (mapc (lambda (buf)
+            (and (setq proc (buffer-local-value 'garak-elim-process buf))
+                 (not (memq proc proclist))
+                 (processp proc)
+                 (eq (process-status proc) 'run)
+                 (setq proclist (cons proc proclist))))
+          (buffer-list))
+    proclist))
+
 (defun garak-buffer-account-matches (uid &optional buf)
   "Tests whether buffer BUF is associated with elim account id UID."
   (if buf
@@ -2465,16 +2477,21 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 
 (defun garak-deactivate ()
   (interactive)
-  (cond (garak-conv-uid    (garak-cmd-leave        nil))
-        (garak-account-uid (garak-cmd-disconnect   nil))
-        (t                 (garak-cmd-status "offline")) ))
+  (cond (garak-conv-uid     (garak-cmd-leave        nil))
+        (garak-account-uid  (garak-cmd-disconnect   nil))
+        (garak-elim-process (garak-cmd-status "offline"))
+        (t (mapc (lambda (garak-elim-process)
+                   (garak-cmd-status "offline")) (garak-processes))) ))
 
 (defun garak-activate ()
   (interactive)
   (cond (garak-conv-uid     (message "Cannot reactivate conversations"))
         (garak-account-name (garak-cmd-connect garak-account-name))
-        (t                  (garak-cmd-status "available")
-                            (garak-cmd-status "available")) ))
+        (garak-elim-process (garak-cmd-status "available")
+                            (garak-cmd-status "available")) 
+        (t (mapc (lambda (garak-elim-process)
+                   (garak-cmd-status "available")
+                   (garak-cmd-status "available")) (garak-processes))) ))
 
 (defun garak-gui ()
   "Create and display the garak buddy and account list widget buffer"
