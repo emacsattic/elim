@@ -32,33 +32,45 @@
   (when (not (featurep 'elim)) (require 'elim)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; faces
-(defface garak-nick-face '((default (:foreground "salmon")))
-  "Default face for IM user names")
-
-(defface garak-marker-face '((default (:foreground "palegreen")))
-  "Default face for markers etc inserted into garak buffers")
-
-(defface garak-warning-face '((default (:foreground "red")))
-  "Default face for IM warnings")
-
-(defface garak-own-nick-face '((default (:foreground "aquamarine")))
-  "Default face your IM user name(s)")
-
-(defface garak-system-message-face '((default (:foreground "grey")))
-  "Default face for system (non user generated) messages")
-
-(defface garak-emote-face '((default (:foreground "palevioletred")))
-  "Face for /me style emotes.")
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; user customisation
+;; customisation group
 (defgroup garak nil
   "IM (Instant Messaging) Client based on elim"
   :link   '(custom-group-link :tag "elim" elim)
   :prefix "garak-"
   :group  'applications)
 
+(defgroup garak-faces nil
+  "Faces Specific to the Garak IM client"
+  :prefix "garak-"
+  :group  'garak)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; faces
+(defface garak-nick-face '((default (:foreground "salmon")))
+  "Default face for IM user names"
+  :group 'garak-faces)
+
+(defface garak-marker-face '((default (:foreground "palegreen")))
+  "Default face for markers etc inserted into garak buffers"
+  :group 'garak-faces)
+
+(defface garak-warning-face '((default (:foreground "red")))
+  "Default face for IM warnings"
+  :group 'garak-faces)
+
+(defface garak-own-nick-face '((default (:foreground "aquamarine")))
+  "Default face your IM user name(s)"
+  :group 'garak-faces)
+
+(defface garak-system-message-face '((default (:foreground "grey")))
+  "Default face for system (non user generated) messages"
+  :group 'garak-faces)
+
+(defface garak-emote-face '((default (:foreground "palevioletred")))
+  "Face for /me style emotes."
+  :group 'garak-faces)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; user customisation
 (defconst garak-icon-directory-internal
   (expand-file-name
    (concat (file-name-directory
@@ -136,7 +148,7 @@ substitute these characters for the basic ascii ones:\n
   :person          ♟
   :unavailable     ⊘\n"
   :group   'garak
-  :tag     "icon tags"
+  :tag     "Icon Tags"
   :options (mapcar
             (lambda (k)
               (list (list 'string :value k :size 20 :format "Icon: %v ")
