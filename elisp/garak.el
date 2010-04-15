@@ -1467,7 +1467,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           (t (elim-debug "UI Account Operation `%S' not implemented" value))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid menu type name mtail plabel blabel auid aicon cname)
+  (let (kids uid menu type name mtail plabel blabel auid aicon cname kids spred)
     (setq uid   (elim-avalue "bnode-uid"     bnode)
           cname (elim-avalue "contact-alias" bnode)
           type  (elim-avalue "bnode-type"    bnode)
@@ -1476,9 +1476,10 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           mtail (list (garak-choice-item "--single-line")
                       (garak-choice-item "Remove" (cons :del uid))
                       (garak-choice-item "--single-line"))
-          kids  (mapcar
-                 (lambda (N) (garak-buddy-list-node-widget proc N))
-                 (delq nil (elim-buddy-children proc uid)))
+          spred garak-buddy-list-sort-type
+          rawk  (delq nil (elim-buddy-children proc uid))
+          kids  (mapcar (lambda (N) (garak-buddy-list-node-widget proc N))
+                        (if spred (sort rawk spred) rawk))
           menu  (cond ((eq type :chat-node )
                        (list (garak-choice-item "Join" (cons :join uid))))
                       ((eq type :buddy-node)
@@ -1606,6 +1607,9 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
     ;;(message "Updating children for node %S" uid)
     (setq process  garak-elim-process
           children (elim-buddy-children process uid))
+    ;; if the user asked for a sorted list, let there be sorting:
+    (if garak-buddy-list-sort-type
+        (setq children (sort children garak-buddy-list-sort-type)))
     ;;(elim-debug "(garak-buddy-list-node-children %S) -> %S" (car widget) uid)
     (setq kids (mapcar
                 (lambda (N)
@@ -1616,16 +1620,19 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
     (delq nil kids)))
 
 (defun garak-insert-buddy-list-top (proc bnode)
-  (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids alias)
+  (let ((uid (elim-avalue "bnode-uid" bnode)) menu name kids alias rawk spred)
     (setq ;remove (garak-choice-item "Delete All" (cons :del uid))
           name   (elim-avalue "bnode-name"  bnode)
           alias  (elim-avalue "bnode-alias" bnode)
           name   (if (> (length alias) 0) alias name)
+          spred  garak-buddy-list-sort-type
+          rawk   (elim-buddy-children proc (elim-avalue "bnode-uid" bnode))
+          rawk   (if spred (sort rawk spred) rawk)
           kids   (mapcar
                   (lambda (N)
                     (let ((node (garak-buddy-list-skip proc N)))
                       (when node (garak-buddy-list-node-widget proc node))))
-                  (elim-buddy-children proc (elim-avalue "bnode-uid" bnode)))
+                  rawk)
           kids   (delq nil kids))
     (if kids
         (apply 'widget-create
