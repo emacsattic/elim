@@ -86,6 +86,14 @@
   :type  '(boolean)
   :group 'garak)
 
+(defcustom garak-buddy-list-sort-type 'garak-buddy-sort-by-label-predicate
+  "Sort the buddy list by: "
+  :type  '(choice (const :tag "Nothing (No Sorting)" nil)
+                  (const :tag "Displayed Name"
+                         garak-buddy-sort-by-label-predicate)
+                  (function :tag "Custom Sort Function"))
+  :group 'garak)
+
 (defcustom garak-display-splash t
   "Whether to display the garak splash logo while initialising the elim daemon"
   :type '(boolean)
@@ -1739,6 +1747,12 @@ descriptive label is constructed to help disambiguate them."
                           (concat alias " | "
                                   (elim-avalue "account-name" buddy))) alias)))
           (t name)) ))
+
+(defun garak-buddy-sort-by-label-predicate (node-a node-b)
+  "Sort two buddy nodes lexically by label.
+NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
+  (not (string< (garak-buddy-node-label node-b)
+                (garak-buddy-node-label node-a))))
 
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
