@@ -2075,6 +2075,10 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 (defun garak-read-password (proc proto)
   (read-passwd "password: " t))
 
+(defun garak-read-protocol (proc)
+  (let ((available (mapcar 'car (elim-protocol-alist proc))))
+    (completing-read "protocol: " available nil t) ))
+
 (defmacro garak-cmd-strip-account-arg (proc i raw a)
   `(progn
      (setq ,i (split-string ,raw))
