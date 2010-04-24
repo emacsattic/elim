@@ -902,10 +902,18 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           (lui-insert
            (elim-add-face (format "[%s]" stamp) 'garak-marker-face)))
         (lui-insert (format mformat (elim-add-face who nick-face) text)) ))
-    ;; we never alert for sent messages.
-    (when (not (memq :send flags))
-      (garak-alert-user process buffer ctype flags
-                        who title is-new text args)) ))
+    ;; we never alert for sent messages
+    (if (not (memq :send flags))
+        (garak-alert-user process buffer ctype flags
+                          who title is-new text args)
+      ;; display the conversation if it was initiated by us with this message:
+      ;; if the buffer is not new, it must have been visible anyway, or we
+      ;; couldn't have sent a message through it to its conversation.
+      ;; (but try not to stomp on the current buffer when we do so):
+      (when is-new
+        (let ((display-buffer-reuse-frames t))
+          (switch-to-buffer-other-window buffer)
+          (if is-new (goto-char (point-max)))) )) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
