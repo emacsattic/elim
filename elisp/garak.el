@@ -2161,11 +2161,13 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (setq account
           (garak-cmd-strip-account-arg garak-elim-process
                                        items args account-data))
-    (when (string-match "\\s-*\\(\\S-+\\)\\s-+" args)
+    (when (string-match "\\s-*\\(\\S-+\\)\\s-*" args)
       (setq buddy   (match-string 1 args)
             message (substring args (match-end 0)))
-        (elim-message garak-elim-process account buddy message)
-        (setq rval (format "/msg %s" args)) )
+      (if (not (string-match "\\S-" message))
+          (setq message (read-string (format "IM %s> " buddy))))
+      (elim-message garak-elim-process account buddy message)
+      (setq rval (format "/msg %s" args)) )
     rval))
 
 (defun garak-cmd-alias-buddy (args)
