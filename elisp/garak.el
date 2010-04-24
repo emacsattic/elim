@@ -226,6 +226,15 @@ over SIZE."
             " " ellipsis " "
             (substring text (- (length text) postfix))) ))
 
+(defun garak-backtrace (format &rest args)
+  "Like `message', but prefixed with a stack backtrace of function calls
+leading up to this point."
+  (let ((trace nil) (n 2) (frame nil))
+    (while (setq frame (backtrace-frame n))
+      (if (car frame)
+          (setq trace (cons (cadr frame) trace)))
+      (setq n (1+ n)))
+    (message "%s: %s" (format "%S" trace) (apply 'format format args)) ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; icons
 (defun garak-file-attr-to-icon (attr)
