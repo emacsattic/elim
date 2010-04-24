@@ -67,6 +67,7 @@ xmlnode * _h_elim_init ( const char *name ,
         purple_blist_load();
         // glib signal initialisation:
         elim_ft_signals_init();
+        elim_typing_signals_init();
         // tidy up:
         g_free( ppath );
     }
