@@ -961,9 +961,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 (defun garak-new-conversation (process call call-id status args)
   (let ((buffer (garak-conversation-buffer process args t)))
     (when (not buffer)
-      (setq buffer (garak-conversation-buffer process args))
-      (with-current-buffer buffer
-        (lui-insert (format "*%s / %s*" garak-account-name garak-conv-name)) ))
+      (setq buffer (garak-conversation-buffer process args)))
       buffer))
 
 (defun garak-end-conversation (process call call-id status args)
