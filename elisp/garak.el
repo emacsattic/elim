@@ -205,6 +205,8 @@ substitute these characters for the basic ascii ones:\n
 (defvar garak-account-uid  nil)
 (defvar garak-conv-uid     nil)
 (defvar garak-conv-name    nil)
+(defvar garak-typing-state nil)
+(put 'garak-typing-state 'risky-local-variable t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; misc utils
@@ -343,6 +345,7 @@ leading up to this point."
 (defun garak-init-local-storage ()
   (mapc 'make-local-variable
         '(garak-elim-process
+          garak-typing-state
           garak-account-name
           garak-im-protocol
           garak-account-uid
