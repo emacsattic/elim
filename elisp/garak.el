@@ -121,6 +121,7 @@
                              (":on"             . " ! ")
                              (":person"         . " i ")
                              (":unavailable"    . "(/)")
+                             (":typing"         . "...")
                              ;; protocol icon tags:
                              (":prpl-aim"       . "AIM ")
                              (":prpl-bonjour"   . "Bon ")
