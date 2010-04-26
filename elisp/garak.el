@@ -1360,6 +1360,15 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buddy list & account list ui
+(defun garak-icon-theme-init ()
+  (if (tree-widget-use-image-p)
+      (let ((icons (copy-sequence garak-icons)))
+        (tree-widget-set-theme)
+        ;; add our icons into the whatever tree-widget theme
+        ;; the user wanted as the default:
+        (setq icons (nconc icons (aref tree-widget--theme 3)))
+        (aset tree-widget--theme 3 icons)) ))
+
 (defun garak-ui-create-widget-buffer (proc)
   (when (tree-widget-use-image-p) (garak-load-icons))
   (let ((blist   (elim-buddy-list proc))
@@ -1375,11 +1384,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
       (garak-init-local-storage)
       (setq garak-elim-process proc)
       ;; initialise tree-widget support in this buffer
-      (tree-widget-set-theme)
-      ;; add our icons into the whatever tree-widget theme
-      ;; the user wanted as the default:
-      (setq icons (nconc icons (aref tree-widget--theme 3)))
-      (aset tree-widget--theme 3 icons)
+      (garak-icon-theme-init)
       (add-hook 'tree-widget-before-create-icon-functions
                 'garak-ui-node-setup-icon nil t)
       (setq elim-form-ui-args (list :process proc))
