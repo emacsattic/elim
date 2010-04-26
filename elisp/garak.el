@@ -373,9 +373,25 @@ leading up to this point."
     (if (not (garak-buffer-reusable proc buffer))
         (if do-not-create
             (setq buffer nil)
+          ;; create new buffer, set its mode, init buffer local storage
           (setq buffer (generate-new-buffer cname)
                 garak-conversation-buffers
-                (cons (cons uid buffer) garak-conversation-buffers)) ))
+                (cons (cons uid buffer) garak-conversation-buffers)) 
+          (with-current-buffer buffer 
+            (garak-mode)
+            (garak-init-local-storage)
+            (garak-icon-theme-init)
+            (setq garak-elim-process proc
+                  garak-account-name (cdr (assoc "account-name" args))
+                  garak-account-uid  (cdr (assoc "account-uid"  args))
+                  garak-conv-name    (cdr (assoc "conv-name"    args))
+                  garak-conv-uid     (cdr (assoc "conv-uid"     args))
+                  garak-im-protocol  (cdr (assoc "im-protocol"  args))
+                  garak-typing-state t
+                  header-line-format
+                  (list t '(" " garak-typing-state
+                            " " garak-account-name " -"
+                            " " garak-conv-name))) )))
     buffer))
 
 (defun garak-mapbuffers (function &optional predicate &rest args)
@@ -929,14 +945,6 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
     (when (not buffer)
       (setq buffer (garak-conversation-buffer process args))
       (with-current-buffer buffer
-        (garak-mode)
-        (garak-init-local-storage)
-        (setq garak-elim-process process
-              garak-account-name (cdr (assoc "account-name" args))
-              garak-account-uid  (cdr (assoc "account-uid"  args))
-              garak-conv-name    (cdr (assoc "conv-name"    args))
-              garak-conv-uid     (cdr (assoc "conv-uid"     args))
-              garak-im-protocol  (cdr (assoc "im-protocol"  args)))
         (lui-insert (format "*%s / %s*" garak-account-name garak-conv-name)) ))
       buffer))
 
