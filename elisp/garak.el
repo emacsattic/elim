@@ -317,6 +317,8 @@ leading up to this point."
     (elim-conv-write-chat        . garak-chat-message        )
     (elim-conv-write-im          . garak-user-message        )
     (elim-conv-write-sys         . garak-misc-message        )
+    ;; status updates
+    (elim-typing-update          . garak-conv-typing-state   )
     ;; process related
     (elim-exit                   . garak-elim-exit           )
     ;; failsafe error handler     
@@ -937,6 +939,22 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
+
+(defun garak-conv-typing-state (process call call-id status args)
+  (let ((buffer  (garak-conversation-buffer process args t))
+        (state   (elim-avalue "typing-state" args))
+        icon tag name)
+    (if buffer
+        (with-current-buffer buffer
+          (if (not (eq state :typing))
+              (setq garak-typing-state t)
+            (setq name ":typing"
+                  tag  (elim-avalue name garak-icon-tags)
+                  icon (tree-widget-find-image name))
+            (if icon
+                (setq tag (propertize tag 'display icon)))
+            (setq garak-typing-state tag) 
+            (force-mode-line-update)) )) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; conv callbacks
