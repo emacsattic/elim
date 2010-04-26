@@ -91,6 +91,7 @@ flags rather than simple enumerations.")
     (elim-conv-write-chat       )
     (elim-conv-write-im         )
     (elim-conv-write-sys        )
+    (elim-typing-update         )
     ;; chat
     (elim-chat-add-users        )
     (elim-chat-remove-users     )
