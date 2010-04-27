@@ -868,9 +868,8 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
        (lambda (how) 
          (cond ((stringp    how) (play-sound-file how))
                ((eq :notify how)
-                (setq icon 
-                      (or (cadr (memq :file (elim-avalue ":garak" garak-icons)))
-                          "/dev/null")
+                (setq icon       (elim-avalue ":garak48x48" garak-icons)
+                      icon       (or (cadr (memq :file icon)) "/dev/null")
                       summarised (garak-summarise-text text))
                 (notify-show-message ::action-handler 'ignore
                                      :id      0
