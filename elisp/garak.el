@@ -1842,17 +1842,50 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
   (not (string< (garak-buddy-node-label node-b)
                 (garak-buddy-node-label node-a))))
 
+(defun garak-update-account-conversations (proc auid)
+  (let (account status icon tag)
+    (setq account (elim-account-status proc auid)
+          status  (elim-avalue "status-type" account)
+          status (if status (symbol-name status) ":offline")
+          tag    (or (elim-avalue status garak-icon-tags) ""))
+    (if (and auid account status tag)
+        (garak-mapbuffers
+         (lambda ()
+           (if (or icon (setq icon (tree-widget-find-image status)))
+               (setq tag (propertize tag 'display icon)))
+           (setq garak-account-presence tag))
+         (lambda (buf) (garak-buffer-account-matches auid)) )) ))
+
+(defun garak-update-buddy-conversations (proc buddy)
+  (let (auid bname status icon tag)
+    (setq auid   (elim-avalue "account-uid" buddy)
+          bname  (elim-avalue "bnode-name"  buddy)
+          status (elim-avalue "status-type" buddy)
+          status (if status (symbol-name status) ":offline")
+          tag    (or (elim-avalue status garak-icon-tags) ""))
+    (if (and buddy auid bname status tag)
+        (garak-mapbuffers
+         (lambda ()
+            (if (or icon (setq icon (tree-widget-find-image status)))
+               (setq tag (propertize tag 'display icon)))
+           (setq garak-contact-presence tag))
+         (lambda (buf)
+           (and (garak-buffer-account-matches auid)
+                (or (equal bname garak-conv-title)
+                    (equal bname garak-conv-name )))) )) ))
+
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
   (let (;;(inhibit-redisplay t)
         buid buddy where-widget point widget icon-name icon buffer tag other
         proto auid)
-    (setq buffer (elim-fetch-process-data proc :blist-buffer))
+    (setq buffer (elim-fetch-process-data proc :blist-buffer)
+          buid  (elim-avalue    "bnode-uid" args )
+          buddy (elim-buddy-data       proc buid ))
+    (garak-update-buddy-conversations proc buddy)
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
-        (setq buid  (elim-avalue    "bnode-uid" args )
-              buddy (elim-buddy-data       proc buid )
-              other (garak-buddy-list-skip proc buddy))
+        (setq other (garak-buddy-list-skip proc buddy))
         (if (setq auid (elim-avalue "account-uid" buddy))
             (setq proto (elim-avalue :proto (elim-account-data proc auid))))
         ;; if the bnode is not in the "ignored" class, buddy will eq other:
@@ -1941,12 +1974,15 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   (let (buffer auid where-widget point end icon-name
         icon conn kids node tag proto iname alt atag aname)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
+          auid   (elim-avalue "account-uid" args)
           status nil)
-    (elim-debug "(garak-account-update.%S ...)" name)
+    ;; update any account conversation buffers with _our_ new status
+    (garak-update-account-conversations proc auid)
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; proceed to updating the blist ui buffer
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
-        (setq auid         (elim-avalue "account-uid" args)
-              where-widget (garak-ui-find-node auid :account))
+        (setq where-widget (garak-ui-find-node auid :account))
 
         ;; set the conn or status data (whichever is appropriate)
         (cond ((eq name 'elim-account-status-changed) (setq status args))
