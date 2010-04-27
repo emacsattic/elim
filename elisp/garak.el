@@ -35,7 +35,8 @@
 ;; customisation group
 (defgroup garak nil
   "IM (Instant Messaging) Client based on elim"
-  :link   '(custom-group-link :tag "elim" elim)
+  :link   '(custom-group-link :tag "elim (the IM library)" elim)
+  :link   '(custom-group-link :tag "lui (the text input UI)" lui)
   :prefix "garak-"
   :group  'applications)
 
