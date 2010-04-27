@@ -396,14 +396,36 @@ leading up to this point."
             (setq garak-elim-process proc
                   garak-account-name (cdr (assoc "account-name" args))
                   garak-account-uid  (cdr (assoc "account-uid"  args))
+                  garak-conv-title   (cdr (assoc "conv-title"   args))
                   garak-conv-name    (cdr (assoc "conv-name"    args))
                   garak-conv-uid     (cdr (assoc "conv-uid"     args))
                   garak-im-protocol  (cdr (assoc "im-protocol"  args))
                   garak-typing-state t
-                  header-line-format
-                  (list t '(" " garak-typing-state
-                            " " garak-account-name " -"
-                            " " garak-conv-name))) )))
+                  header-line-format (list t '(" "
+                                               garak-typing-state
+                                               " "
+                                               garak-account-name 
+                                               garak-account-presence
+                                               " - "
+                                               garak-contact-presence
+                                               garak-conv-name)))
+            (let ((status (elim-account-status proc garak-account-uid))
+                  icon tag)
+              (setq status (elim-avalue "status-type" status)
+                    status (if status (symbol-name status) ":offline")
+                    icon (tree-widget-find-image status)
+                    tag  (or (elim-avalue status garak-icon-tags) ""))
+              (if icon (setq tag (propertize tag 'display icon)))
+              (setq garak-account-presence tag))
+            (let (status icon tag buddy)
+              (setq buddy  garak-conv-title
+                    buddy  (elim-buddy-data proc buddy garak-account-uid)
+                    status (elim-avalue "status-type" buddy)
+                    status (if status (symbol-name status) ":offline")
+                    icon   (tree-widget-find-image status)
+                    tag    (or (elim-avalue status garak-icon-tags) ""))
+              (if icon (setq tag (propertize tag 'display icon)))
+              (setq garak-contact-presence tag)) ) ))
     buffer))
 
 (defun garak-mapbuffers (function &optional predicate &rest args)
