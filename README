@@ -32,6 +32,11 @@ client suport, you need to do the following:
 * customise or set elim-executable to the location of the elim-client binary
   (this step shouldn't be necessary now, but just in case it doesn't work)
 
+Example .emacs configuration:
+
+       (add-to-list 'load-path "~/src/elim/elisp")
+       (load-library "garak")
+
 M-x garak RET
 
 To add an account:
