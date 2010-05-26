@@ -856,13 +856,14 @@ unexpecting user.")
          (set-marker lui-input-marker (point)))
        (add-text-properties lui-output-marker lui-input-marker
                             `(read-only t
-                                        rear-nonsticky t
                                         field lui-prompt
                                         keymap ,lui-prompt-map
                                         ;; XEmacs stuff.
                                         start-open t
                                         end-open t
-                                        ))))))
+                                        ))
+       (add-text-properties
+        (- lui-input-marker 1) lui-input-marker '(rear-nonsticky t)) )) ))
 
 (defun lui-prompt-end-of-line (&optional N)
   "Move past the prompt, and then to the end of the line.
