@@ -25,6 +25,7 @@
 (require 'time-date  )
 (require 'image      )
 (require 'notify     )
+(require 'ispell     )
 
 (let ((load-path (cons (file-name-directory
                         (or load-file-name buffer-file-name)) load-path)))
@@ -192,6 +193,33 @@ substitute these characters for the basic ascii ones:\n
               (const  :tag "Sending a freedesktop.org notification" :notify)
               (repeat :tag "Calling these functions" function)))
 
+(defcustom garak-flyspell nil
+  "Whether to activate as-you-type spell checking in garak buffers"
+  :group 'garak
+  :tag   "Spell Checking: "
+  :type '(choice (const :tag "On"  t)
+                 (const :tag "Off" nil)))
+
+(defcustom garak-flyspell-default-dictionary ispell-dictionary
+  "The dictionary to use in garak conversation buffers if `garak-flyspell' is
+set and `garak-conversation-dictionary-function' is not."
+  :group 'garak
+  :tag "Flyspell Dictionary: "
+  :type '(choice (string :tag "Dictionary")
+                 (const  :tag "None (no spell-checking)" "")
+                 (const  :tag "Ispell Default"          nil)))
+
+(defcustom garak-conversation-dictionary-function nil
+  "A function which will be called when a cnversation buffer is created,
+with that buffer current, to choose a flyspell (ispell) dictionary to use.\n
+It should return one of:\n
+    a string (the name of the dictionary to use; see `ispell-dictionary-alist')
+    nil (use the default ispell dictionary)
+    an empty string (do no spell checking in this buffer)"
+  :group 'garak
+  :tag "Flyspell Dictionary Chooser"
+  :type '(choice (function :tag "Function")
+                 (const    :tag "None (use default)" nil)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffer tracking data structures
 (defvar garak-conversation-buffers      nil)
