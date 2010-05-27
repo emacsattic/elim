@@ -402,6 +402,18 @@ leading up to this point."
            (or (eq oldproc proc)
                (not (memq status '(run stop open connect))) )) )))
 
+(defun garak-conversation-dictionary ()
+  "Called just after a garak conversation buffer has been set up, with that
+buffer current, to return a dictionary name for flyspell to use (if flyspell
+has been activated: see `garak-flyspell').\n
+This function calls `garak-conversation-dictionary-function' if it is set, and
+returns its value, otherwise it returns `garak-flyspell-default-dictionary'."
+  (if garak-flyspell
+      (if (functionp garak-conversation-dictionary-function)
+          (funcall garak-conversation-dictionary-function)
+        garak-flyspell-default-dictionary)
+    ""))
+
 (defun garak-conversation-buffer (proc args &optional do-not-create)
   (let ((uid   (elim-avalue "conv-uid"  args))
         (cname (elim-avalue "conv-name" args)) buffer)
@@ -418,7 +430,7 @@ leading up to this point."
           (setq buffer (generate-new-buffer cname)
                 garak-conversation-buffers
                 (cons (cons uid buffer) garak-conversation-buffers)) 
-          (with-current-buffer buffer 
+          (with-current-buffer buffer
             (garak-mode)
             (garak-init-local-storage)
             (garak-icon-theme-init)
@@ -454,7 +466,8 @@ leading up to this point."
                     icon   (tree-widget-find-image status)
                     tag    (or (elim-avalue status garak-icon-tags) ""))
               (if icon (setq tag (propertize tag 'display icon)))
-              (setq garak-contact-presence tag)) ) ))
+              (setq garak-contact-presence tag)) 
+            (lui-flyspell-change-dictionary (garak-conversation-dictionary))) ))
     buffer))
 
 (defun garak-mapbuffers (function &optional predicate &rest args)
