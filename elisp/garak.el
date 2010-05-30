@@ -2228,6 +2228,68 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (goto-char (point-min))
       (widget-forward 1))
     (display-buffer buf)))
+
+(defun garak-ui-node-item-p ()
+  (let ((widget (widget-at)))
+    (or (widget-get widget :buddy  )
+        (widget-get widget :account))))
+
+(defun garak-ui-node-account-p ()
+  (message "checking widget at %S" (point))
+  (widget-get (widget-at) :account))
+
+(defun garak-ui-node-channel-p ()
+  (let ((widget (widget-at)))
+    (and (widget-get widget :buddy)
+         (eq (widget-get widget :elim-type) :chat-node))))
+
+(defun garak-ui-node-contact-p ()
+  (let ((widget (widget-at)))
+    (and (widget-get widget :buddy)
+         (eq (widget-get widget :elim-type) :buddy-node))))
+
+(defun garak-ui-next-node (&optional type jump)
+  (let (last check-node target boundary step (missed 0))
+    (or jump (setq jump 1))
+    (setq step     (if (< jump 0) -1 1)
+          boundary (if (eq step -1) '>= '<=))
+    (setq check-node (cond ((eq type :contact) 'garak-ui-node-contact-p)
+                           ((eq type :channel) 'garak-ui-node-channel-p)
+                           ((eq type :account) 'garak-ui-node-account-p)
+                           (t 'garak-ui-node-item-p)))
+    (while (/= jump 0)
+      (setq last (point))
+      (ignore-errors (widget-move step))
+      ;; if we've wrapped more than once, abort:
+      (if (and (funcall boundary (point) last)
+               (< 1 (setq missed (1+ missed))))
+          (setq jump 0)
+        ;; otherwise if it's the right kind of node and count it off
+        (if (funcall check-node)
+            (setq target (point)
+                  jump   (- jump step))) ))
+    (if target (goto-char target))))
+
+(defun garak-ui-prev-item (jump)
+  (interactive "p")
+  (garak-ui-next-node nil (- jump)))
+
+(defun garak-ui-next-item (jump)
+  (interactive "p")
+  (garak-ui-next-node nil jump))
+
+(defun garak-ui-next-contact (&optional jump)
+  (interactive "p")
+  (garak-ui-next-node :contact jump))
+
+(defun garak-ui-next-channel (&optional jump)
+  (interactive "p")
+  (garak-ui-next-node :channel jump))
+
+(defun garak-ui-next-account (&optional jump)
+  (interactive "p")
+  (garak-ui-next-node :account jump))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commands
 (defun garak-read-username (proc proto)
