@@ -1633,6 +1633,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                :buddy      uid
                :value      uid
                :garak-type :bnode
+               :elim-type  type
                :expander   'garak-buddy-list-node-children
                :node       (apply 'widget-convert 'menu-choice
                                   :format    "%[%t%]\n"
@@ -1652,6 +1653,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
              :value             '(noop)
              :buddy              uid
              :garak-type        :bnode
+             :elim-type          type
              :value-get         'widget-value-value-get
              :mouse-down-action 'garak-menu-choice-mouse-down-action
              :inline             t
