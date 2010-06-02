@@ -243,6 +243,46 @@ It should return one of:\n
 (put 'garak-account-presence 'risky-local-variable t)
 (put 'garak-contact-presence 'risky-local-variable t)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; widgets
+(defconst garak-ui-widget-navigation
+  '(("C-c C-a"   . garak-ui-next-account)
+    ("C-c C-b"   . garak-ui-next-contact)
+    ("C-c C-c"   . garak-ui-next-channel)
+    ("TAB"       . garak-ui-next-item)
+    ("M-TAB"     . garak-ui-prev-item)
+    ("<backtab>" . garak-ui-prev-item)))
+
+(defun garak-ui-widget-make-keymap (&optional parent)
+  (let ((keymap (make-sparse-keymap)))
+    (if parent (set-keymap-parent keymap parent))
+    (mapc (lambda (key)
+            (define-key keymap (read-kbd-macro (car key)) (cdr key))) 
+          garak-ui-widget-navigation)
+    keymap))
+
+(defvar garak-tree-widget-button-keymap 
+  (garak-ui-widget-make-keymap tree-widget-button-keymap))
+
+(define-widget 'garak-tree-widget-icon 'tree-widget-icon
+  "Basic widget other garak-tree-widget icons are derived from."
+  :keymap        garak-tree-widget-button-keymap
+  :button-keymap garak-tree-widget-button-keymap)
+
+(define-widget 'garak-tree-widget-open-icon 'garak-tree-widget-icon
+  "Garak UI icon for an expanded tree-widget node."
+  :tag        "[-]"
+  :glyph-name "open")
+
+(define-widget 'garak-tree-widget-close-icon 'garak-tree-widget-icon
+  "Garak UI icon for a collapsed tree-widget node."
+  :tag        "[+]"
+  :glyph-name "close")
+
+(define-widget 'garak-tree-widget-empty-icon 'garak-tree-widget-icon
+  "Garak UI icon for an expanded tree-widget node with no child."
+  :tag        "[X]"
+  :glyph-name "empty")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; misc utils
