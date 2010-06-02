@@ -1764,6 +1764,9 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
   (apply 'widget-create 'tree-widget
          :open        t
          :expander   'garak-account-list-node-children
+         :open-icon  'garak-tree-widget-open-icon
+         :close-icon 'garak-tree-widget-close-icon
+         :empty-icon 'garak-tree-widget-empty-icon
          :garak-type :accounts
          :tag        "Accounts"
          (garak-account-list-node-children)))
@@ -1806,10 +1809,13 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                :open       t
                :tag        name
                :garak-type :bnode
-               :help-echo nil
+               :help-echo  nil
                :buddy      uid
                :value      uid
-               :expander  'garak-buddy-list-node-children
+               :open-icon  'garak-tree-widget-open-icon
+               :close-icon 'garak-tree-widget-close-icon
+               :empty-icon 'garak-tree-widget-empty-icon
+               :expander   'garak-buddy-list-node-children
                kids )
       (setq menu (list (garak-choice-item ""       (cons :noop uid))
                        (garak-choice-item "Remove" (cons :del  uid))))
@@ -1821,7 +1827,10 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
              :help-echo  nil
              :buddy      uid
              :value      uid
-             :expander  'garak-buddy-list-node-children
+             :open-icon  'garak-tree-widget-open-icon
+             :close-icon 'garak-tree-widget-close-icon
+             :empty-icon 'garak-tree-widget-empty-icon
+             :expander   'garak-buddy-list-node-children
              :node      (apply 'widget-convert 'menu-choice
                                :format    "%[%t%]\n"
                                :tag        name
@@ -1845,7 +1854,10 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 
 (defconst garak-tree-container-classes '(tree-widget-open-icon
                                          tree-widget-empty-icon
-                                         tree-widget-close-icon))
+                                         tree-widget-close-icon
+                                         garak-tree-widget-open-icon
+                                         garak-tree-widget-empty-icon
+                                         garak-tree-widget-close-icon))
 
 (defun garak-tree-widget-real-target (widget)
   (let ((c (car widget)))
