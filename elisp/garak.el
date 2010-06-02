@@ -1470,7 +1470,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
         (aset tree-widget--theme 3 icons)) ))
 
 (defun garak-ui-create-widget-buffer (proc)
-  (when (tree-widget-use-image-p) (garak-load-icons))
+  (if (tree-widget-use-image-p) (garak-load-icons))
   (let ((blist   (elim-buddy-list proc))
         (icons   (copy-sequence garak-icons))
         (keymap  nil)
