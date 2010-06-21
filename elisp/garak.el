@@ -1041,14 +1041,15 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
     (if (not (memq :send flags))
         (garak-alert-user process buffer ctype flags
                           who title is-new text args)
-      ;; display the conversation if it was initiated by us with this message:
-      ;; if the buffer is not new, it must have been visible anyway, or we
-      ;; couldn't have sent a message through it to its conversation.
+      ;; display the conversation if we sent this message
+      ;; In general, it should have been visible _anyway_ if we sent a message
+      ;; to it, but we could have used /msg or the menu to send a message
+      ;; from outside the buffer, so display it anyway:
       ;; (but try not to stomp on the current buffer when we do so):
-      (when is-new
-        (let ((display-buffer-reuse-frames t))
-          (switch-to-buffer-other-window buffer)
-          (if is-new (goto-char (point-max)))) )) ))
+      (if (not (get-buffer-window buffer 'visible))
+          (let ((display-buffer-reuse-frames t))
+            (switch-to-buffer-other-window buffer)
+            (if is-new (goto-char (point-max)))) )) ))
 
 (defalias 'garak-user-message 'garak-chat-message)
 (defalias 'garak-misc-message 'garak-chat-message)
