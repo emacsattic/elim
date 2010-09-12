@@ -357,8 +357,8 @@ leading up to this point."
     (elim-account-request-auth   . garak-auth-requested      )
     ;; blist (buddy list) ops
     ;;(elim-blist-create-node                                )
-    (elim-blist-update-node      . garak-update-buddy        )
-    (elim-blist-remove-node      . garak-delete-buddy        )
+    (elim-blist-update-node      . garak-update-buddy-req    )
+    (elim-blist-remove-node      . garak-update-buddy-req    )
     (elim-blist-request-add-buddy . garak-request-add-buddy  )
     ;; connection ops
     (elim-connection-state       . garak-account-update      )
@@ -1972,6 +1972,61 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
                 (or (equal bname garak-conv-title)
                     (equal bname garak-conv-name )))) )) ))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; update buddy request, these can swamp us so we cache them and deal with 
+;; them in an idle fiunction:
+(defvar garak-update-buddy-requests nil)
+(defvar garak-update-buddy-timer    nil)
+(defvar garak-update-buddy-index    nil)
+(defconst garak-update-buddy-block  100)
+
+(defun garak-update-buddy-delayed (proc)
+  (let (reqs op fn req (i 0))
+    (message "processing delayed buddy updates [%d buckets]" 
+             (length garak-update-buddy-requests))
+    ;; pop the oldest bucket off the queue:
+    (setq reqs                        (car garak-update-buddy-requests)
+          garak-update-buddy-requests (cdr garak-update-buddy-requests))
+    (message "%d buckets remaining" (length garak-update-buddy-requests))
+    ;; process all the requests in the bucket:
+    (while (and (< i (length reqs))
+                (setq req (aref reqs i)))
+      (setq i  (1+  i)
+            fn (car req)
+            op (cond ((eq fn 'elim-blist-update-node) 'garak-update-buddy)
+                     ((eq fn 'elim-blist-remove-node) 'garak-delete-buddy)))
+      (apply op proc req))
+    (if garak-update-buddy-requests
+        (setq garak-update-buddy-timer
+              (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc))
+      (setq garak-update-buddy-timer nil)) ))
+
+(defun garak-queue-buddy-update (req &optional cache)
+  ;; current cache bucket, if any
+  (setq cache (car (last garak-update-buddy-requests)))
+  ;; if the bucket is full, reset the bucket pointer
+  (if (and garak-update-buddy-index 
+           (>= garak-update-buddy-index (length cache)))
+      (setq garak-update-buddy-index nil))
+  ;; if the bucket pointer is unset, initialise a new bucket
+  (if (not garak-update-buddy-index)
+      (setq garak-update-buddy-index 0
+            cache (make-vector garak-update-buddy-block nil)
+            garak-update-buddy-requests
+            (nconc garak-update-buddy-requests (list cache))))
+  ;;(message "item %d added to bucket %d"
+  ;;         garak-update-buddy-index 
+  ;;         (length garak-update-buddy-requests))
+  (aset cache garak-update-buddy-index req)
+  (setq garak-update-buddy-index (1+ garak-update-buddy-index)))
+
+(defun garak-update-buddy-req (proc name id attr args)
+  (garak-queue-buddy-update (list name id attr args))
+  (when (not garak-update-buddy-timer)
+    (setq garak-update-buddy-timer
+          (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc)) ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;!! update icon of visible node
 (defun garak-update-buddy (proc name id status args)
   (let (;;(inhibit-redisplay t)
