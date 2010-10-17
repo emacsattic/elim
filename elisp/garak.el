@@ -2236,7 +2236,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
               (delete-char -1)) )) )) ))
 
 (defun garak-buddy-list-choose-icon (widget buddy)
-  (let ((class (when (consp widget) (car widget) widget)) type blocked)
+  (let ((class (if (consp widget) (car widget) widget)) type blocked online)
     (setq type    (elim-avalue "bnode-type" buddy)
           allowed (elim-avalue "allowed"    buddy))
     (cond ((eq class 'tree-widget-empty-icon) ":invisible")
