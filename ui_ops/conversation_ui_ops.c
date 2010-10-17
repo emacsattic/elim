@@ -90,14 +90,14 @@ PurpleConversationUiOps elim_conversation_ui_ops =
 };
 
 
-static gboolean _elim_strippable ( PurpleConversation   *conv  , 
+static gboolean _elim_strippable ( PurpleConversation   *conv  ,
                                    PurpleMessageFlags    flag  )
 {
     PurpleConnectionFlags feat = purple_conversation_get_features( conv );
     PurpleAccount        *acct = purple_conversation_get_account ( conv );
     const char          *proto = purple_account_get_protocol_id  ( acct );
     // µblog plugin gets this wrong:
-    if( strstr( (proto ? proto : "") , "-mbpurple-" ) ) 
+    if( strstr( (proto ? proto : "") , "-mbpurple-" ) )
         feat = feat|PURPLE_CONNECTION_HTML;
 
     return ( (feat & PURPLE_CONNECTION_HTML) &&
@@ -116,7 +116,7 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
     PurpleConversationType ctype = purple_conversation_get_type    ( conv );
 
     fprintf( stderr, "(_elim_conv_args)\n" );
-    
+
     AL_STR ( alist, "account-name" , aname );
     AL_STR ( alist, "im-protocol"  , proto );
     AL_PTR ( alist, "account-uid"  , acct  );
@@ -124,7 +124,7 @@ static void _elim_conv_args ( xmlnode *alist, PurpleConversation *conv )
     AL_STR ( alist, "conv-name"    , cname );
     AL_STR ( alist, "conv-title"   , title ? title : cname );
     AL_ENUM( alist, "conv-type"    , ctype , ":conversation-type" );
-    AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );    
+    AL_ENUM( alist, "conv-features", cflag , ":connection-flags"  );
 }
 
 static void _elim_create_conversation  ( PurpleConversation *conv )
