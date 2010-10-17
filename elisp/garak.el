@@ -820,7 +820,7 @@ In addition, PREDICATE will receive the buffer as its only argument."
 (defvar garak-search-column-labels nil)
 (defun garak-notify-search-callback (point action)
   ;; (message "garak-notify-search-callback(%S %S)" point action)
-  (let ((row nil) (start point) (args nil))
+  (let ((row nil) (start point) (args nil) (call nil))
     (setq start (next-single-char-property-change (point-min) 'result-start)
           row   (- (line-number-at-pos point) 
                    (line-number-at-pos start) 2)
@@ -1222,7 +1222,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
       (elim-get-prefs proc 'garak-ui-prefs-insert-widget)) buffer))
 
 (defun garak-ui-pref-to-node (pref)
-  (let (type name kids data val w-args node)
+  (let (type name kids data val w-args node choice)
     (setq data   (cdr pref)
           name   (car (last (split-string (car pref) "/" nil)))
           type   (elim-avalue "pref-type"    data)
@@ -1414,6 +1414,8 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
             (pos    nil)
             (icon  (tree-widget-find-image ":available"))
             (label (elim-avalue ":available" garak-icon-tags))
+            ft-icon
+            pos2
             ;;(inhibit-redisplay   t)
             )
           (setq pos (next-single-char-property-change start 'ft-progress))
@@ -1437,6 +1439,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
         (inhibit-read-only          t)
         (inhibit-point-motion-hooks t)
         (inhibit-modification-hooks t)
+        progress  ft-icon
         ft-region ft-display other-user icon-name ft-state  s-label complete
         file      size       p-icon     p-label   direction pos     pos2)
     (setq progress   (or (elim-avalue "xfer-progress" xfer) 0.0)
