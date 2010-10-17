@@ -1,4 +1,5 @@
 *.o
+elisp/*.elc
 TAGS
 elim-client
 elim-func-handlers.c
