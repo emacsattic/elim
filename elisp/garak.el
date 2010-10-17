@@ -2556,7 +2556,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
                     (elim-join-chat garak-elim-process account "" options)
                     (format "/join %s" args))
                 (format "/join %s: args not valid" args))
-            (format "/join %s: protocol plugin does not support command")))
+            (format "/join %s: protocol plugin does not support command" args)))
       (format "/join %s: no account found" args)) ))
 
 (defun garak-cmd-status (args)
