@@ -2063,8 +2063,9 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
                         (setq kids (garak-tree-widget-apply widget :expander))
                         (garak-tree-widget-set widget :args kids)
                         (when (garak-tree-widget-get widget :open)
-                          (widget-apply widget :action)
-                          (widget-apply widget :action)) ))
+                          (let ((inhibit-redisplay t))
+                            (widget-apply widget :action)
+                            (widget-apply widget :action))) ))
                   (save-excursion
                     (goto-char (point-max))
                     (garak-insert-buddy-list-top proc
