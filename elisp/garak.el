@@ -2044,7 +2044,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq other (garak-buddy-list-skip proc buddy))
-        (if (setq auid (elim-avalue "account-uid" buddy))
+        (if (setq auid  (elim-avalue "account-uid" buddy))
             (setq proto (elim-avalue :proto (elim-account-data proc auid))))
         ;; if the bnode is not in the "ignored" class, buddy will eq other:
         (when (eq buddy other)
