@@ -1998,10 +1998,11 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
             fn (car req)
             op (cond ((eq fn 'elim-blist-update-node) 'garak-update-buddy)
                      ((eq fn 'elim-blist-remove-node) 'garak-delete-buddy)))
-      (apply op proc req))
+      (apply op proc req)
+      (sit-for 0 t))
     (if garak-update-buddy-requests
         (setq garak-update-buddy-timer
-              (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc))
+              (run-with-idle-timer 2 nil 'garak-update-buddy-delayed proc))
       (setq garak-update-buddy-timer nil)) ))
 
 (defun garak-queue-buddy-update (req &optional cache)
@@ -2027,7 +2028,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
   (garak-queue-buddy-update (list name id attr args))
   (when (not garak-update-buddy-timer)
     (setq garak-update-buddy-timer
-          (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc)) ))
+          (run-with-idle-timer 2 nil 'garak-update-buddy-delayed proc)) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;!! update icon of visible node
@@ -2036,9 +2037,10 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
         buid buddy where-widget point widget icon-name icon buffer tag other
         proto auid)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
-          buid  (elim-avalue    "bnode-uid" args )
-          buddy (elim-buddy-data       proc buid ))
+          buid   (elim-avalue    "bnode-uid" args)
+          buddy  (elim-buddy-data       proc buid))
     (garak-update-buddy-conversations proc buddy)
+    (sit-for 0 t)
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq other (garak-buddy-list-skip proc buddy))
@@ -2070,6 +2072,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
                     (goto-char (point-max))
                     (garak-insert-buddy-list-top proc
                                                  (elim-buddy-data proc puid)))))
+            (sit-for 0 t)
             ;; the widget is currently visible. tweak it by hand
             ;; as this seems to be the only reliable way to refresh it:
             (setq point     (car where-widget)
