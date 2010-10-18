@@ -67,6 +67,11 @@ To login:
 
 (USERNAME can be tab-completed once accounts have been added)
 
+NOTE: You may need to set the status offline explicitly before 
+      setting it to available - this eems to be an oddity of the 
+      way libpurple behaves, but it could be a mistake on my part.
+      Under investiagtion, either way.
+
 To join a channel/room/etc
 
 on IRC:
@@ -164,7 +169,7 @@ To set libpurple's preferences, issue the /prefs command.
 -- 
 fledermaus <vivek@etla.org>
 
-Copyright © 2009 Vivek Dasmohapatra 
+Copyright © 2009-2010 Vivek Dasmohapatra 
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
