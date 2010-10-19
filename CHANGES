@@ -4,7 +4,7 @@
 	(garak-mapbuffers): apply action to all garak buffers
 	(garak-buffer-account-matches): helper to find buffers for given account
 	(garak-network-down): handle network down event
-	(garak-disconnected): handle accountt disconnected event
+	(garak-disconnected): handle account disconnected event
 	(garak-network-up): handle network up event (reconnect accounts)
 	(garak-buddy-list-skip): better offline-contact check, buddies that go
 	offline now disappear if offline buddy hiding is ocnfigured
@@ -94,7 +94,7 @@
 	this is the right approach here ).
 	* ui_ops/notify_ui_ops.c (_elim_notify_search): call the standard purple
 	`more search rows' function instead of assuming our callback is in place
-	and calling it directly. Unlikely thyat we were wrong, but just in case.
+	and calling it directly. Unlikely that we were wrong, but just in case.
 	(_elim_notify_search_rows): cache the ephemeral row data we get here
 	* elim-rpc.h (_NOTIFY_RESP): search row data is ephemeral: cache it here
 
