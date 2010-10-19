@@ -116,3 +116,11 @@
 (setq eproc (get-process "*elim*"))
 (delete-process eproc)
 (elim-load-enum-values (get-process "*elim*"))
+
+
+(elim-atom-to-proto t)
+
+(elim-process-send
+ (get-process "*elim*")
+ (elim-daemon-call 'debug-mode nil
+                   (elim-simple-list-to-proto-alist '("debug" t))))
