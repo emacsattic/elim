@@ -630,8 +630,6 @@ xnode_to_str_helper( xmlnode *node, int *len, gboolean formatting, int depth )
     g_free( tab );
 
     if( len ) *len = text->len;
-    //fprintf( stderr, "--> length: %d; actual: %d\n", 
-    //         *len  , text->len );
 
     return g_string_free( text, FALSE );
 }
