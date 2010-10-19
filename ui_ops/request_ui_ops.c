@@ -1,5 +1,5 @@
 /*
-Copyright © 2009 Vivek Dasmohapatra 
+Copyright © 2009 Vivek Dasmohapatra
 
 email : vivek@etla.org
 irc   : fledermaus on freenode, oftc
@@ -121,14 +121,14 @@ struct _REQ_RESP
     char             *id   ;
     gpointer          data ;
     PurpleRequestType type ;
-    union    
+    union
     {
         struct { PurpleRequestInputCb  ok; PurpleRequestInputCb  nok; } input ;
         struct { PurpleRequestChoiceCb ok; PurpleRequestChoiceCb nok; } choice;
         struct { action_func        *func; int                 count; } action;
         struct { PurpleRequestFileCb   ok; PurpleRequestFileCb   nok; } path  ;
         struct { PurpleRequestFields  *fields;
-                 PurpleRequestFieldsCb ok    ; 
+                 PurpleRequestFieldsCb ok    ;
                  PurpleRequestFieldsCb nok   ; } fields;
     } req;
 };
@@ -139,7 +139,7 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
 
     CB_HANDLER  *cbh = ptr;
     REQ_RESP *handle = cbh->data;
-    if( handle ) 
+    if( handle )
     {
         gpointer data = handle->data;
 
@@ -147,21 +147,21 @@ static xmlnode * _elim_request_input_cb ( gpointer ptr, SEXP_VALUE *args )
         {
             PurpleRequestInputCb cb = NULL;
             int status = ALIST_VAL_INT( args, "status" );
-            if( status == 0 ) 
+            if( status == 0 )
             {
                 char *input = ALIST_VAL_STR( args, "value" );
                 cb = ( input ? handle->req.input.ok : handle->req.input.nok );
                 if( cb ) (cb)( data, input );
             }
-            else 
-            { 
+            else
+            {
                 cb = (handle->req.input.nok);
-                if( cb ) (cb)( data, "" ); 
+                if( cb ) (cb)( data, "" );
             }
         }
         else { handle->req.input.nok( data, "" ); }
     }
-    
+
     purple_request_close( handle->type, cbh );
     if( args   ) sexp_val_free( args );
 
@@ -246,7 +246,7 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
 
     CB_HANDLER *cbh  = ptr;
     REQ_RESP *handle = cbh->data;
-    if( handle ) 
+    if( handle )
     {
         gpointer data = handle->data;
 
@@ -254,22 +254,22 @@ static xmlnode * _elim_request_choice_cb ( gpointer ptr, SEXP_VALUE *args )
         {
             PurpleRequestChoiceCb cb = NULL;
             int status = ALIST_VAL_INT( args, "status" );
-            if( status == 0 ) 
+            if( status == 0 )
             {
                 int choice = ALIST_VAL_INT( args, "value" );
-                cb =  ( (choice != -1) ? 
+                cb =  ( (choice != -1) ?
                         handle->req.choice.ok : handle->req.choice.nok );
                 if( cb ) (cb)( data, choice );
             }
-            else 
+            else
             {
-                cb = handle->req.choice.nok; 
-                if( cb ) (cb)( data, 0 ); 
+                cb = handle->req.choice.nok;
+                if( cb ) (cb)( data, 0 );
             }
         }
         else { handle->req.choice.nok( data, 0 ); }
     }
-    
+
   //if( handle ) g_free( handle )
     purple_request_close( handle->type, cbh );
     if( args   ) sexp_val_free( args );
@@ -296,7 +296,7 @@ static void *_elim_request_choice( const char         *title         ,
     CB_HANDLER *cbh    = g_new0( CB_HANDLER, 1 );
     REQ_RESP   *resp   = g_new0( REQ_RESP  , 1 );
     xmlnode    *alist  = xnode_new( "alist" );
-    char       *ID     = new_elim_id();   
+    char       *ID     = new_elim_id();
     xmlnode    *choice = xnode_new( "alist" );
 
     VA_LIST_TO_ALIST( choice, INT, const char *, int, choices );
@@ -305,7 +305,7 @@ static void *_elim_request_choice( const char         *title         ,
     AL_STR ( alist, "primary"   , primary       );
     AL_STR ( alist, "secondary" , secondary     );
     AL_STR ( alist, "ok-label"  , ok_text       );
-    AL_STR ( alist, "nok-label" , cancel_text   );   
+    AL_STR ( alist, "nok-label" , cancel_text   );
     AL_STR ( alist, "who"       , who           );
     AL_INT ( alist, "default"   , default_value );
     AL_NODE( alist, "choices"   , choice        );
@@ -356,22 +356,22 @@ static xmlnode * _elim_request_action_cb( gpointer ptr, SEXP_VALUE *args )
     if( handle )
     {
         gpointer data = handle->data;
-        
+
         if( args && (args->type == SEXP_ALIST) )
         {
             int status = ALIST_VAL_INT( args, "status" );
             int max    = handle->req.action.count;
-            if( status == 0 ) 
+            if( status == 0 )
             {
                 int x = 0;
                 gpointer     f = (gpointer)ALIST_VAL_INT( args, "value" );
                 action_func *F = handle->req.action.func;
                 fprintf( stderr, "( chosen action    : %p\n", f );
                 for( x = 0; x < max; x++ )
-                    if( f == *(F + x) ) 
+                    if( f == *(F + x) )
                     {
                         fprintf( stderr, "     matched action: %p\n", *(F+x) );
-                        (*(F + x))( data ); break; 
+                        (*(F + x))( data ); break;
                     }
                     else
                     {
@@ -413,7 +413,7 @@ static void *_elim_request_action( const char          *title        ,
         int offs = 0;
         const char *label = NULL;
         while( ( offs  < action_count ) &&
-               ( label = va_arg( actions, const char *) ) )   
+               ( label = va_arg( actions, const char *) ) )
         {
             action_func func = va_arg( actions, action_func );
             AL_PTR( acts, label, func );
@@ -467,7 +467,7 @@ static void *_elim_request_action( const char          *title        ,
     return cbh;
 }
 
-static void _elim_merge_request_fields( PurpleRequestFields *fields , 
+static void _elim_merge_request_fields( PurpleRequestFields *fields ,
                                         SEXP_VALUE          *value  )
 {
     GList *gl; // group list (group of input widgets)
@@ -526,7 +526,7 @@ static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
     {
         PurpleRequestFields *F = handle->req.fields.fields;
         gpointer data = handle->data;
-        
+
         if( args && (args->type == SEXP_ALIST) )
         {
             int         status = ALIST_VAL_INT  ( args, "status" );
@@ -538,17 +538,17 @@ static xmlnode * _elim_request_fields_cb ( gpointer ptr, SEXP_VALUE *args )
                 _elim_merge_request_fields( F, ALIST_VAL(args, "value") );
                 if( handle->req.fields.ok )
                     handle->req.fields.ok( data, F );
-            } 
-            else 
+            }
+            else
             {
                 if( handle->req.fields.nok )
-                    handle->req.fields.nok( data, F ); 
+                    handle->req.fields.nok( data, F );
             }
         }
-        else 
+        else
         {
             if( handle->req.fields.nok )
-                handle->req.fields.nok( data, F ); 
+                handle->req.fields.nok( data, F );
         }
     }
 
@@ -583,7 +583,7 @@ static void *_elim_request_fields( const char          *title        ,
     AL_STR ( alist, "primary"   , primary     );
     AL_STR ( alist, "secondary" , secondary   );
     AL_STR ( alist, "ok-label"  , ok_text     );
-    AL_STR ( alist, "nok-label" , cancel_text );   
+    AL_STR ( alist, "nok-label" , cancel_text );
     AL_STR ( alist, "who"       , who         );
     AL_NODE( alist, "fields"    , xflds       );
 
@@ -666,7 +666,7 @@ static void *_elim_request_fields( const char          *title        ,
                 {
                     xmlnode *choices = xnode_new( "list" );
                     GList   *cl      = NULL;
-     
+
                     AL_BOOL( field, "value"  , prf->u.choice.value         );
                     AL_BOOL( field, "default", prf->u.choice.default_value );
                     AL_NODE( field, "choices", choices );
@@ -728,33 +728,33 @@ static xmlnode * _elim_request_path_cb( gpointer ptr, SEXP_VALUE *args )
 
     CB_HANDLER  *cbh = ptr;
     REQ_RESP *handle = cbh->data;
-    if( handle ) 
+    if( handle )
     {
         gpointer data = handle->data;
-        PurpleRequestFileCb cb = NULL; 
+        PurpleRequestFileCb cb = NULL;
 
         if( args && (args->type == SEXP_ALIST) )
         {
             int status = ALIST_VAL_INT( args, "status" );
-            if( status == 0 ) 
+            if( status == 0 )
             {
                 char *path = ALIST_VAL_STR( args, "value" );
                 cb = ( path ?  handle->req.path.ok : handle->req.path.nok );
                 if( cb ) (cb)( data, path );
             }
-            else 
-            { 
+            else
+            {
                 cb = handle->req.path.nok;
-                if( cb ) (cb)( data, "" ); 
+                if( cb ) (cb)( data, "" );
             }
         }
-        else 
-        { 
+        else
+        {
             cb = handle->req.path.nok;
-            if( cb ) (cb)( data, "" ); 
+            if( cb ) (cb)( data, "" );
         }
     }
-    
+
     purple_request_close( handle->type, cbh );
     //if( handle ) g_free( handle );
 
@@ -822,7 +822,7 @@ static void *_elim_request_file  ( const char            *title      ,
     add_outbound_sexp( mcall );
 
     fprintf(stderr, "(_elim_request_file HANDLE: %p . %p)", cbh, resp );
-    return cbh;    
+    return cbh;
 }
 
 static void _elim_close_request  ( PurpleRequestType type, void *ui_handle )
@@ -832,9 +832,9 @@ static void _elim_close_request  ( PurpleRequestType type, void *ui_handle )
     CB_HANDLER *cbh  = ui_handle;
     REQ_RESP   *resp = cbh ? cbh->data : NULL;
 
-    if( resp && (resp->type == PURPLE_REQUEST_ACTION) ) 
+    if( resp && (resp->type == PURPLE_REQUEST_ACTION) )
     {
-        fprintf( stderr, "about to free action list: %p\n", 
+        fprintf( stderr, "about to free action list: %p\n",
                  resp->req.action.func );
         g_free( resp->req.action.func );
     }
@@ -899,5 +899,5 @@ static void *_elim_request_folder( const char            *title      ,
     xmlnode *mcall = func_call( "elim-request-directory", ID, alist );
     add_outbound_sexp( mcall );
     fprintf(stderr, "(_elim_request_folder HANDLE: %p . %p)", cbh, resp );
-    return cbh;    
+    return cbh;
 }
