@@ -174,7 +174,7 @@ void xnode_set_attrib_with_prefix(xmlnode *node, const char *attr, const char *p
  *
  * @param node  The node to set an attribute for.
  * @param attr  The name of the attribute to set
- * @param xmlns The namespace of the attribute to ste
+ * @param xmlns The namespace of the attribute to set
  * @param value The value of the attribute
  */
 void xnode_set_attrib_with_namespace(xmlnode *node, const char *attr, const char *xmlns, const char *value);
@@ -196,7 +196,7 @@ const char *xnode_get_attrib(xmlnode *node, const char *attr);
  * @param attr  The attribute to get
  * @param xmlns The namespace of the attribute to get
  *
- * @return The value of the attribute/
+ * @return The value of the attribute.
  */
 const char *xnode_get_attrib_with_namespace(xmlnode *node, const char *attr, const char *xmlns);
 
@@ -228,7 +228,7 @@ void xnode_set_namespace(xmlnode *node, const char *xmlns);
 /**
  * Returns the namespace of a node
  *
- * @param node The node to get the namepsace from
+ * @param node The node to get the namespace from
  * @return The namespace of this node
  */
 const char *xnode_get_namespace(xmlnode *node);
