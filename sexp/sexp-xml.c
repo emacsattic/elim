@@ -98,12 +98,6 @@ int xnode_from_sexp_char ( const char c, SEXP *sexp )
 {
     switch( sexp->state )
     {
-//      case SEXP_EXTERNAL:
-//        DEBUGI;
-//        if     ( c == '(' ) sexp->state = SEXP_TOPLEVEL;
-//        else if( c == ')' ) sexp->state = SEXP_NONE    ;
-//        DEBUGP;
-//        break;
       case SEXP_TOPLEVEL:
         if     ( c == '(' ) sexp->state = SEXP_TAG_NAME;
         else if( c == ')' ) sexp->state = SEXP_PARSED  ;
@@ -259,7 +253,6 @@ int xnode_from_sexp_chunk ( const char *src, SEXP *sexp, size_t len )
     }
 
     // erase as much of the buffer as we used up:
-    // fprintf( stderr, ">>> erasing %04d buffer bytes\n", s - start );
     g_string_erase( sexp->buffer, 0, s - start );
 
     if( sexp->state == SEXP_PARSED ) { return 0; }
@@ -272,11 +265,7 @@ int xnode_from_sexp_chunk ( const char *src, SEXP *sexp, size_t len )
         go = sexp->state != SEXP_PARSED;
     }
     
-    // fprintf( stderr, "chunk state: %d\n", sexp->state );
     // any leftover data goes into the buffer
-    // fprintf( stderr, ">>> storing  %04d buffer bytes\n", end - s   );
-    // fprintf( stderr, "    parsed   %04d source bytes\n", s   - src );
-    // fprintf( stderr, "    received %04d source bytes\n", end - src );
     g_string_append_len( sexp->buffer, s, end - s );
 
     return s - src;
@@ -437,7 +426,7 @@ _xnode_to_sexp( xmlnode *node, int *len, int depth )
 
     if( len ) *len = text->len;
 
-    return text; // g_string_free( text, FALSE );
+    return text;
 }
 
 char * xnode_to_sexp( xmlnode *node, int *len )
