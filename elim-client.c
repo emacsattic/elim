@@ -160,9 +160,6 @@ static gboolean sexp_handler(GIOChannel *io, GIOCondition cond, gpointer data)
             {
                 xmlnode    *root = parser.root;
                 xmlnode    *meth = xnode_first_child_tag( root );
-                // fprintf( stderr, "sexp root: %p; %s\n", root, root->name );
-                // fprintf( stderr, "sexp meth: %p; %s\n", meth, 
-                //          meth ? meth->name : "nil" );
                 if( meth )
                 {
                     sexp_func func =
