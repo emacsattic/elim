@@ -99,10 +99,12 @@ gboolean store_cb_data( char *key, gpointer value )
     if( !cb_data )
     {
         cb_data =
-          g_hash_table_new_full( g_str_hash, g_str_equal,  g_free, NULL );
+          g_hash_table_new_full( g_str_hash, g_str_equal, g_free, NULL );
     }
+
     fprintf( stderr, "storing callback data: %p\n",  value );
     g_hash_table_insert( cb_data, key, value );
+
     return TRUE;
 }
 
