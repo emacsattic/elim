@@ -253,7 +253,6 @@ int main ( int argc, char **argv )
 
     g_io_add_watch  ( in, IO_IN , (GIOFunc)sexp_handler, NULL   );
     g_io_add_watch  ( in, IO_ERR, (GIOFunc)quit_handler, gmloop );
-  //g_timeout_add   ( 1000, _heartbeat, NULL );
     sexp_init       ( &parser );
     g_main_loop_run ( gmloop  );
     sexp_exit       ( &parser );
