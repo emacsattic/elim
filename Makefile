@@ -37,7 +37,7 @@ DEFINES     := -D_GNU_SOURCE                 \
                 $(OLD_GLIB)HAS_ADD_SECONDS   \
                 $(OLD_GLIB)HAS_QUEUE_INIT    \
                 $(OLD_GLIB)HAS_GET_HASH_KEYS
-CFLAGS      += -Wall -std=c99 $(DEFINES)
+CFLAGS      += -Wall -g -O2 -std=c99 $(DEFINES)
 CFLAGS      += $(foreach P, $(PACKAGES), \
                          $(shell pkg-config --cflags $(subst $s,$S,$P))) 
 LDFLAGS     += $(foreach P, $(PACKAGES), \
