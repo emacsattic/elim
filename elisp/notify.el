@@ -32,6 +32,7 @@
 (defvar notify-action-invoked nil)
 (defvar notify-notice-closed  nil)
 (defvar notify-notifications  nil)
+(defvar notify-capabilities   nil)
 
 (defun notify-action (id action)
   (let ((handler (assq id notify-notifications)) callback)
@@ -45,6 +46,20 @@
     (when handler
       ;;(message "deleting handler for %S after close" id)
       (setq notify-notifications (assq-delete-all id notify-notifications)) )))
+
+(defun notify-cache-capabilities (&rest caps)
+  (let (ubuntu)
+    (setq caps
+          (cdr (assoc "return_caps"
+                      (dbus-util-unpack-return notify-service
+                                               nil
+                                               notify-interface
+                                               "get-capabilities" caps))))
+    (mapc (lambda (x)
+            (when (string-match "^x-canonical-" x) (setq ubuntu t))) caps)
+    ;; the ubuntu -osd implementation of actions is… special.
+    (when ubuntu (setq caps (delete "actions" caps)))
+    (setq notify-capabilities caps)))
 
 (defun notify-init ()
   "Idempotently initialise the `notify-service' interface and handlers.
@@ -68,6 +83,11 @@ Returns t if the interface was found, nil otherwise."
                                   notify-interface
                                   "NotificationClosed"
                                   'notify-closed)))
+
+  (or notify-capabilities
+      (dbus-util-call-method :session notify-service nil notify-interface
+                             "get-capabilities"
+                             'notify-cache-capabilities))
   (if notify-interface-spec t nil))
 
 (defun notify-exit ()
@@ -77,6 +97,7 @@ related handlers."
           (list notify-action-invoked notify-notice-closed)))
   (setq notify-interface-spec nil
         notify-action-invoked nil
+        notify-capabilities   nil
         notify-notice-closed  nil))
 
 (defun notify-show-message (&rest args)
