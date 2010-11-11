@@ -34,7 +34,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 xmlnode *
 xnode_first_child_tag ( xmlnode *node )
 {
-    for( node = node->child; node; node = node->next )
+    for( node && (node = node->child); node; node = node->next )
         if( node->type == XMLNODE_TYPE_TAG ) return node;
     return NULL;
 }
@@ -384,7 +384,8 @@ xnode_free( xmlnode *node )
 {
     xmlnode *x, *y;
 
-    g_return_if_fail( node != NULL );
+    if( !node )
+        return;
 
     /* if we're part of a tree, remove ourselves from the tree first */
     if( NULL != node->parent ) 
