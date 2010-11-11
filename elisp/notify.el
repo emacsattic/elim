@@ -130,6 +130,8 @@ You do not need to specify optional arguments either."
     ;; mask out the actions arg if the caps cache doesn't list actions
     (if (not (member "actions" notify-capabilities))
         (setq args (nconc '(:actions nil) args)))
+    ;; make a return value handler that takes the id of the notification
+    ;; and associates the action handler with it in the handler cache:
     (let ((action-handler (cadr (memq ::action-handler args))) return-handler)
       (setq return-handler
             `(lambda (id)
