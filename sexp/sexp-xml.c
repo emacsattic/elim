@@ -23,6 +23,7 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 #include "sexp-xml.h"
 #include "string.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define STATE                                                   \
     switch(sexp->state)                                         \
@@ -47,6 +48,8 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 
 #define DEBUGP     DEBUGP_off('+')
 #define DEBUGI     DEBUGP_off('-')
+
+static guint nulls_seen = 0;
 
 void sexp_init( SEXP *sexp )
 {   
@@ -96,6 +99,16 @@ xmlnode * xnode_from_sexp ( const char *sexp )
 
 int xnode_from_sexp_char ( const char c, SEXP *sexp )
 {
+    if (!c)
+    {
+        if (nulls_seen++ >= 50)
+        {
+            fprintf( stderr, "%u NULs in input, abort.\n", nulls_seen );
+            exit( 1 );
+        }
+        return 0;
+    }
+
     switch( sexp->state )
     {
       case SEXP_TOPLEVEL:
