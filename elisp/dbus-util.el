@@ -65,8 +65,8 @@
           (xml-get-children if 'method))
     sig))
 
-(defun dbus-util-argspec-to-cons (arg &optional name)
-  (when (equal (xml-get-attribute-or-nil arg 'direction) "in")
+(defun dbus-util-argspec-to-cons (arg &optional name io)
+  (when (equal (xml-get-attribute-or-nil arg 'direction) (or io "in"))
     (cons (or (xml-get-attribute-or-nil arg 'name) name)
           (xml-get-attribute arg 'type))))
 
