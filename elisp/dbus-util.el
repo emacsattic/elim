@@ -79,6 +79,16 @@
                  (setq idx (1+ idx))) arg)
            (xml-get-children method 'arg))) ))
 
+(defun dbus-util-method-args-out (method)
+  (let ((idx 0) arg)
+    (delq
+     nil
+     (mapcar
+      (lambda (node)
+        (if (setq arg (dbus-util-argspec-to-cons node (format "%d" idx) "out"))
+            (setq idx (1+ idx))) arg)
+      (xml-get-children method 'arg))) ))
+
 (defun dbus-util-coerce-value (value type)
   "Coerce an elisp VALUE to an appropriate form for passing to dbus methods
 expecting an argument matching TYPE (a dbus type signature string).
@@ -142,6 +152,18 @@ appropriate form for a dbus call to it."
                                          munge name t))
     (aset name 0 (downcase (aref name 0)))
     name))
+
+(defun dbus-util-unpack-return (service path interface name &optional arg-list)
+  (let (method-name method-spec arg-spec arg-name rval (i 0))
+    (setq method-name (dbus-util-uglify-name name)
+          method-spec (dbus-util-find-method service interface method-name path)
+          arg-spec    (dbus-util-method-args-out method-spec))
+    (while (or arg-spec arg-list)
+      (setq rval     (cons (cons (or (caar arg-spec) i) (car arg-list)) rval)
+            i        (1+ i)
+            arg-spec (cdr arg-spec)
+            arg-list (cdr arg-list)))
+    (nreverse rval)))
 
 (defun dbus-util-call-method (bus service path interface name handler
                               &optional args)
