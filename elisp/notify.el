@@ -127,6 +127,9 @@ Example:
 Since the arguments are named, you need not specify them in any order.
 You do not need to specify optional arguments either."
   (when (notify-init)
+    ;; mask out the actions arg if the caps cache doesn't list actions
+    (if (not (member "actions" notify-capabilities))
+        (setq args (nconc '(:actions nil) args)))
     (let ((action-handler (cadr (memq ::action-handler args))) return-handler)
       (setq return-handler
             `(lambda (id)
