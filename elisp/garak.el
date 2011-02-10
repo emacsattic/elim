@@ -511,11 +511,11 @@ returns its value, otherwise it returns `garak-flyspell-default-dictionary'."
             (lui-flyspell-change-dictionary (garak-conversation-dictionary))) ))
     buffer))
 
-(defun garak-mapbuffers (function &optional predicate &rest args)
+(defun garak-mapbuffers (proc function &optional predicate &rest args)
   "Call FUNCTION with ARGS for each garak buffer that matches PREDICATE.
 If PREDICATE is nil, all garak buffers are considered to match.
-Each time PREDICATE or FUNCTION is invoked, a garak buffer will be the
-current buffer.
+Each time PREDICATE or FUNCTION is invoked, a garak buffer associated with
+process PROC will be the current buffer.
 In addition, PREDICATE will receive the buffer as its only argument."
   (mapc
    (lambda (buffer)
@@ -567,13 +567,13 @@ In addition, PREDICATE will receive the buffer as its only argument."
   (garak-account-update proc name id 0 args))
 
 (defun garak-network-down (proc name id status args)
-  (garak-mapbuffers
+  (garak-mapbuffers proc
    (lambda (&rest x)
      (lui-insert
       (elim-add-face "* network disconnected *" 'garak-warning-face))) ))
 
 (defun garak-network-up (proc name id status args)
-  (garak-mapbuffers
+  (garak-mapbuffers proc
    (lambda (&rest x)
      (lui-insert
       (elim-add-face "* network restored *" 'garak-system-message-face)))) 
@@ -1951,7 +1951,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
           status (if status (symbol-name status) ":offline")
           tag    (or (elim-avalue status garak-icon-tags) ""))
     (if (and auid account status tag)
-        (garak-mapbuffers
+        (garak-mapbuffers proc
          (lambda ()
            (if (or icon (setq icon (tree-widget-find-image status)))
                (setq tag (propertize tag 'display icon)))
@@ -1966,7 +1966,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
           status (if status (symbol-name status) ":offline")
           tag    (or (elim-avalue status garak-icon-tags) ""))
     (if (and buddy auid bname status tag)
-        (garak-mapbuffers
+        (garak-mapbuffers proc
          (lambda ()
             (if (or icon (setq icon (tree-widget-find-image status)))
                (setq tag (propertize tag 'display icon)))
