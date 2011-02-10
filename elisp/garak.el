@@ -1637,7 +1637,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           (t (elim-debug "UI Account Operation `%S' not implemented" value))) ))
 
 (defun garak-buddy-list-node-widget (proc bnode)
-  (let (kids uid menu type name mtail plabel blabel auid aicon cname kids spred)
+  (let (kids uid menu type name mtail plabel blabel auid aicon cname rawk spred)
     (setq uid   (elim-avalue "bnode-uid"     bnode)
           cname (elim-avalue "contact-alias" bnode)
           type  (elim-avalue "bnode-type"    bnode)
@@ -1725,7 +1725,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
 ;    bnode))
 
 (defun garak-account-list-node-widget (process account)
-  (let (adata uid proto iname icon label aname)
+  (let (adata uid proto iname icon label aname alt)
     (setq uid   (car account)
           adata (cdr account)
           aname (elim-avalue :name  adata)
@@ -2132,7 +2132,7 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
   "This function handles updating the garak ui when the state of one of your
 accounts changes. Typically this is as a result of elim-account-status-changed
 elim-connection-state or elim-connection-progress, but any call can be handled as long as an \"account-uid\" entry is present in the ARGS alist."
-  (let (buffer auid where-widget point end icon-name
+  (let (buffer auid where-widget point end icon-name adata widget
         icon conn kids node tag proto iname alt atag aname)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
           auid   (elim-avalue "account-uid" args)
@@ -2241,7 +2241,8 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
               (delete-char -1)) )) )) ))
 
 (defun garak-buddy-list-choose-icon (widget buddy)
-  (let ((class (if (consp widget) (car widget) widget)) type blocked online)
+  (let ((class (if (consp widget) (car widget) widget))
+        type blocked online allowed)
     (setq type    (elim-avalue "bnode-type" buddy)
           allowed (elim-avalue "allowed"    buddy))
     (cond ((eq class 'tree-widget-empty-icon) ":invisible")
