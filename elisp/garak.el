@@ -326,6 +326,10 @@ leading up to this point."
                                          :pointer 'hand
                                          :ascent  'center
                                          :mask '(heuristic t)))) )))
+
+(defvar garak-icons nil
+  "Alist of names and icons \(images, see `create-image'\) to use in the gui")
+
 (defun garak-load-icons ()
   (when (and (not garak-icons) (file-directory-p garak-icon-directory))
     (setq garak-icons
@@ -333,9 +337,6 @@ leading up to this point."
                 (mapcar 'garak-file-attr-to-icon
                         (directory-files-and-attributes garak-icon-directory))))
     (length garak-icons)))
-
-(defvar garak-icons nil
-  "Alist of names and icons \(images, see `create-image'\) to use in the gui")
 
 (defvar garak-logo nil
   "The garak logo for the splash screen")
