@@ -15,6 +15,11 @@ libpurple
 Note that the makefile will try to detect these and will complain if it 
 can't find them.
 
+On a debian stable (squeeze) system you should install at least the
+following packages:
+
+libpurple-dev
+
 You will also need GNU Make and a C compiler.
 
 Assuming the build dependencies are all installed, all you should need to 
