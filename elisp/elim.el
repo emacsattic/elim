@@ -732,7 +732,7 @@ into any clients."
                                :notify 'elim-form-ui-ok-cb)
       (use-local-map widget-keymap)
       (widget-setup)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (widget-forward 1))
     (display-buffer field-buf)))
 
@@ -768,7 +768,7 @@ into any clients."
                                :notify 'elim-form-ui-ok-cb)
       (use-local-map widget-keymap)
       (widget-setup)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (widget-forward 1))
     (display-buffer field-buf)))
 
@@ -811,7 +811,7 @@ into any clients."
                                :notify 'elim-form-ui-ok-cb)
       (use-local-map widget-keymap)
       (widget-setup)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (widget-forward 1))
     (display-buffer action-buf)))
 
@@ -845,7 +845,7 @@ into any clients."
                                :notify 'elim-form-ui-ok-cb)
       (use-local-map widget-keymap)
       (widget-setup)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (widget-forward 1))
     (display-buffer auth-buf)))
 
