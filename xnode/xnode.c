@@ -34,8 +34,12 @@ along with elim.  If not, see <http://www.gnu.org/licenses/>.
 xmlnode *
 xnode_first_child_tag ( xmlnode *node )
 {
-    for( node && (node = node->child); node; node = node->next )
+    if( !node )
+        return NULL;
+
+    for( node = node->child; node; node = node->next )
         if( node->type == XMLNODE_TYPE_TAG ) return node;
+
     return NULL;
 }
 
