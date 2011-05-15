@@ -310,6 +310,15 @@ elim will inform you of conversation UIDs as they are created;
       (string ((name . "conv-name"    )) "fsbot"    ) 
       (string ((name . "text"         )) "møøse"    )))
 
+;; to start a conversation without sending a message, omit the 
+;; "text" argument or pass the empty string:
+  (function-call 
+    (message ((id . "108")))
+    (alist nil
+      (int    ((name . "account-uid"  )) "268435456")
+      (string ((name . "account-name" )) "USER@..." )
+      (string ((name . "im-protocol"  )) "prpl-irc" )
+      (string ((name . "conv-name"    )) "fsbot"    )))
 
   (function-response 
     (message ((id . "108")))

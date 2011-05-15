@@ -74,23 +74,32 @@ xmlnode * _h_elim_message ( const char *name ,
     PurpleConvIm   *pci = NULL;
     PurpleConvChat *pcc = NULL;
     const char     *msg = ALIST_VAL_STRING( args, "text" );
-    char           *esc = g_markup_escape_text( msg, -1 );
-    int             len = strlen( esc );
+    int             len = 0;
 
-    switch( pt )
+    if( msg )
     {
-      case PURPLE_CONV_TYPE_IM:
-        pci = purple_conversation_get_im_data( pc );
-        purple_conv_im_send( pci, esc );
-        break;
-      case PURPLE_CONV_TYPE_CHAT:
-        pcc = purple_conversation_get_chat_data( pc );
-        purple_conv_chat_send( pcc, esc );
-        break;
-      default:
-        g_free       ( esc  );
-        sexp_val_free( args );
-        return response_error( EINVAL, id, name, "unknown conversation type" );
+        char *esc = g_markup_escape_text( msg, -1 );
+
+        len = strlen( esc );
+
+        switch( pt )
+        {
+          case PURPLE_CONV_TYPE_IM:
+            pci = purple_conversation_get_im_data( pc );
+            purple_conv_im_send( pci, esc );
+            break;
+          case PURPLE_CONV_TYPE_CHAT:
+            pcc = purple_conversation_get_chat_data( pc );
+            purple_conv_chat_send( pcc, esc );
+            break;
+          default:
+            g_free       ( esc  );
+            sexp_val_free( args );
+            return response_error( EINVAL, id, name,
+                                   "unknown conversation type" );
+        }
+
+        g_free( esc  );
     }
 
     xmlnode *rval = xnode_new( "alist" );
@@ -98,7 +107,6 @@ xmlnode * _h_elim_message ( const char *name ,
     AL_PTR( rval, "conv-uid" , pc      );
     AL_STR( rval, "conv-name", purple_conversation_get_name(pc) );
 
-    g_free       ( esc  );
     sexp_val_free( args );
     fprintf(stderr, "(elim-debug leaving _h_elim_message)");
     return response_value( 0, id, name, rval );
