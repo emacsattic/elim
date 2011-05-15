@@ -42,6 +42,7 @@ CFLAGS      += $(foreach P, $(PACKAGES), \
                          $(shell pkg-config --cflags $(subst $s,$S,$P))) 
 LDFLAGS     += $(foreach P, $(PACKAGES), \
                          $(shell pkg-config --libs   $(subst $s,$S,$P))) 
+LDFLAGS     += -lm
 TVER        := $(shell etags --version | head -n 1 | grep -i exuberant)
 BINARIES    := elim-client
 CH_FILES    := $(wildcard *.c         ) \
