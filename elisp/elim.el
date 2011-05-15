@@ -553,7 +553,7 @@ into any clients."
 (defvar elim-form-ui-args nil)
 
 (defun elim-form-proto-values (widgets)
-  (let (value slot alist-cache)
+  (let (value slot alist-cache iname ivalue)
     (mapc
      (lambda (W)
        (setq iname  (widget-get W 'ident)
@@ -854,11 +854,12 @@ into any clients."
 (defun elim-init (process &optional ui-string user-dir)
   "Initialises the elim daemon. Not normally called by the user,
 as it relies on initialisation done by `elim-start'."
-  (let ((init-call nil)
-        (dummy     nil)
+  (let ((init-call  nil)
+        (dummy      nil)
+        (proto-call nil)
         (uiid     (or ui-string "elim"))
         (dir      (or user-dir  elim-directory))
-        (arglist   nil))
+        (arglist    nil))
     (setq arglist    (list         "dot-dir" dir "ui-id" uiid)
           arglist    (elim-simple-list-to-proto-alist arglist)
           proto-call (elim-daemon-call  'init   nil   arglist))
@@ -1229,7 +1230,7 @@ libpurple unregister support is too flaky right now." user-login-name)
 (defun elim-do-cmd  (process account conversation cmd)
   "Execute a CONVERSATION (name or uid) command CMD (a string, excluding the
 / prefix) as implemented by libpurple, on ACCOUNT (name or uid)."
-  (let (acct-args arglist conv-arg)
+  (let (acct-args arglist conv-arg text-arg)
     (setq acct-args (elim-account-proto-items process account)
           conv-arg  (cond ((numberp conversation)
                            (elim-atom-to-item "conv-uid"  conversation))
@@ -1246,7 +1247,7 @@ libpurple unregister support is too flaky right now." user-login-name)
   "Send a TEXT to ACCOUNT (name or uid) CONVERSATION (uid or name)
 via elim PROCESS. If CONVERSATION is a name then a new conversation
 may be started if none by that name exists."
-  (let (acct-args arglist conv-arg)
+  (let (acct-args arglist conv-arg text-arg)
     (setq acct-args (elim-account-proto-items  process account)
           conv-arg  (cond ((numberp conversation)
                            (elim-atom-to-item "conv-uid"  conversation))
