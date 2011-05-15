@@ -1077,7 +1077,9 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
   (let ((buffer (garak-conversation-buffer process args t)))
     (when (not buffer)
       (setq buffer (garak-conversation-buffer process args)))
-      buffer))
+    (display-buffer buffer)
+    (tracking-add-buffer buffer)
+    buffer))
 
 (defun garak-end-conversation (process call call-id status args)
   (let ((buffer (garak-conversation-buffer process args t)))
