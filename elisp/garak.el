@@ -106,6 +106,7 @@
     (cond ((eq (length raw) 2)         (concat     raw " "))
           ((eq (length raw) 1)         (concat " " raw " "))
           (t raw)) ))
+
 (defcustom garak-icon-tags '((":available"      . "[i]")
                              (":away"           . "[_]")
                              (":blocked"        . "(X)")
@@ -1531,6 +1532,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
       (setq buffer-undo-list t)
       (elim-init-ui-buffer)
       (garak-init-local-storage)
+      (make-local-variable 'garak-updated-blist-groups)
       (setq garak-elim-process proc)
       ;; initialise tree-widget support in this buffer
       (garak-icon-theme-init)
@@ -1983,16 +1985,36 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
 (defvar garak-update-buddy-requests nil)
 (defvar garak-update-buddy-timer    nil)
 (defvar garak-update-buddy-index    nil)
+(defvar garak-updated-blist-groups  nil)
 (defconst garak-update-buddy-block  100)
 
+(defun garak-apply-delayed-blist-updates (proc &optional buffer)
+  (if (not buffer)
+      (setq buffer (elim-fetch-process-data proc :blist-buffer)))
+  (if (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (let ((inhibit-redisplay nil) seen point widget)
+          (mapc
+           (lambda (puid) 
+             (when (not (member puid seen))
+               (setq seen  (cons puid seen)
+                     point (car (garak-ui-find-node puid :buddy)))
+               (and point (setq widget (widget-at point)) ;; found widget
+                    (garak-tree-widget-get widget :open)  ;; & it's open 
+                    (progn (widget-apply widget :action)
+                           (widget-apply widget :action))) ))
+           garak-updated-blist-groups)
+          (setq garak-updated-blist-groups nil)) )) )
+
 (defun garak-update-buddy-delayed (proc)
-  (let (reqs op fn req (i 0))
+  (sit-for 0)
+  (let (reqs op fn req buffer (i 0))
     (message "processing delayed buddy updates [%d buckets]" 
              (length garak-update-buddy-requests))
     ;; pop the oldest bucket off the queue:
     (setq reqs                        (car garak-update-buddy-requests)
           garak-update-buddy-requests (cdr garak-update-buddy-requests))
-    (message "%d buckets remaining" (length garak-update-buddy-requests))
+    ;; (message "%d buckets remaining" (length garak-update-buddy-requests))
     ;; process all the requests in the bucket:
     (while (and (< i (length reqs))
                 (setq req (aref reqs i)))
@@ -2004,16 +2026,21 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
       (sit-for 0 t))
     (if garak-update-buddy-requests
         (setq garak-update-buddy-timer
-              (run-with-idle-timer 2 nil 'garak-update-buddy-delayed proc))
-      (setq garak-update-buddy-timer nil)) ))
+              (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc))
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      ;; finally! we emptied the list of ui updates. unset the timer
+      (setq garak-update-buddy-timer nil)
+      (garak-apply-delayed-blist-updates proc)) ))
 
-(defun garak-queue-buddy-update (req &optional cache)
+(defun garak-queue-buddy-update (proc req &optional cache)
   ;; current cache bucket, if any
   (setq cache (car (last garak-update-buddy-requests)))
-  ;; if the bucket is full, reset the bucket pointer
-  (if (and garak-update-buddy-index 
-           (>= garak-update-buddy-index (length cache)))
-      (setq garak-update-buddy-index nil))
+  ;; if the bucket is full, reset the bucket pointer and apply any updates
+  ;; we've already processed from the cache:
+  (when (and garak-update-buddy-index
+             (>= garak-update-buddy-index (length cache)))
+    (setq garak-update-buddy-index nil)
+    (garak-apply-delayed-blist-updates proc))
   ;; if the bucket pointer is unset, initialise a new bucket
   (if (not garak-update-buddy-index)
       (setq garak-update-buddy-index 0
@@ -2027,106 +2054,53 @@ NODE-A and NODE-B must be standard (uid ((name . value) ...)) nodes or nil."
   (setq garak-update-buddy-index (1+ garak-update-buddy-index)))
 
 (defun garak-update-buddy-req (proc name id attr args)
-  (garak-queue-buddy-update (list name id attr args))
+  (garak-queue-buddy-update proc (list name id attr args))
   (when (not garak-update-buddy-timer)
     (setq garak-update-buddy-timer
-          (run-with-idle-timer 2 nil 'garak-update-buddy-delayed proc)) ))
+          (run-with-idle-timer 3 nil 'garak-update-buddy-delayed proc)) ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;!! update icon of visible node
+;;!! update icon of a visible(?) node
 (defun garak-update-buddy (proc name id status args)
-  (let (;;(inhibit-redisplay t)
-        buid buddy where-widget point widget icon-name icon buffer tag other
-        proto auid)
+  (let (buid buddy where-widget point widget buffer other)
     (setq buffer (elim-fetch-process-data proc :blist-buffer)
           buid   (elim-avalue    "bnode-uid" args)
           buddy  (elim-buddy-data       proc buid))
     (garak-update-buddy-conversations proc buddy)
-    (sit-for 0 t)
+    (sit-for 0 t) ;; allow the user to grab control/focus here
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq other (garak-buddy-list-skip proc buddy))
-        (if (setq auid  (elim-avalue "account-uid" buddy))
-            (setq proto (elim-avalue :proto (elim-account-data proc auid))))
+
         ;; if the bnode is not in the "ignored" class, buddy will eq other:
         (when (eq buddy other)
-          (setq buid         (elim-avalue "bnode-uid"   args)
-                where-widget (garak-ui-find-node buid :buddy))
-          ;; if where-widget is nil, the bnode is not displayed: find the
-          ;; parent node and clear its cache, and refresh it if it's open:
-          (if (not where-widget)
-              (let ((puid (garak-buddy-find-parent proc buid)) parent kfun kids)
-                (if (setq where-widget (garak-ui-find-node puid :buddy))
-                    (progn
-                      (setq parent (elim-buddy-data proc puid)
-                            point  (car where-widget)
-                            widget (widget-at  point))
-                      (when (and (memq (elim-avalue "bnode-type" parent)
-                                       '(:group-node :contact-node))
-                                 (garak-tree-widget-get widget :node))
-                        (setq kids (garak-tree-widget-apply widget :expander))
-                        (garak-tree-widget-set widget :args kids)
-                        (when (garak-tree-widget-get widget :open)
-                          (let ((inhibit-redisplay t))
-                            (widget-apply widget :action)
-                            (widget-apply widget :action))) ))
-                  (save-excursion
-                    (goto-char (point-max))
-                    (garak-insert-buddy-list-top proc
-                                                 (elim-buddy-data proc puid)))))
-            (sit-for 0 t)
-            ;; the widget is currently visible. tweak it by hand
-            ;; as this seems to be the only reliable way to refresh it:
-            (setq point     (car where-widget)
-                  end       (next-single-char-property-change point 'display)
-                  widget    (cdr where-widget)
-                  icon-name (garak-buddy-list-choose-icon widget buddy)
-                  tag       (elim-avalue icon-name garak-icon-tags)
-                  icon      (tree-widget-find-image icon-name))
-            (let ((inhibit-read-only t) 
-                  (inhibit-modification-hooks t)
-                  name alias old old-label new-label label)
-              (when (eq widget 'tree-widget-leaf-icon)
-                (setq widget (widget-at point)
-                      old    (widget-get widget :tag))
-                (widget-put widget :tag tag)
-                (if (and icon (tree-widget-use-image-p))
-                    (put-text-property point end 'display icon)
-                  (when tag
-                    (setq end (+ point (length old)))
-                    (save-excursion
-                      (goto-char point)
-                      (setq old (make-string (length old) ?.))
-                      (when (search-forward-regexp old end t)
-                        (replace-match tag nil t)) )) ))
-              ;; update the label in the widget and the buffer itself:
-              (when (memq (elim-avalue "bnode-type" buddy) 
-                          '(:buddy-node :chat-node :contact-mode))
-                (save-excursion
-                  (goto-char point)
-                  (if (not (widget-get (widget-at) :buddy))
-                      (widget-forward 1))
-                  (setq label     (garak-buddy-node-label buddy)
-                        old-label (widget-get (widget-at) :tag)
-                        new-label (replace-regexp-in-string  
-                                   "^ ?.*" label old-label nil nil 0))
-                  ;; if there's not a tree-widget-leaf-icon, we need to kludge
-                  ;; that status icon tag into the label instead (this happens
-                  ;; when in a terminal or with a non-image-capable emacs)
-                  (if (not (eq (cdr where-widget) 'tree-widget-leaf-icon))
-                      (setq new-label (concat tag new-label)))
-                  ;; reattach the protocol icon if we have one:
-                  (if (tree-widget-use-image-p) 
-                      (setq proto (tree-widget-find-image (concat ":" proto)))
-                    (setq proto nil))
-                  (if proto
-                      (setq new-label
-                            (concat (propertize " " 'display proto) new-label)))
-                  ;; now write it into the buffer if it has changed:
-                  (when (not (equal new-label old-label))
-                    (widget-put (widget-at) :tag new-label)
-                    (when (re-search-forward ".+" nil t)
-                      (replace-match new-label t t))) )))) ))) ))
+          (setq buid (elim-avalue "bnode-uid" args))
+
+          ;; find the parent node and reset its kids list and cache:
+          (let ((puid (garak-buddy-find-parent proc buid)) parent kids group)
+            (setq where-widget (garak-ui-find-node puid :buddy)
+                  parent       (elim-buddy-data proc puid)
+                  point        (car where-widget)
+                  widget       (widget-at point))
+            (when (and (memq (elim-avalue "bnode-type" parent)
+                             '(:group-node :contact-node))
+                       (garak-tree-widget-get widget :node))
+              (setq kids (garak-tree-widget-apply widget :expander)
+                    group t)
+              (garak-tree-widget-set widget :args kids))
+
+            ;; if the parent widget was not visible, add it now:
+            (if where-widget
+                nil ;; nothing to do here, visible widgets are updated later
+              (save-excursion
+                (goto-char (point-max))
+                (garak-insert-buddy-list-top proc (elim-buddy-data proc puid))))
+
+            ;; remember that we need to update this group (if it's a group
+            ;; or contact, weird if it's not, but hey):
+            (if group
+                (setq garak-updated-blist-groups
+                      (cons puid garak-updated-blist-groups)) )) )) )))
 
 (defalias 'garak-connection-progress 'garak-account-update)
 (defun garak-account-update (proc name id status args)
