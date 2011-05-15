@@ -1599,6 +1599,7 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
           ((eq op :info) (elim-buddy-info   proc auid buid))
           ((eq op :xfer) (elim-send-file    proc auid buid))
           ((eq op :priv) (elim-toggle-user-blocked proc buid auid))
+          ((eq op :msg ) (elim-message proc auid bname nil))
           ((eq op :menu)
            (lexical-let ((m-event event))
              (setq menu-cb 
@@ -1606,8 +1607,6 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                      (garak-buddy-menu-response-handler 
                       proc name id attr args m-event)))
              (elim-buddy-menu proc buid menu-cb) ))
-          ((eq op :msg ) (elim-message proc auid bname
-                                       (read-string (format "IM %s> " bname))))
           (t (elim-debug "UI Buddy Operation `%S' not implemented" op))) ))
 
 (defun garak-maybe-remove-account (account)
@@ -2497,7 +2496,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
       (setq buddy   (match-string 1 args)
             message (substring args (match-end 0)))
       (if (not (string-match "\\S-" message))
-          (setq message (read-string (format "IM %s> " buddy))))
+          (setq message nil))
       (elim-message garak-elim-process account buddy message)
       (setq rval (format "/msg %s" args)) )
     rval))
