@@ -3,7 +3,7 @@ Use at your own peril.
 
 It is available under the GPL, as detailed in COPYING, and the 
 documentation is available under the GFDL with no invariant sections,
-supplied in  doc/COPYING.
+supplied in doc/COPYING.
 
 Having said that, you will need the following packages (including header files,
 if your distro ships the -dev or -devel part as a separate package):
@@ -14,6 +14,11 @@ libpurple
 
 Note that the makefile will try to detect these and will complain if it 
 can't find them.
+
+On a debian stable (squeeze) system you should install at least the
+following packages:
+
+libpurple-dev
 
 You will also need GNU Make and a C compiler.
 
