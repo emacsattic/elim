@@ -1,4 +1,4 @@
-;; Copyright © 2009, 2010 Vivek Dasmohapatra 
+;; Copyright © 2009-2011 Vivek Dasmohapatra 
 
 ;; email : vivek@etla.org
 ;; irc   : fledermaus on freenode, oftc
