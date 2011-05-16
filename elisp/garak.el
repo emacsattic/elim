@@ -18,14 +18,15 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with elim.  If not, see <http://www.gnu.org/licenses/>.
-(require 'lui   nil t)
-(require 'elim  nil t)
-(require 'widget     )
-(require 'tree-widget)
-(require 'time-date  )
-(require 'image      )
-(require 'notify     )
-(require 'ispell     )
+(eval-when-compile 
+  (require 'lui   nil t)
+  (require 'elim  nil t)
+  (require 'widget     )
+  (require 'tree-widget)
+  (require 'time-date  )
+  (require 'image      )
+  (require 'notify     )
+  (require 'ispell     ))
 
 (let ((load-path (cons (file-name-directory
                         (or load-file-name buffer-file-name)) load-path)))
@@ -244,6 +245,8 @@ It should return one of:\n
 (put 'garak-account-presence 'risky-local-variable t)
 (put 'garak-contact-presence 'risky-local-variable t)
 
+(defvar garak-roomlist-field nil)
+(defvar garak-roomlist-index nil)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; widgets
 (defconst garak-ui-widget-navigation
@@ -928,49 +931,45 @@ In addition, PREDICATE will receive the buffer as its only argument."
 
 (defun garak-roomlist-join-at (e &rest x)
   (interactive (list (this-command-keys)))
-  (when (vectorp e) (setq e (aref e 0)))
-  (setq line (line-number-at-pos 
-              (if (eventp e)
-                  (posn-point (event-start e))
-                (point)))
-        spec (elim-chat-parameters garak-elim-process 
-                                   garak-im-protocol)
-        room (assoc line garak-roomlist-index))
-  (let ((room-name (car room))
-        (room-fields (cdr room))
-        argv)
-    (while (setq req (car spec))
-      (setq arg (car req))
-      (setq argv (cons arg argv))
-      (if (setq param (assoc arg room-fields))
-          (setq argv (cons (cdr param) argv))
-        (let ((secret (cdr (assoc "secret" (cdr req))))
-              (required (cdr (assoc "required" (cdr req)))))
-          (setq help  (if required "" " (enter - to ignore)")
-                value (if secret
-                          (read-passwd (concat arg help ": "))
-                        (read-string (concat arg help ": ") nil nil nil t)))
-          (setq argv (cons value argv))))
-      (setq spec (cdr spec)))
-    (setq argv (nreverse argv))
-    (elim-join-chat garak-elim-process garak-account-uid "" argv)))
-
+  (let (line spec room req param arg help value)
+    (when (vectorp e) (setq e (aref e 0)))
+    (setq line (line-number-at-pos 
+                (if (eventp e)
+                    (posn-point (event-start e))
+                  (point)))
+          spec (elim-chat-parameters garak-elim-process 
+                                     garak-im-protocol)
+          room (assoc line garak-roomlist-index))
+    (let ((room-name   (car room))
+          (room-fields (cdr room)) argv)
+      (while (setq req (car spec))
+        (setq arg  (car req)
+              argv (cons arg argv))
+        (if (setq param (assoc arg room-fields))
+            (setq argv (cons (cdr param) argv))
+          (let ((secret (cdr (assoc "secret" (cdr req))))
+                (required (cdr (assoc "required" (cdr req)))))
+            (setq help  (if required "" " (enter - to ignore)")
+                  value (if secret
+                            (read-passwd (concat arg help ": "))
+                          (read-string (concat arg help ": ") nil nil nil t)))
+            (setq argv (cons value argv))))
+        (setq spec (cdr spec)))
+      (setq argv (nreverse argv))
+      (elim-join-chat garak-elim-process garak-account-uid "" argv))))
 
 (defun garak-roomlist-set-keymap ()
   (set (make-local-variable 'garak-roomlist-menu)
        (make-sparse-keymap "Actions") )
   (define-key garak-roomlist-menu "j"
     (list 'menu-item "(Join)" 'garak-roomlist-join-at))
-  (setq menu (if (current-local-map)
-                 (copy-keymap (current-local-map))
-               (make-sparse-keymap)))
-  (define-key menu [return] garak-roomlist-menu)
-  (define-key menu "j" 'garak-roomlist-join-at)
-  (define-key menu "q" 'kill-this-buffer)
-  (define-key menu "p" 'previous-line)
-  (define-key menu "n" 'next-line)
-  (use-local-map menu))
-
+  (let ((menu (if (current-local-map)
+                  (copy-keymap (current-local-map))
+                (make-sparse-keymap))))
+    (define-key menu (kbd "<down-mouse-1>") garak-roomlist-menu)
+    (define-key menu (kbd "RET") 'garak-roomlist-join-at)
+    (define-key menu "q" 'kill-this-buffer)
+    (use-local-map menu)))
 
 (defun garak-roomlist-buffer (proc args)
   (let* ((account-name (elim-avalue "account-name" args)) 
@@ -978,7 +977,8 @@ In addition, PREDICATE will receive the buffer as its only argument."
          (im-protocol  (elim-avalue "im-protocol"  args))
          (roomlist-id  (elim-avalue "roomlist-id"  args))
          (buf-store    (elim-fetch-process-data proc :roomlist-buffers))
-         (buf          (elim-avalue roomlist-id buf-store)))
+         (buf          (elim-avalue roomlist-id buf-store))
+         buf-name)
     (when (and buf (not (buffer-live-p buf)))
       (rassq-delete-all buf buf-store)
       (setq buf nil))
@@ -994,8 +994,7 @@ In addition, PREDICATE will receive the buffer as its only argument."
               garak-elim-process proc
               garak-account-uid  account-uid
               garak-account-name account-name
-              garak-im-protocol  im-protocol
-              garak-roomlist-id  roomlist-id)
+              garak-im-protocol  im-protocol)
         (set (make-local-variable 'garak-roomlist-fields) nil)
         (set (make-local-variable 'garak-roomlist-index) nil)
         (garak-roomlist-set-keymap) ))
@@ -2755,7 +2754,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
                                                items args account-data))
     (if account-data
         (progn (elim-list-chats garak-elim-process account)
-            (format "/list %s" args))
+               (format "/list %s" args))
       (format "/list %s: no account found" args)) ))
 
 (defun garak-cmd-account-generic (cmd elim-op args)
