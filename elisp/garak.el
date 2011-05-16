@@ -374,6 +374,11 @@ leading up to this point."
     (elim-conv-destroy           . garak-end-conversation    )
     (elim-chat-add-users         . garak-chat-add-users      )
     (command                     . garak-command-response    )
+    ;; roomlist
+    (elim-roomlist-create        . garak-roomlist-create     )
+    (elim-roomlist-add           . garak-roomlist-add        )
+    (elim-roomlist-set-field     . garak-roomlist-set-field  )
+    (elim-roomlist-in-progress   . garak-roomlist-in-progress) 
     ;; accounts:
     (add-account                 . garak-account-update      )
     (remove-account              . garak-account-update      )
@@ -905,6 +910,185 @@ In addition, PREDICATE will receive the buffer as its only argument."
             (lui-insert (elim-add-face (format "/%s" cmd)
                                        'garak-system-message-face))) ))
       (warn "%S response %s %S: no target buffer" call call-id args)) ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; roomlist 
+(defvar garak-roomlist-index nil)
+(defvar garak-roomlist-fields nil)
+(defvar garak-roomlist-menu nil)
+
+;; (defun garak-roomlist-field-find (name fields)
+;;   (if fields
+;;       (if (equal (cdr (assoc "name" (car fields))) name)
+;;           0
+;;         (let ((r (garak-roomlist-field-is-hidden name (cdr fields))))
+;;           (if (or (equal r 0) (equal r 1)) 
+;;               (+ r 1)
+;;               nil)) ))
+
+(defun garak-roomlist-join-at (e &rest x)
+  (interactive (list (this-command-keys)))
+  (when (vectorp e) (setq e (aref e 0)))
+  (setq line (line-number-at-pos 
+              (if (eventp e)
+                  (posn-point (event-start e))
+                (point)))
+        spec (elim-chat-parameters garak-elim-process 
+                                   garak-im-protocol)
+        room (assoc line garak-roomlist-index))
+  (let ((room-name (car room))
+        (room-fields (cdr room))
+        argv)
+    (while (setq req (car spec))
+      (setq arg (car req))
+      (setq argv (cons arg argv))
+      (if (setq param (assoc arg room-fields))
+          (setq argv (cons (cdr param) argv))
+        (let ((secret (cdr (assoc "secret" (cdr req))))
+              (required (cdr (assoc "required" (cdr req)))))
+          (setq help  (if required "" " (enter - to ignore)")
+                value (if secret
+                          (read-passwd (concat arg help ": "))
+                        (read-string (concat arg help ": ") nil nil nil t)))
+          (setq argv (cons value argv))))
+      (setq spec (cdr spec)))
+    (setq argv (nreverse argv))
+    (elim-join-chat garak-elim-process garak-account-uid "" argv)))
+
+
+(defun garak-roomlist-set-keymap ()
+  (set (make-local-variable 'garak-roomlist-menu)
+       (make-sparse-keymap "Actions") )
+  (define-key garak-roomlist-menu "j"
+    (list 'menu-item "(Join)" 'garak-roomlist-join-at))
+  (setq menu (if (current-local-map)
+                 (copy-keymap (current-local-map))
+               (make-sparse-keymap)))
+  (define-key menu [return] garak-roomlist-menu)
+  (define-key menu "j" 'garak-roomlist-join-at)
+  (define-key menu "q" 'kill-this-buffer)
+  (define-key menu "p" 'previous-line)
+  (define-key menu "n" 'next-line)
+  (use-local-map menu))
+
+
+(defun garak-roomlist-buffer (proc args)
+  (let* ((account-name (elim-avalue "account-name" args)) 
+         (account-uid  (elim-avalue "account-uid"  args))
+         (im-protocol  (elim-avalue "im-protocol"  args))
+         (roomlist-id  (elim-avalue "roomlist-id"  args))
+         (buf-store    (elim-fetch-process-data proc :roomlist-buffers))
+         (buf          (elim-avalue roomlist-id buf-store)))
+    (when (and buf (not (buffer-live-p buf)))
+      (rassq-delete-all buf buf-store)
+      (setq buf nil))
+    (when (not buf)
+      (setq buf-name  (format "*Room List for %s.%d*" account-name account-uid)
+            buf       (generate-new-buffer buf-name)
+            buf-store (cons (cons roomlist-id buf) buf-store))
+      (elim-store-process-data proc :roomlist-buffers buf-store)
+      (with-current-buffer buf
+        (elim-init-ui-buffer)
+        (garak-init-local-storage)
+        (setq elim-form-ui-args  args
+              garak-elim-process proc
+              garak-account-uid  account-uid
+              garak-account-name account-name
+              garak-im-protocol  im-protocol
+              garak-roomlist-id  roomlist-id)
+        (set (make-local-variable 'garak-roomlist-fields) nil)
+        (set (make-local-variable 'garak-roomlist-index) nil)
+        (garak-roomlist-set-keymap) ))
+      buf))
+
+(defun garak-roomlist-create (proc name id status args)
+  (let ((buf (garak-roomlist-buffer proc args)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t)) (erase-buffer))
+      (setq garak-roomlist-field nil)
+      (setq garak-roomlist-index nil)
+      (toggle-read-only 1))
+    (display-buffer buf) ))
+
+(defun insert-formatted-str-field (f) 
+  (ignore-errors (insert (concat (substring (format "%-24s" f) 0 24) " | "))))
+
+(defun insert-formatted-sep-field (c) 
+  (ignore-errors (insert (format "%24s-+-" (make-string 24 c)))))
+
+(defun garak-roomlist-set-field (proc name id status args)
+  (let ((buf (garak-roomlist-buffer proc args)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (setq garak-roomlist-fields (elim-avalue "fields" args))
+        (save-excursion
+          (goto-char (point-min))
+          (insert-formatted-str-field "Room")
+          (mapc (lambda (x)
+                  (when (not (elim-avalue "field-hidden" x))
+                    (insert-formatted-str-field (elim-avalue "field-label" x))))
+                garak-roomlist-fields)
+          (insert "\n")
+          ;; insert separator
+          (insert-formatted-sep-field ?-)
+          (mapc (lambda (x)
+                  (when (not (elim-avalue "field-hidden" x))
+                    (insert-formatted-sep-field ?-))) garak-roomlist-fields)
+          (insert "\n"))))
+    (display-buffer buf)))
+
+(defun garak-roomlist-field-is-hidden (name fields)
+  (if (not name) (error "Invalid field name: %S" name))
+  (if (not fields) (elim-debug "Field not found : %S" name))
+  (when (and name fields)
+    (if (equal (cdr (assoc "field-name" (car fields))) name)
+        (cdr (assoc "field-hidden" (car fields)))
+      (garak-roomlist-field-is-hidden name (cdr fields)))))
+  
+(defun garak-roomlist-add (proc name id status args)
+  (let* ((roomlist-id (elim-avalue "roomlist-id"  args))
+         (buf-store   (elim-fetch-process-data proc :roomlist-buffers))
+         (buf         (elim-avalue roomlist-id buf-store))
+         (fields      (elim-avalue "fields" args))
+         (room-name   (elim-avalue "room-name" args)))
+    (when buf
+      (with-current-buffer buf
+        (let ((inhibit-read-only t))
+          (save-excursion 
+            (goto-char (point-max))
+            (setq garak-roomlist-index 
+                  (cons (cons (line-number-at-pos) (cons room-name fields))
+                        garak-roomlist-index))
+            (insert-formatted-str-field room-name)
+            (mapc (lambda (x)
+                    (let ((hidden (garak-roomlist-field-is-hidden 
+                                   (car x) garak-roomlist-fields))
+                          (value (cdr x)))
+                      (when (not hidden)
+                        (cond ((stringp value)
+                               (insert-formatted-str-field value))
+                              ((integerp value)
+                               (insert-formatted-str-field 
+                                (int-to-string value)))
+                              ((booleanp value)
+                               (insert-formatted-str-field 
+                                (if value "True" "")))))))
+                  fields)
+            (insert "\n")))))))
+
+(defun garak-roomlist-in-progress (proc name id status args)
+  (let ((buf (garak-roomlist-buffer proc args))
+        (in-progress (elim-avalue "in-progress" args)))
+    (when (not in-progress)
+      (with-current-buffer buf
+        (let ((inhibit-read-only t))
+          (save-excursion
+            (goto-char (point-max))
+            (insert (format "\n\nListed %d rooms from %s.\n" 
+                            (length garak-roomlist-index)
+                            garak-account-name)))))
+      (display-buffer buf))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun garak-time-since (time-t)
   (let ((delay    (- (float-time) time-t))
@@ -2565,6 +2749,15 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (elim-leave-conversation garak-elim-process garak-conv-uid)
     "/part"))
 
+(defun garak-cmd-list-chats (args)
+  (let (items account account-data proto spec options)
+    (setq account (garak-cmd-strip-account-arg garak-elim-process
+                                               items args account-data))
+    (if account-data
+        (progn (elim-list-chats garak-elim-process account)
+            (format "/list %s" args))
+      (format "/list %s: no account found" args)) ))
+
 (defun garak-cmd-account-generic (cmd elim-op args)
   (let ( (account-data
           (or (elim-account-data garak-elim-process args)
@@ -2601,6 +2794,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (help         . garak-cmd-help             )
     (join         . garak-cmd-join             )
     (leave        . garak-cmd-leave            )
+    (list-chats   . garak-cmd-list-chats       )
     (msg          . garak-cmd-msg              )
     (prefs        . garak-cmd-prefs            )
     (quit         . garak-cmd-quit             )
@@ -2628,6 +2822,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
    ((string-match "\\(?:^\\|/\\)join\\(?:.\\S-+\\)?\\>" cmd) 'join        )
    ((string-match "\\(?:^\\|/\\)part\\>"                cmd) 'leave       )
    ((string-match "\\(?:^\\|/\\)leave\\>"               cmd) 'leave       )
+   ((string-match "\\(?:^\\|/\\)list\\>"                cmd) 'list-chats  )
    ((string-match "\\(?:^\\|/\\)prefs\\>"               cmd) 'prefs       )
    ((string-match "\\(?:^\\|/\\)\\(?:priv\\)?msg\\>"    cmd) 'msg         )
    ((string-match "\\(?:^\\|/\\)register\\>"            cmd) 'register    )
@@ -2665,11 +2860,11 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; completion:
 (defvar garak-commands
-  '( "/add-account" "/add-buddy"      "/alias"        "/configure-account"
-     "/connect"     "/disconnect"     "/login"        "/logoff"
-     "/logout"      "/msg"            "/prefs"        "/quit"
-     "/register"    "/remove-account" "/remove-buddy" "/send"       
-     "/status" ))
+  '( "/add-account" "/add-buddy"    "/alias"          "/configure-account"
+     "/connect"     "/disconnect"   "/list"           "/login"
+     "/logoff"      "/logout"       "/msg"            "/prefs"
+     "/quit"        "/register"     "/remove-account" "/remove-buddy" 
+     "/send"        "/status" ))
 
 (defvar garak-command-completers
   '((add-account . garak-comp-add-account)
@@ -2685,7 +2880,8 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
     (set-icon    . garak-comp-account-file)
     (status      . garak-comp-status     )
     (help        . garak-comp-help       )
-    (join        . garak-comp-join       )))
+    (join        . garak-comp-join       )
+    (list-chats  . garak-comp-account    )))
 
 (defun garak-comp-add-account (prefix &optional protocol)
   (let (proto args available)

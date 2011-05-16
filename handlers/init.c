@@ -1,5 +1,5 @@
 /*
-Copyright © 2009-2011 Vivek Dasmohapatra 
+Copyright © 2009-2011 Vivek Dasmohapatra
 
 email : vivek@etla.org
 irc   : fledermaus on freenode, oftc
@@ -51,8 +51,9 @@ xmlnode * _h_elim_init ( const char *name ,
     purple_connections_set_ui_ops  ( &elim_connections_ui_ops  );
     purple_conversations_set_ui_ops( &elim_conversation_ui_ops );
     purple_notify_set_ui_ops       ( &elim_notify_ui_ops       );
+    purple_roomlist_set_ui_ops     ( &elim_roomlist_ui_ops     );
 
-    // load any data for init:    
+    // load any data for init:
     if( purple_get_core() == NULL )
     {
         // purple debug goes to stdout if we don't divert it here:

@@ -95,7 +95,14 @@ flags rather than simple enumerations.")
     ;; chat
     (elim-chat-add-users        )
     (elim-chat-remove-users     )
-    (elim-chat-rename-user      ) )
+    (elim-chat-rename-user      )
+    ;; roomlist
+    (elim-roomlist-show         )
+    (elim-roomlist-create       )
+    (elim-roomlist-add          )
+    (elim-roomlist-set-field    )
+    (elim-roomlist-in-progress  )
+    (elim-roomlist-destroy      ))
   "Alist of function call handlers. The car of a given element is the
 elim protocol function symbol. The cdr is the handler function, or nil
 if the symbol to look for is the same as that of the protocol function.")
@@ -345,7 +352,7 @@ and return an s-expression suitable for making a call to an elim daemon."
               (delete-region pt (point))))
         (error
          (elim-debug "input filter: -- no more sexps remaining --")
-       (goto-char pt)))
+         (goto-char pt)))
       (when sexp-list
         (mapc
          (lambda (S) (elim-handle-sexp process S))
@@ -1330,6 +1337,14 @@ must also be supplied."
           arglist   (nconc (list 'alist nil chat-arg) acct-args optitems))
     (elim-process-send process
                        (elim-daemon-call 'join-chat nil arglist)) ))
+
+(defun elim-list-chats (process account)
+  (let ((account-data (elim-account-data process account)) arglist)
+    (if account-data
+        (setq account (car account-data))
+      (error "No such account: %S" account))
+    (setq arglist (list 'alist nil (elim-atom-to-item "account-uid" account)))
+    (elim-process-send process (elim-daemon-call 'list-chats nil arglist))))
 
 (defun elim-account-options (process account &optional callback)
   (let ((account-data (elim-account-data process account)) arglist)
