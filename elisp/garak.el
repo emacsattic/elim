@@ -188,7 +188,10 @@ substitute these characters for the basic ascii ones:\n
                (function :tag "this function returns a non-nil value")))
 
 (defcustom garak-alert-methods nil
-  "The mechanism(s) to use when alerting a user."
+  "The mechanism(s) to use when alerting a user.
+If the user-supplied-functions option below is selected, each function
+specified is called in turn, and receives the same arguments as 
+`garak-alert-user'"
   :group 'garak
   :tag "Alert by: "
   :type '(set (file   :tag "Playing this sound")
@@ -1122,8 +1125,7 @@ In addition, PREDICATE will receive the buffer as its only argument."
 (defun garak-alert-user (process buffer ctype flags who title is-new text args)
   "Potentially alert the user to a new message, depending on the
 content of `garak-alert-when'. The alert method(s) will depend on
-`garak-alert-sound', `garak-alert-desktop-notice' and `garak-alert-custom'.
-
+the value of `garak-alert-methods'.\n
 PROCESS : the elim process
 BUFFER  : the buffer we are raising an alert for
 WHO     : the name (or alias) of the message sender, as displayed in BUFFER
@@ -1166,6 +1168,9 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
       (mapc 
        (lambda (how) 
          (cond ((stringp    how) (play-sound-file how))
+               ((functionp  how)
+                (funcall how
+                         process buffer ctype flags who title is-new text args))
                ((eq :notify how)
                 (setq icon       (elim-avalue ":garak48x48" garak-icons)
                       icon       (or (cadr (memq :file icon)) "/dev/null")
