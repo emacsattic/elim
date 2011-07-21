@@ -18,7 +18,7 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with elim.  If not, see <http://www.gnu.org/licenses/>.
-(eval-when-compile 
+(eval-and-compile
   (require 'lui   nil t)
   (require 'elim  nil t)
   (require 'widget     )
