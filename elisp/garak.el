@@ -231,6 +231,11 @@ It should return one of:\n
 (defvar garak-dead-conversation-buffers nil)
 (defvar garak-recent-alerts             nil)
 
+(defcustom garak-ui-buffer-name "*Garak*"
+  "The name of the garak ui buffer"
+  :group 'garak
+  :type 'string)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; variables local to a garak conversation buffer
 (defvar garak-elim-process nil)
@@ -1711,9 +1716,9 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
         (icons   (copy-sequence garak-icons))
         (keymap  nil)
         (bbuffer (or (elim-fetch-process-data proc :blist-buffer) 
-                     (get-buffer "*Garak*"))))
+                     (get-buffer garak-ui-buffer-name))))
     (when (not (garak-buffer-reusable proc bbuffer))
-      (setq bbuffer (generate-new-buffer "*Garak*")
+      (setq bbuffer (generate-new-buffer garak-ui-buffer-name)
             keymap  garak-tree-widget-button-keymap))
     (elim-store-process-data proc :blist-buffer bbuffer)
     (with-current-buffer bbuffer
