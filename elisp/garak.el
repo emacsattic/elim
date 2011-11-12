@@ -472,6 +472,9 @@ returns its value, otherwise it returns `garak-flyspell-default-dictionary'."
         garak-flyspell-default-dictionary)
     ""))
 
+(defun garak-kill-conversation-buffer-hook-function ()
+  (elim-leave-conversation garak-elim-process garak-conv-uid))
+
 (defun garak-conversation-buffer (proc args &optional do-not-create)
   (let ((uid   (elim-avalue "conv-uid"  args))
         (cname (elim-avalue "conv-name" args)) buffer)
@@ -508,6 +511,9 @@ returns its value, otherwise it returns `garak-flyspell-default-dictionary'."
                                                " - "
                                                garak-contact-presence
                                                garak-conv-name)))
+            (add-hook 'kill-buffer-hook
+                      'garak-kill-conversation-buffer-hook-function
+                      nil 't)
             (let ((status (elim-account-status proc garak-account-uid))
                   icon tag)
               (setq status (elim-avalue "status-type" status)
