@@ -2990,7 +2990,7 @@ elim-connection-state or elim-connection-progress, but any call can be handled a
   "Complete /status commands of the form:\n
   /status :type-symbol label ... OR
   /status standard-label ..."
-  (let (args type )
+  (let (args type name)
     (setq args (split-string prefix split-string-default-separators nil)
           type (or (nth 1 args) "")
           name (or (nth 2 args) ""))
