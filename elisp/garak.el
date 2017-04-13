@@ -1186,14 +1186,14 @@ ARGS    : The raw args passed to whatever function called garak-alert-user"
                 (setq icon       (elim-avalue ":garak48x48" garak-icons)
                       icon       (or (cadr (memq :file icon)) "/dev/null")
                       summarised (garak-summarise-text text))
-                (notify-show-message ::action-handler 'ignore
-                                     :id      0
-                                     :summary title
-                                     :body    summarised
-                                     :icon    icon
-                                     :actions '("-" "Ok")
-                                     :timeout -1
-                                     :app-name "garak")))) garak-alert-methods))
+                (elim-notify-show-message ::action-handler 'ignore
+                                          :id      0
+                                          :summary title
+                                          :body    summarised
+                                          :icon    icon
+                                          :actions '("-" "Ok")
+                                          :timeout -1
+                                          :app-name "garak")))) garak-alert-methods))
     alert))
 
 (defun garak-chat-message (process call call-id status args)
